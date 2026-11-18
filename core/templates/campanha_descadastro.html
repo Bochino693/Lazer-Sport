@@ -1,0 +1,33 @@
+{% comment %}
+  "Não quero mais receber" -- o link do rodapé dos e-mails de campanha (LEIA-ME seção 107).
+  Página sem extends (não carrega o menu nem o tema do site): quem chega aqui vem de um
+  e-mail, às vezes num celular velho. O estilo mora em site/paginas/campanha_descadastro.css.
+  O link só pergunta; quem descadastra é o botão (POST).
+{% endcomment %}{% load interno_extras %}<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>{% if feito %}Você saiu da lista{% else %}Não quero mais receber{% endif %} | Lazer &amp; Sport</title>
+<link rel="stylesheet" href="{% estatico 'site/paginas/campanha_descadastro.css' %}">
+</head>
+<body>
+<main class="caixa">
+  <p class="marca">Lazer &amp; Sport Brinquedos</p>
+  {% if feito %}
+    <div class="ok" aria-hidden="true">&#10003;</div>
+    <h1>Pronto: você saiu da lista</h1>
+    <p><span class="email">{{ email_mascarado }}</span> não recebe mais as ofertas da Lazer &amp; Sport por e-mail.</p>
+    <p>Pedidos, propostas e avisos do que você comprou continuam chegando normalmente.</p>
+  {% else %}
+    <h1>Não quer mais receber nossas ofertas?</h1>
+    <p>Confirme e <span class="email">{{ email_mascarado }}</span> sai da lista de divulgações por e-mail da Lazer &amp; Sport.</p>
+    <form method="post">
+      <button type="submit">Não quero mais receber</button>
+    </form>
+  {% endif %}
+  <p><a href="/">Ir para o site</a></p>
+</main>
+</body>
+</html>

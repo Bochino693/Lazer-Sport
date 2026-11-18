@@ -1,4 +1,4 @@
-Olá, {{ entrega.nome_destinatario }}!
+{% autoescape off %}Olá, {{ entrega.nome_destinatario }}!
 
 {{ campanha.mensagem }}
 
@@ -11,4 +11,6 @@ Cupom: {{ campanha.codigo_cupom }}
 Fábrica de brinquedos Lazer Sport
 CNPJ: 54.486.908/0001-86
 
-Você recebeu esta mensagem porque seu contato consta no cadastro comercial da Lazer & Sport. Para não receber novas divulgações, responda a este e-mail solicitando a remoção.
+Você recebeu esta mensagem porque seu contato consta no cadastro comercial da Lazer & Sport.{% if url_descadastro %}
+Para não receber mais estas ofertas: {{ url_descadastro }}{% else %} Para não receber novas divulgações, responda a este e-mail solicitando a remoção.{% endif %}
+{% endautoescape %}

@@ -2,25 +2,30 @@
 
 from urllib.parse import quote
 
+from django.conf import settings
 from django.contrib import messages
 from django.db import transaction
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.csrf import csrf_exempt
 
 from .campanhas import (
     ErroCampanha,
     conteudo_do_objeto,
     criar_campanha,
+    descadastrar,
     destinatarios,
+    estado_da_fila,
     mensagem_whatsapp,
+    progresso,
+    retomar_fila,
     url_publica,
 )
-from core.email_utils import smtp_configurado
-
-from .models import CampanhaDivulgacao, EntregaCampanha
+from .models import CampanhaDivulgacao, DescadastroEmail, EntregaCampanha
 from .views import CriacaoInternoRequiredMixin
 
 
@@ -153,6 +158,7 @@ class CampanhasInnerView(CriacaoInternoRequiredMixin, View):
         )
         return render(request, "campanhas_inner.html", {
             "campanhas": campanhas,
+            "fila": estado_da_fila(),
             "total_fila": CampanhaDivulgacao.objects.filter(
                 status__in=(
                     CampanhaDivulgacao.Status.FILA,
@@ -168,24 +174,92 @@ class CampanhasInnerView(CriacaoInternoRequiredMixin, View):
         })
 
 
+def _hora(valor):
+    return timezone.localtime(valor).strftime("%d/%m %H:%M") if valor else ""
+
+
+def _observacao(entrega, agora):
+    """O que a tabela mostra na coluna "Observação" de cada e-mail."""
+    S = EntregaCampanha.Status
+    if entrega.status == S.ENVIADO:
+        return f"Enviado em {_hora(entrega.enviado_em)}"
+    if entrega.status == S.PENDENTE and entrega.proxima_tentativa_em and entrega.proxima_tentativa_em > agora:
+        texto = f"Nova tentativa às {timezone.localtime(entrega.proxima_tentativa_em):%H:%M}."
+        return f"{texto} {entrega.erro}" if entrega.erro else texto
+    return entrega.erro or "—"
+
+
 class CampanhaDetalheView(CriacaoInternoRequiredMixin, View):
+    """O acompanhamento da campanha: os números reais da fila, e-mail por e-mail.
+
+    Com `?formato=json` devolve só os números, para a tela se atualizar
+    sozinha enquanto a campanha anda (sem recarregar a página).
+    """
+
     def get(self, request, token):
         campanha = get_object_or_404(
             CampanhaDivulgacao.objects.select_related("responsavel"),
             token=token,
         )
         campanha.recalcular()
+        agora = timezone.now()
+        numeros = progresso(campanha, agora)
+        fila = estado_da_fila(agora)
         entregas = campanha.entregas.select_related("cliente")
+        emails = list(entregas.filter(canal=EntregaCampanha.Canal.EMAIL))
+        for entrega in emails:
+            entrega.observacao = _observacao(entrega, agora)
+
+        if request.GET.get("formato") == "json":
+            return JsonResponse({
+                "status": campanha.status,
+                "status_rotulo": campanha.get_status_display(),
+                # a campanha inteira (e-mail + WhatsApp) e só a fila de e-mails
+                "campanha": {
+                    "total": campanha.total_destinatarios,
+                    "enviados": campanha.total_enviados,
+                    "falhas": campanha.total_falhas,
+                    "ignorados": campanha.total_ignorados,
+                    "percentual": campanha.progresso_percentual,
+                },
+                "emails": {
+                    chave: valor for chave, valor in numeros.items()
+                    if chave not in ("motivos", "proxima_tentativa_em")
+                },
+                "proxima_tentativa": _hora(numeros["proxima_tentativa_em"]),
+                "motivos": numeros["motivos"],
+                "fila": {
+                    "smtp_ok": fila["smtp_ok"],
+                    "pausada": fila["pausada"],
+                    "pausada_ate": _hora(fila["pausada_ate"]),
+                    "motivo_pausa": fila["motivo_pausa"],
+                    "parada": fila["parada"],
+                    "ultima_rodada": _hora(fila["ultima_rodada_em"]),
+                },
+                "entregas": [
+                    {
+                        "token": str(entrega.token),
+                        "status": entrega.status,
+                        "rotulo": entrega.get_status_display(),
+                        "tentativas": entrega.tentativas,
+                        "observacao": entrega.observacao,
+                    }
+                    for entrega in emails
+                ],
+            })
+
         return render(request, "campanha_detalhe_inner.html", {
             "campanha": campanha,
-            "emails": entregas.filter(canal=EntregaCampanha.Canal.EMAIL),
+            "emails": emails,
             "whatsapps": entregas.filter(canal=EntregaCampanha.Canal.WHATSAPP),
             "url_publica": url_publica(campanha),
+            "numeros": numeros,
+            "fila": fila,
             # sem as credenciais do SMTP no servidor, nenhum e-mail sai: a tela diz
-            "smtp_ok": smtp_configurado(),
-            "emails_pendentes": entregas.filter(
-                canal=EntregaCampanha.Canal.EMAIL, status=EntregaCampanha.Status.PENDENTE,
-            ).count(),
+            "smtp_ok": fila["smtp_ok"],
+            "emails_pendentes": numeros["pendentes"] + numeros["processando"],
+            "proxima_tentativa": _hora(numeros["proxima_tentativa_em"]),
+            "tentativas_max": settings.CAMPANHA_EMAIL_TENTATIVAS,
         })
 
     @transaction.atomic
@@ -194,31 +268,55 @@ class CampanhaDetalheView(CriacaoInternoRequiredMixin, View):
             CampanhaDivulgacao.objects.select_for_update(), token=token,
         )
         acao = request.POST.get("acao", "")
-        if acao == "repetir_falhas":
-            quantidade = campanha.entregas.filter(
+        if acao in ("reenviar_falhas", "repetir_falhas"):
+            if campanha.status == CampanhaDivulgacao.Status.CANCELADA:
+                messages.error(request, "A campanha foi cancelada: crie outra para mandar de novo.")
+                return redirect("campanha_detalhe", token=campanha.token)
+            falhas = campanha.entregas.filter(
                 canal=EntregaCampanha.Canal.EMAIL,
                 status=EntregaCampanha.Status.FALHOU,
-            ).update(
+            )
+            # quem se descadastrou depois da falha não volta para a fila
+            fora = set(DescadastroEmail.objects.filter(
+                email_chave__in=list(falhas.values_list("destino_chave", flat=True)),
+            ).values_list("email_chave", flat=True))
+            quantidade = falhas.exclude(destino_chave__in=fora).update(
                 status=EntregaCampanha.Status.PENDENTE,
                 tentativas=0,
                 erro="",
                 proxima_tentativa_em=None,
                 processando_desde=None,
+                atualizado=timezone.now(),
             )
             campanha.recalcular()
-            messages.success(request, f"{quantidade} e-mail(s) recolocado(s) na fila.")
+            if quantidade:
+                retomar_fila()
+                from .fila_de_emails import disparar_agora
+
+                transaction.on_commit(disparar_agora)
+            if quantidade == 1:
+                messages.success(request, "1 e-mail com falha voltou para a fila e já está saindo.")
+            else:
+                messages.success(request, f"{quantidade} e-mails com falha voltaram para a fila e já estão saindo.")
         elif acao == "enviar_agora":
+            retomar_fila()
             from .fila_de_emails import disparar_agora
 
             transaction.on_commit(disparar_agora)
-            messages.success(request, "Enviando os e-mails pendentes agora. Atualize a tela em alguns segundos.")
+            messages.success(request, "Enviando os e-mails pendentes agora. A tela mostra o andamento.")
         elif acao == "cancelar":
             campanha.status = CampanhaDivulgacao.Status.CANCELADA
             campanha.save(update_fields=("status", "atualizado"))
             campanha.entregas.filter(status__in=(
                 EntregaCampanha.Status.PENDENTE,
                 EntregaCampanha.Status.AGUARDANDO_ACAO,
-            )).update(status=EntregaCampanha.Status.IGNORADO)
+            )).update(
+                status=EntregaCampanha.Status.IGNORADO,
+                erro="Campanha cancelada antes do envio.",
+                proxima_tentativa_em=None,
+                atualizado=timezone.now(),
+            )
+            campanha.recalcular()
             messages.success(request, "Campanha cancelada. Nenhuma entrega pendente será processada.")
         else:
             messages.error(request, "Ação de campanha inválida.")
@@ -264,3 +362,56 @@ class CampanhaPublicaDestinoView(View):
     def get(self, request, token):
         campanha = get_object_or_404(CampanhaDivulgacao, token=token)
         return redirect(campanha.destino_url or "/")
+
+
+def _mascarar(email):
+    """cliente@x.com -> cl•••••@x.com: a página confirma sem expor o endereço inteiro."""
+    usuario, _, dominio = (email or "").partition("@")
+    if not dominio:
+        return email
+    visivel = usuario[:2] if len(usuario) > 2 else usuario[:1]
+    return f"{visivel}{'•' * max(1, len(usuario) - len(visivel))}@{dominio}"
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class DescadastroCampanhaView(View):
+    """O link "não quero mais receber" do rodapé de cada e-mail de campanha.
+
+    GET mostra a pergunta e um botão: o link sozinho não descadastra,
+    porque antivírus e pré-visualização de e-mail abrem links sem ninguém
+    clicar. POST descadastra -- é também o que o Gmail e o Yahoo mandam no
+    "Cancelar inscrição" (List-Unsubscribe-Post, RFC 8058), sem cookie nem
+    token de formulário: por isso sem CSRF. Quem autoriza é o token da
+    entrega, um UUID que só o destinatário recebeu.
+    """
+
+    def _entrega(self, token):
+        return get_object_or_404(
+            EntregaCampanha.objects.select_related("campanha"),
+            token=token,
+            canal=EntregaCampanha.Canal.EMAIL,
+        )
+
+    def _responder(self, request, entrega, feito):
+        resposta = render(request, "campanha_descadastro.html", {
+            "entrega": entrega,
+            "email_mascarado": _mascarar(entrega.destino),
+            "feito": feito,
+        })
+        resposta["Cache-Control"] = "no-store"
+        resposta["X-Robots-Tag"] = "noindex, nofollow"
+        return resposta
+
+    def get(self, request, token):
+        entrega = self._entrega(token)
+        feito = DescadastroEmail.objects.filter(email_chave=entrega.destino_chave).exists()
+        return self._responder(request, entrega, feito)
+
+    def post(self, request, token):
+        entrega = self._entrega(token)
+        um_clique = request.POST.get("List-Unsubscribe") == "One-Click"
+        descadastrar(
+            entrega,
+            origem=(DescadastroEmail.Origem.UM_CLIQUE if um_clique else DescadastroEmail.Origem.LINK),
+        )
+        return self._responder(request, entrega, True)

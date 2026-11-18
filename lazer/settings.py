@@ -781,6 +781,32 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "").strip()
 FILA_DE_EMAILS_NO_SITE = os.getenv("FILA_DE_EMAILS_NO_SITE", "true").strip().lower() != "false"
 FILA_DE_EMAILS_INTERVALO = int(os.getenv("FILA_DE_EMAILS_INTERVALO", "60").strip() or "60")
 
+
+def _numero_do_ambiente(nome, padrao, tipo=int, minimo=0):
+    try:
+        return max(minimo, tipo(os.getenv(nome, str(padrao)).strip() or padrao))
+    except (TypeError, ValueError):
+        return padrao
+
+
+# O RITMO DO ENVIO DAS CAMPANHAS (LEIA-ME seção 107, sistema_interno/campanhas.py).
+# Rajada é o que o provedor recusa ("421 try again later", "454 too many login
+# attempts"): o envio sai em lotes pequenos, uma conexão SMTP por lote, com
+# pausa entre um e-mail e outro e entre um lote e outro.
+CAMPANHA_EMAIL_LOTE = _numero_do_ambiente("CAMPANHA_EMAIL_LOTE", 10, minimo=1)
+CAMPANHA_EMAIL_PAUSA = _numero_do_ambiente("CAMPANHA_EMAIL_PAUSA", 2.0, float)  # s entre e-mails
+CAMPANHA_EMAIL_PAUSA_LOTE = _numero_do_ambiente("CAMPANHA_EMAIL_PAUSA_LOTE", 20.0, float)  # s entre lotes
+# Um e-mail com erro só dele (recusa temporária do endereço, erro ao montar)
+# tenta de novo com espera crescente até este número de vezes.
+CAMPANHA_EMAIL_TENTATIVAS = _numero_do_ambiente("CAMPANHA_EMAIL_TENTATIVAS", 5, minimo=1)
+# Teto de e-mails de CAMPANHA por dia (0 = sem teto). O Gmail bloqueia a conta
+# por até 24 h passando de ~500 por dia -- e aí nem a confirmação de pedido
+# sai. Com o Gmail o padrão é 400, para sobrar folga aos e-mails do dia a dia.
+CAMPANHA_EMAILS_POR_DIA = _numero_do_ambiente(
+    "CAMPANHA_EMAILS_POR_DIA",
+    400 if "gmail" in EMAIL_HOST.lower() or "googlemail" in EMAIL_HOST.lower() else 0,
+)
+
 # A foto de peça em fundo branco perde o fundo ao subir pelo painel (LEIA-ME
 # seção 102; core/recorte_peca.py). Ligado no Render, onde as fotos estão no
 # Cloudinary; RECORTE_PECAS_AUTOMATICO=false desliga.

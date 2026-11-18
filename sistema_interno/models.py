@@ -4042,6 +4042,9 @@ class CampanhaDivulgacao(Prime):
     total_destinatarios = models.PositiveIntegerField(default=0)
     total_enviados = models.PositiveIntegerField(default=0)
     total_falhas = models.PositiveIntegerField(default=0)
+    # Os que não saíram de propósito: descadastrados, oferta encerrada,
+    # campanha cancelada. Contam como "resolvidos" no progresso.
+    total_ignorados = models.PositiveIntegerField(default=0)
     responsavel = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -4064,7 +4067,7 @@ class CampanhaDivulgacao(Prime):
     def progresso_percentual(self):
         if not self.total_destinatarios:
             return 0
-        encerrados = self.total_enviados + self.total_falhas
+        encerrados = self.total_enviados + self.total_falhas + self.total_ignorados
         return min(100, round(encerrados * 100 / self.total_destinatarios))
 
     def recalcular(self, salvar=True):
@@ -4073,6 +4076,7 @@ class CampanhaDivulgacao(Prime):
         total = entregas.count()
         enviados = entregas.filter(status=EntregaCampanha.Status.ENVIADO).count()
         falhas = entregas.filter(status=EntregaCampanha.Status.FALHOU).count()
+        ignorados = entregas.filter(status=EntregaCampanha.Status.IGNORADO).count()
         abertos = entregas.filter(status__in=(
             EntregaCampanha.Status.PENDENTE,
             EntregaCampanha.Status.PROCESSANDO,
@@ -4092,10 +4096,11 @@ class CampanhaDivulgacao(Prime):
         self.total_destinatarios = total
         self.total_enviados = enviados
         self.total_falhas = falhas
+        self.total_ignorados = ignorados
         if salvar:
             self.save(update_fields=(
                 "status", "total_destinatarios", "total_enviados",
-                "total_falhas", "atualizado",
+                "total_falhas", "total_ignorados", "atualizado",
             ))
         return self
 
@@ -4182,6 +4187,102 @@ class EntregaCampanha(Prime):
 
     def __str__(self):
         return f"{self.campanha} · {self.get_canal_display()} · {self.nome_destinatario}"
+
+
+class DescadastroEmail(Prime):
+    """Quem pediu para não receber mais divulgação por e-mail (LEIA-ME seção 107).
+
+    Guardado pelo endereço (a mesma chave sha256 de ``EntregaCampanha``),
+    e não pelo cliente: o mesmo e-mail pode estar num ``Cliente`` do
+    cadastro comercial e numa conta do site, e o pedido vale para os dois.
+    A campanha nova não o inclui e a fila não manda para ele o que já
+    estava pendente.
+    """
+
+    class Origem(models.TextChoices):
+        LINK = "link", "Link no rodapé do e-mail"
+        UM_CLIQUE = "um_clique", "Botão do provedor de e-mail"
+        EQUIPE = "equipe", "Equipe"
+
+    email = models.EmailField(max_length=254)
+    email_chave = models.CharField(max_length=64, unique=True, editable=False)
+    origem = models.CharField(max_length=12, choices=Origem.choices, default=Origem.LINK)
+    entrega = models.ForeignKey(
+        EntregaCampanha,
+        on_delete=models.SET_NULL,
+        related_name="descadastros",
+        null=True,
+        blank=True,
+    )
+
+    @staticmethod
+    def chave(email):
+        import hashlib
+
+        return hashlib.sha256((email or "").strip().casefold().encode("utf-8")).hexdigest()
+
+    def save(self, *args, **kwargs):
+        if not self.email_chave:
+            self.email_chave = self.chave(self.email)
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = "Descadastro de divulgação"
+        verbose_name_plural = "Descadastros de divulgação"
+        ordering = ("-criacao", "-id")
+
+    def __str__(self):
+        return self.email
+
+
+class EstadoFilaEmails(models.Model):
+    """O estado da fila de e-mails das campanhas, numa linha só (LEIA-ME seção 107).
+
+    * ``pausada_ate``/``motivo_pausa``: o provedor recusou a conexão, o login,
+      o remetente ou pediu calma ("421 try again later"). A fila inteira para
+      e tenta de novo depois, com espera que dobra a cada recusa seguida
+      (``falhas_seguidas``) -- em vez de gastar as tentativas de cada cliente
+      numa recusa que não é dele.
+    * ``dia``/``enviados_no_dia``: o teto diário (CAMPANHA_EMAILS_POR_DIA).
+    * ``ultima_rodada_em``: a prova de que a fila está andando no servidor.
+      O painel avisa quando ela para de bater.
+    * ``ultimo_erro``: erro da própria fila (banco fora do ar, defeito). Antes
+      ele só ia para o log do Render e ninguém via.
+    """
+
+    CHAVE = "campanhas"
+
+    chave = models.CharField(max_length=20, unique=True, default=CHAVE)
+    pausada_ate = models.DateTimeField(null=True, blank=True)
+    motivo_pausa = models.CharField(max_length=300, blank=True)
+    falhas_seguidas = models.PositiveSmallIntegerField(default=0)
+    dia = models.DateField(null=True, blank=True)
+    enviados_no_dia = models.PositiveIntegerField(default=0)
+    ultimo_envio_em = models.DateTimeField(null=True, blank=True)
+    ultima_rodada_em = models.DateTimeField(null=True, blank=True)
+    ultimo_erro = models.CharField(max_length=300, blank=True)
+    ultimo_erro_em = models.DateTimeField(null=True, blank=True)
+    atualizado = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def atual(cls):
+        from django.db import IntegrityError, transaction
+
+        estado = cls.objects.filter(chave=cls.CHAVE).first()
+        if estado:
+            return estado
+        try:
+            with transaction.atomic():
+                return cls.objects.create(chave=cls.CHAVE)
+        except IntegrityError:  # outro processo criou no mesmo instante
+            return cls.objects.get(chave=cls.CHAVE)
+
+    class Meta:
+        verbose_name = "Estado da fila de e-mails"
+        verbose_name_plural = "Estado da fila de e-mails"
+
+    def __str__(self):
+        return f"Fila de e-mails ({self.chave})"
 
 
 class ExclusaoRegistrada(models.Model):

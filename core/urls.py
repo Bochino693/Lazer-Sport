@@ -23,7 +23,11 @@ from .views_orcamento import orcamento_publico
 from .views_ordem_servico import ordem_servico_publica
 from .views_assinatura import assinar_documento, documento_assinado
 from .views_codigo_orcamento import AssinarTermoView, VincularOrcamentoView
-from sistema_interno.views_campanhas import CampanhaPublicaDestinoView, CampanhaPublicaView
+from sistema_interno.views_campanhas import (
+    CampanhaPublicaDestinoView,
+    CampanhaPublicaView,
+    DescadastroCampanhaView,
+)
 from .views_redirects import redirecionar_interno
 from .views_seguranca import token_csrf
 from .sitemaps import (
@@ -206,6 +210,13 @@ urlpatterns = [
         "divulgacao/<uuid:token>/visitar/",
         CampanhaPublicaDestinoView.as_view(),
         name="campanha_publica_destino",
+    ),
+    # "Não quero mais receber": o link do rodapé e o botão de um clique do
+    # Gmail/Yahoo (List-Unsubscribe-Post). Token da entrega, nunca o e-mail.
+    path(
+        "divulgacao/sair/<uuid:token>/",
+        DescadastroCampanhaView.as_view(),
+        name="campanha_descadastro",
     ),
     path(
         "estabelecimentos/<int:pk>/",
