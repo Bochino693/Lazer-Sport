@@ -142,6 +142,12 @@
               <td data-rotulo="Produção">
                 <div class="ls-funil-celula">
                   {% if pedido.status != "cancelado" %}{% campo_prazo pedido %}{% endif %}
+                  {% if pedido.producao_vista %}
+                    {# a fila e a etapa de agora na lista de montagem (seção 108) #}
+                    <a class="ls-montagem-elo" href="{% url 'lista_montagem' %}" title="Abrir a lista de montagem">
+                      <i class="bi bi-list-ol" aria-hidden="true"></i> {{ pedido.producao_vista.nota }}
+                    </a>
+                  {% endif %}
                   {% if pedido.pago %}
                     <button type="button" class="btn btn-sm btn-outline-primary"
                             data-etiquetas-url="{% url 'etiquetas_maquinas' 'pedido' pedido.id %}"

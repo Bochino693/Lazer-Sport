@@ -6521,6 +6521,15 @@ a.ls-pager-pagina:hover,a.ls-pager-seta:hover{border-color:var(--line-forte);col
 .ls-situacao-chip.recusado:has(input:checked){border-color:var(--red);background:rgba(var(--red-rgb),.16);color:var(--red-claro)}
 
 
+/* a fila e a etapa da lista de montagem na linha do pedido (seção 108) */
+.ls-montagem-elo{
+  display:inline-flex;align-items:flex-start;gap:5px;margin-top:4px;max-width:100%;
+  color:var(--apoio-texto);font-size:.74rem;font-weight:850;line-height:1.3;text-decoration:none;
+  overflow-wrap:anywhere;
+}
+.ls-montagem-elo:hover{text-decoration:underline}
+
+
 /* ======================================================================
    LISTA OU CARDS, SEGUNDA PARTE — a barra de ações do cartão e o cartão
    que a tela desenha

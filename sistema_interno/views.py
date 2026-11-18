@@ -1542,8 +1542,9 @@ class PedidosView(FinanceiroInternoRequiredMixin, View):
             Pedido.objects
             # a venda vem junto: a linha diz "venda #12" sem uma consulta
             # por pedido (LEIA-ME-V10, seção 89)
-            .select_related("cliente__user", "venda")
-            .prefetch_related("itens")
+            .select_related("cliente__user", "venda", "producao")
+            # a lista de montagem de cada pedido (seção 108), sem consulta por linha
+            .prefetch_related("itens", "producao__unidades")
             .order_by("-criacao", "-id")
         )
         filtro = (request.GET.get("filtro") or "abertos").strip()
@@ -1572,6 +1573,10 @@ class PedidosView(FinanceiroInternoRequiredMixin, View):
             # O acesso reverso sem venda levanta DoesNotExist; o
             # `select_related` já trouxe a resposta, e aqui ela vira None.
             pedido.venda_da_linha = getattr(pedido, "venda", None)
+            # a fila e a etapa de agora na fábrica (lista de montagem, seção 108)
+            from .montagem import producao_vista_do_pedido
+
+            pedido.producao_vista = producao_vista_do_pedido(pedido)
         abertos = Pedido.objects.exclude(status__in=self.ENCERRADOS).count()
         return render(request, "pedidos_inner.html", {
             "pedidos": pedidos,

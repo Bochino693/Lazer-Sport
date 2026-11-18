@@ -26,7 +26,7 @@
     <span class="ls-page-kicker">Produção · pedidos do site e orçamentos</span>
     <h1>Lista de montagem</h1>
     {% if not ve_tudo %}<p><strong>Aqui aparecem só as máquinas dos orçamentos que você vendeu.</strong></p>{% endif %}
-    <p>Toda máquina vendida entra aqui sozinha: no pagamento do pedido ou na aprovação do orçamento. São {{ config.capacidade_maquinas }} em montagem ao mesmo tempo ({{ config.dias_ate_limite }} dias úteis até {{ limite_texto }} m³, {{ config.dias_acima_limite }} acima), em 7 etapas; o resto espera na fila. Marque a etapa feita: o cliente acompanha em Meus pedidos.</p>
+    <p>Toda máquina vendida entra aqui sozinha: no pagamento do pedido ou na aprovação do orçamento. São {{ config.capacidade_maquinas }} em montagem ao mesmo tempo ({{ config.dias_ate_limite }} dias úteis até {{ limite_texto }} m³, {{ config.dias_acima_limite }} acima), em 7 etapas; o resto espera na fila.{% if pode_mexer %} Marque a etapa feita: o cliente acompanha em Meus pedidos.{% else %} Quem marca as etapas é a Engenharia de produção; aqui você acompanha o andamento e a previsão.{% endif %}</p>
   </div>
 </section>
 

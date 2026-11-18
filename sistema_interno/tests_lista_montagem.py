@@ -471,6 +471,13 @@ class TelaTests(Base):
         self.assertEqual(resposta.status_code, 400)
         self.assertIn("na fila", resposta.json()["msg"])
 
+    def test_a_tela_de_pedidos_mostra_a_fila_de_cada_pedido(self):
+        self.client.force_login(equipe("fin-pedidos", "financeiro"))
+        html = self.client.get("/pedidos/inner/?filtro=todos", **INTERNO).content.decode()
+        self.assertIn('class="ls-montagem-elo"', html)
+        self.assertIn("Na fila de produção — posição 1", html)
+        self.assertIn("Em produção · Corte de MDF", html)
+
     def test_quem_nao_e_da_producao_nem_do_comercial_nao_entra(self):
         self.client.force_login(equipe("criacao-montagem", "criacao"))
         self.assertEqual(self.client.get("/producao/montagem/", **INTERNO).status_code, 302)
