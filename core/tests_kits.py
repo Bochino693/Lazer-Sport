@@ -732,3 +732,51 @@ class MigracaoDosKitsTests(TransactionTestCase):
         apps = self._ate(CONVERTE)
         self.assertEqual(migracao_0212.converter(apps, None, avisar=lambda *_: None), [])
         self.assertFalse(apps.get_model("core", "CategoriasBrinquedos").objects.exists())
+
+
+class CapasNovasDosKitsTests(Base):
+    """A migração 0214: a arte nova (TV em pé com a tela do jogo) vira a capa do kit."""
+
+    def migracao(self):
+        return importlib.import_module("core.migrations.0214_capas_novas_dos_kits")
+
+    def test_fora_do_render_nada_sobe(self):
+        from django.apps import apps as django_apps
+
+        resultado = self.migracao().trocar(django_apps, avisar=lambda *_: None)
+        self.assertTrue(resultado.get("fora_do_render"))
+        self.kit.refresh_from_db()
+        self.assertEqual(self.kit.imagem_brinquedo.name, "pecas_reposicao/kit-boliche-virtual-ab12")
+
+    def test_troca_a_capa_a_frente_e_a_categoria_uma_vez_so(self):
+        from django.apps import apps as django_apps
+        from django.core.files.storage import InMemoryStorage
+
+        from .models import ImagemBrinquedo
+
+        mig = self.migracao()
+        campo = ImagemBrinquedo._meta.get_field("imagem")
+        with mock.patch.object(campo, "storage", InMemoryStorage()):
+            primeira = mig.trocar(django_apps, avisar=lambda *_: None, forcar=True)
+            segunda = mig.trocar(django_apps, avisar=lambda *_: None, forcar=True)
+        self.assertEqual(primeira["trocados"], ["Kit Boliche Virtual"])
+        self.assertEqual(segunda["ja_estavam"], ["Kit Boliche Virtual"])
+        self.kit.refresh_from_db()
+        capa = self.kit.imagem_brinquedo.name
+        marca = mig._assinatura(mig.PASTA / "kit-boliche-virtual.webp")
+        self.assertIn(marca, capa)
+        self.assertLessEqual(len(capa), 100)
+        frente = ImagemBrinquedo.objects.get(brinquedo=self.kit, tipo="perfil")
+        self.assertEqual(frente.imagem.name, capa)
+        self.assertEqual(frente.fundo, "com")
+        self.cat_kits.refresh_from_db()
+        self.assertEqual(self.cat_kits.imagem_categoria.name, capa)
+
+    def test_a_arte_deixa_o_topo_e_o_pe_livres_para_os_selos_do_card(self):
+        """Nada de texto sob o selo "KIT", os botões e o "Sob consulta" do card (LEIA-ME 107)."""
+        for chave in ("kit-boliche-virtual", "kit-strike-kids", "kit-lazer-shot"):
+            with Image.open(Path(kits.arquivo_da_foto(chave))) as arte:
+                arte = arte.convert("L").resize((1200, 1200))
+                # o canto do "Sob consulta" (pé, à esquerda): só o fundo escuro, sem letra clara
+                faixa = arte.crop((0, 1032, 672, 1164))
+                self.assertLess(max(faixa.getdata()), 150, chave)
