@@ -48,6 +48,7 @@ from .views_funil import (
     EtiquetasImpressaoView,
     PrazoProducaoView,
 )
+from .views_montagem import ListaMontagemView
 from .views_transportadoras import TransportadorasInnerView
 from .views_documento_assinatura import (
     DocumentoAssinaturaInnerView,
@@ -354,6 +355,9 @@ urlpatterns = [
 
     # ---------------- produção ----------------
     path('producao/', MinhaProducaoView.as_view(), name='minha_producao'),
+    # A lista de montagem: as máquinas dos pedidos pagos e dos orçamentos
+    # aprovados, a fila, as 7 etapas e as regras (LEIA-ME-V10, seção 108).
+    path('producao/montagem/', ListaMontagemView.as_view(), name='lista_montagem'),
     path('producao/guias/', GuiasProducaoView.as_view(), name='guias_producao'),
     path('producao/produtos/', ProdutosProducaoView.as_view(), name='produtos_producao'),
     path('producao/ordens/', OrdensProducaoView.as_view(), name='ordens_producao'),

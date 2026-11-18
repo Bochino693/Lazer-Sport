@@ -329,9 +329,15 @@
       </div>
       {% endif %}
 
-      {% if permissoes_interno.producao %}
+      {% if permissoes_interno.producao or permissoes_interno.lista_montagem %}
       <div class="ls-nav-section">
         <span class="ls-nav-caption">Produção</span>
+        {# A lista de montagem (seção 108): a fila e as etapas de todas as máquinas vendidas. #}
+        <a data-titulo="Lista de montagem" aria-label="Lista de montagem" class="ls-nav-item {% if request.resolver_match.url_name == 'lista_montagem' %}active{% endif %}" href="{% url 'lista_montagem' %}">
+          <span class="ls-nav-icon"><i class="bi bi-list-ol"></i></span>
+          <span>Lista de montagem</span>
+        </a>
+        {% if permissoes_interno.producao %}
         <a data-titulo="Acompanhamento" aria-label="Acompanhamento" class="ls-nav-item {% if request.resolver_match.url_name == 'minha_producao' or request.resolver_match.url_name == 'producao_ordem_detalhe' %}active{% endif %}" href="{% url 'minha_producao' %}">
           <span class="ls-nav-icon"><i class="bi bi-list-check"></i></span>
           <span>Acompanhamento</span>
@@ -349,6 +355,7 @@
           <span class="ls-nav-icon"><i class="bi bi-hammer"></i></span>
           <span>Ordens de produção</span>
         </a>
+        {% endif %}
       </div>
       {% endif %}
 
@@ -872,6 +879,8 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
   chega pela navegação suave.
 {% endcomment %}
 <script src="{% estatico 'interno/producao-etiquetas.js' %}"></script>
+{# A lista de montagem (seção 108): as etapas em chips, a fila e a entrega, por delegação. #}
+<script src="{% estatico 'interno/lista-montagem.js' %}"></script>
 <script>
 (function () {
   const sidebar = document.getElementById("sidebarMenu");

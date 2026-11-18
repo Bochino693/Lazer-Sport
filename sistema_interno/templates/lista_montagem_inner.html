@@ -1,0 +1,208 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+{% block title %}Lista de montagem | Lazer &amp; Sport{% endblock %}
+{% block top_title %}Lista de montagem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="montagem" href="{% estatico 'interno/lista-montagem.css' %}">
+{% endblock %}
+
+{% block content %}
+{% comment %}
+  A LISTA DE MONTAGEM (views_montagem.py, montagem.py; LEIA-ME-V10, seção 108).
+
+  "Lista de montagem com todos os brinquedos que tem pra montar": as
+  máquinas dos pedidos pagos do site e dos orçamentos aprovados, juntas,
+  uma linha por unidade. Em cima, as vagas (3 máquinas e 1 brinquedão ao
+  mesmo tempo, no padrão) e os filtros em chips; embaixo, o que está em
+  produção agrupado por brinquedo, a fila de cada linha, as prontas e as
+  regras. Tudo entra sozinho: ninguém digita a máquina duas vezes.
+{% endcomment %}
+<div class="lm" id="lmTela">
+{% csrf_token %}
+
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Produção · pedidos do site e orçamentos</span>
+    <h1>Lista de montagem</h1>
+    {% if not ve_tudo %}<p><strong>Aqui aparecem só as máquinas dos orçamentos que você vendeu.</strong></p>{% endif %}
+    <p>Toda máquina vendida entra aqui sozinha: no pagamento do pedido ou na aprovação do orçamento. São {{ config.capacidade_maquinas }} em montagem ao mesmo tempo ({{ config.dias_ate_limite }} dias úteis até {{ limite_texto }} m³, {{ config.dias_acima_limite }} acima), em 7 etapas; o resto espera na fila. Marque a etapa feita: o cliente acompanha em Meus pedidos.</p>
+  </div>
+</section>
+
+<section class="ls-metrics">
+  {% for href, ativo, rotulo, valor, icone, cor, nota in cartoes %}
+    <a class="ls-metric-card ls-budget-filter-card {{ cor }} {% if ativo %}active{% endif %}"
+       href="{{ href }}" aria-current="{% if ativo %}page{% else %}false{% endif %}">
+      <div class="ls-metric-head">
+        <span class="ls-metric-label">{{ rotulo }}</span>
+        <span class="ls-metric-icon"><i class="bi {{ icone }}"></i></span>
+      </div>
+      <strong class="ls-metric-value">{{ valor }}</strong>
+      <span class="ls-metric-note">{{ nota }}</span>
+    </a>
+  {% endfor %}
+</section>
+
+<section class="lm-filtros" aria-label="Filtros da lista">
+  <div class="lm-filtro">
+    <span class="lm-filtro-rotulo">Situação</span>
+    <div class="lm-chips">
+      {% for valor, rotulo, icone in filtros %}
+        <a class="lm-chip{% if filtro_ativo == valor %} is-ativo{% endif %}"
+           href="?filtro={{ valor }}{% if linha_ativa %}&amp;linha={{ linha_ativa }}{% endif %}{% if brinquedo_ativo %}&amp;brinquedo={{ brinquedo_ativo }}{% endif %}"
+           {% if filtro_ativo == valor %}aria-current="true"{% endif %}><i class="bi {{ icone }}" aria-hidden="true"></i> {{ rotulo }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="lm-filtro">
+    <span class="lm-filtro-rotulo">Linha</span>
+    <div class="lm-chips">
+      {% for valor, rotulo, icone in linhas %}
+        <a class="lm-chip{% if linha_ativa == valor %} is-ativo{% endif %}"
+           href="?filtro={{ filtro_ativo }}{% if valor %}&amp;linha={{ valor }}{% endif %}{% if brinquedo_ativo %}&amp;brinquedo={{ brinquedo_ativo }}{% endif %}"
+           {% if linha_ativa == valor %}aria-current="true"{% endif %}><i class="bi {{ icone }}" aria-hidden="true"></i> {{ rotulo }}</a>
+      {% endfor %}
+    </div>
+  </div>
+  {% if por_brinquedo %}
+  <div class="lm-filtro">
+    <span class="lm-filtro-rotulo">Brinquedo</span>
+    <div class="lm-chips lm-chips-brinquedos">
+      <a class="lm-chip{% if not brinquedo_ativo %} is-ativo{% endif %}" href="?filtro={{ filtro_ativo }}{% if linha_ativa %}&amp;linha={{ linha_ativa }}{% endif %}">Todos</a>
+      {% for grupo in por_brinquedo %}
+        <a class="lm-chip lm-chip-brinquedo{% if brinquedo_ativo == grupo.chave %} is-ativo{% endif %}"
+           href="?filtro={{ filtro_ativo }}{% if linha_ativa %}&amp;linha={{ linha_ativa }}{% endif %}&amp;brinquedo={{ grupo.chave }}"
+           title="{{ grupo.nome }}: {{ grupo.resumo }}"
+           {% if brinquedo_ativo == grupo.chave %}aria-current="true"{% endif %}>
+          <strong>{{ grupo.nome }}</strong><small>{{ grupo.resumo }}</small>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div>
+      <h2>Máquinas</h2>
+      <p>Agrupadas por brinquedo, com a origem, a previsão e as etapas. A data embaixo de cada etapa é o dia em que ficou feita, ou a previsão dela.</p>
+    </div>
+    {% include "includes/lista_ou_cards.html" with alvo="lmLista" chave="montagem" %}
+  </div>
+  <div class="ls-data-body">
+    <div class="ls-visao-alvo lm-lista" id="lmLista" data-visao="lista">
+
+      {% if grupos %}
+        <h3 class="lm-secao"><i class="bi bi-tools" aria-hidden="true"></i> Em produção</h3>
+        {% for grupo in grupos %}
+          <div class="lm-grupo">
+            <div class="lm-grupo-cabeca">
+              <strong>{{ grupo.nome }}</strong>
+              <span>{{ grupo.resumo }}</span>
+            </div>
+            <div class="table-responsive">
+              <table class="ls-table ls-visao-tabela lm-tabela">
+                <thead><tr><th>Máquina</th><th>Origem</th><th>Prazo</th><th>Etapas</th><th>Ações</th></tr></thead>
+                <tbody>
+                  {% for u in grupo.unidades %}{% include "partes/montagem_unidade.html" %}{% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {% if fila_maquinas %}
+        <h3 class="lm-secao"><i class="bi bi-list-ol" aria-hidden="true"></i> Na fila — máquinas <small>{{ config.fila_min_dias }} a {{ config.fila_max_dias }} dias úteis de espera + a montagem</small></h3>
+        {% include "partes/montagem_fila.html" with fila=fila_maquinas %}
+      {% endif %}
+
+      {% if fila_projetos %}
+        <h3 class="lm-secao"><i class="bi bi-bricks" aria-hidden="true"></i> Na fila — brinquedões e espaços <small>um por vez, {{ config.dias_projeto }} dias úteis cada</small></h3>
+        {% include "partes/montagem_fila.html" with fila=fila_projetos %}
+      {% endif %}
+
+      {% if prontas %}
+        <h3 class="lm-secao"><i class="bi bi-box-seam" aria-hidden="true"></i> Prontas, esperando a entrega</h3>
+        <div class="table-responsive">
+          <table class="ls-table ls-visao-tabela lm-tabela">
+            <thead><tr><th>Máquina</th><th>Origem</th><th>Prazo</th><th>Etapas</th><th>Ações</th></tr></thead>
+            <tbody>{% for u in prontas %}{% include "partes/montagem_unidade.html" %}{% endfor %}</tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      {% if entregues %}
+        <h3 class="lm-secao"><i class="bi bi-flag-fill" aria-hidden="true"></i> Entregues <small>as mais recentes</small></h3>
+        <div class="table-responsive">
+          <table class="ls-table ls-visao-tabela lm-tabela">
+            <thead><tr><th>Máquina</th><th>Origem</th><th>Prazo</th><th>Etapas</th><th>Ações</th></tr></thead>
+            <tbody>{% for u in entregues %}{% include "partes/montagem_unidade.html" %}{% endfor %}</tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      {% if nada %}
+        <div class="ls-empty">
+          <i class="bi bi-box2"></i>
+          {% if filtro_ativo == "ativas" and not brinquedo_ativo and not linha_ativa %}
+            Nenhuma máquina para montar agora. Quando um pedido do site for pago ou um orçamento for aprovado, as máquinas dele entram aqui sozinhas.
+          {% else %}
+            Nenhuma máquina neste filtro.
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% if ve_tudo %}
+<section class="ls-data-panel lm-regras">
+  <details{% if not pode_mexer %} class="lm-so-leitura"{% endif %}>
+    <summary>
+      <span><i class="bi bi-sliders" aria-hidden="true"></i> Regras da produção</span>
+      <small>{{ config.capacidade_maquinas }} máquina{{ config.capacidade_maquinas|pluralize }} e {{ config.capacidade_projetos }} brinquedão ao mesmo tempo · fila de {{ config.fila_min_dias }} a {{ config.fila_max_dias }} dias úteis · peças em {{ config.dias_pecas }}</small>
+    </summary>
+    <form method="post" action="{% url 'lista_montagem' %}" class="lm-regras-form" data-montagem-regras>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="regras">
+      <fieldset class="lm-regras-grupo"{% if not pode_mexer %} disabled{% endif %}>
+        <legend>Máquinas (brinquedos normais)</legend>
+        <label>Em montagem ao mesmo tempo <input class="form-control" type="number" min="1" max="50" name="capacidade_maquinas" value="{{ config.capacidade_maquinas }}" inputmode="numeric" required></label>
+        <label>Limite de volume (m³) <input class="form-control" type="text" name="limite_m3" value="{{ limite_texto }}" inputmode="decimal" required></label>
+        <label>Dias úteis até o limite <input class="form-control" type="number" min="1" max="60" name="dias_ate_limite" value="{{ config.dias_ate_limite }}" inputmode="numeric" required></label>
+        <label>Dias úteis acima (e sem medida) <input class="form-control" type="number" min="1" max="60" name="dias_acima_limite" value="{{ config.dias_acima_limite }}" inputmode="numeric" required></label>
+        <label>Fila: mínimo (dias úteis) <input class="form-control" type="number" min="0" max="250" name="fila_min_dias" value="{{ config.fila_min_dias }}" inputmode="numeric" required></label>
+        <label>Fila: máximo (dias úteis) <input class="form-control" type="number" min="0" max="250" name="fila_max_dias" value="{{ config.fila_max_dias }}" inputmode="numeric" required></label>
+      </fieldset>
+      <fieldset class="lm-regras-grupo"{% if not pode_mexer %} disabled{% endif %}>
+        <legend>Brinquedões, espaços esportivos e peças</legend>
+        <label>Brinquedões ao mesmo tempo <input class="form-control" type="number" min="1" max="20" name="capacidade_projetos" value="{{ config.capacidade_projetos }}" inputmode="numeric" required></label>
+        <label>Dias úteis de cada brinquedão <input class="form-control" type="number" min="1" max="250" name="dias_projeto" value="{{ config.dias_projeto }}" inputmode="numeric" required></label>
+        <label>Dias úteis das peças e kits <input class="form-control" type="number" min="1" max="60" name="dias_pecas" value="{{ config.dias_pecas }}" inputmode="numeric" required></label>
+      </fieldset>
+      <fieldset class="lm-regras-grupo lm-regras-largo"{% if not pode_mexer %} disabled{% endif %}>
+        <legend>O que é brinquedão / espaço (um por vez, sem as 7 etapas)</legend>
+        <div class="lm-chips">
+          {% for categoria in categorias %}
+            <label class="lm-chip lm-chip-marca"><input type="checkbox" name="categorias_projeto" value="{{ categoria.pk }}"{% if categoria.marcada %} checked{% endif %}><span>{{ categoria.nome }}</span></label>
+          {% endfor %}
+        </div>
+        <label class="lm-regras-palavras">Palavras no nome (separadas por vírgula)
+          <textarea class="form-control" name="palavras_projeto" rows="2">{{ config.palavras_projeto }}</textarea>
+        </label>
+      </fieldset>
+      {% if pode_mexer %}
+        <div class="lm-regras-botoes">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check2" aria-hidden="true"></i> Salvar as regras</button>
+          <span class="ls-sub">As previsões da fila se recalculam na hora. As máquinas que já estão na lista ficam com o prazo de quando entraram.</span>
+        </div>
+      {% endif %}
+    </form>
+  </details>
+</section>
+{% endif %}
+</div>
+{% endblock %}

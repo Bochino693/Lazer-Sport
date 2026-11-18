@@ -2172,7 +2172,7 @@ class Orcamento(Prime):
         from core.producao import texto_dos_dias
 
         if self.prazo_producao_dias is None:
-            return ""
+            return self.prazo_da_montagem_para_o_cliente()
         dias = texto_dos_dias(self.prazo_producao_dias)
         previsao = self.previsao_producao
         if self.prazo_producao_dias == 0:
@@ -2180,6 +2180,41 @@ class Orcamento(Prime):
         if previsao is not None:
             return f"{dias} — previsão {previsao:%d/%m/%Y}"
         return f"{dias} após a aprovação"
+
+    def prazo_da_montagem_para_o_cliente(self):
+        """Sem prazo digitado pela equipe: o da lista de montagem (seção 108).
+
+        "Todo brinquedo que sair, estiver aprovado, o prazo de montagem são
+        de 4 a 5 dias, dependendo do m cúbico, vc deve informar isso pro
+        cliente" -- e, com as vagas da fábrica ocupadas, a fila. A conta é
+        a de `montagem.prazo_de_entrega` (a mesma do contrato e de Meus
+        pedidos). Proposta que já é história (recusada, expirada,
+        substituída) não ganha prazo novo.
+        """
+        if not self.pk or self.status in (
+            self.Status.RECUSADO, self.Status.EXPIRADO, self.Status.SUBSTITUIDO,
+        ):
+            return ""
+        try:
+            from . import montagem
+
+            prazo = montagem.prazo_de_entrega(self)
+        except Exception:  # noqa: BLE001 -- a proposta nunca cai por causa do prazo
+            import logging
+
+            logging.getLogger(__name__).exception("prazo da montagem do orçamento %s", self.pk)
+            return ""
+        if not prazo.texto:
+            return ""
+        if self.status == self.Status.APROVADO and prazo.data_ate:
+            texto = f"{prazo.texto} — previsão "
+            if prazo.data_de and prazo.data_de != prazo.data_ate:
+                texto += f"entre {prazo.data_de:%d/%m/%Y} e "
+            return texto + f"{prazo.data_ate:%d/%m/%Y}"
+        texto = f"{prazo.texto} após a aprovação"
+        if prazo.fila:
+            texto += " (fila de produção + montagem)"
+        return texto
 
     def marcar_inicio_da_producao(self):
         """Põe o começo (sem gravar) na proposta aprovada que ainda não tem.
@@ -2230,6 +2265,9 @@ class Orcamento(Prime):
             and not hasattr(self, "orcamento_refeito")
             and not hasattr(self, "ordem_servico")
             and not self.contrato_assinado
+            # o pagamento parcial também prende a versão (seção 107): o
+            # dinheiro registrado não pode ficar numa proposta "substituída"
+            and not (self.valor_pago or Decimal("0.00")) > 0
         )
 
     @property
@@ -4520,3 +4558,205 @@ class Transportadora(Prime):
         self.estados_atendidos = transportadoras.gravar_ufs(self.estados_atendidos)
         self.uf_sede = transportadoras.uf_valida(self.uf_sede)
         super().save(*args, **kwargs)
+
+
+# ======================================================================
+# A LISTA DE MONTAGEM: A FILA E AS ETAPAS DA PRODUÇÃO (LEIA-ME-V10, seção 108)
+# ======================================================================
+# "Lista de montagem com todos os brinquedos que tem pra montar" -- e as
+# regras do dono que vieram junto: a máquina normal leva de 4 a 5 dias
+# úteis conforme o volume (m³), em 7 etapas (corte de MDF, montagem,
+# adesivo, eletrônica, finalização, teste de qualidade e embalagem); no
+# máximo 3 em montagem ao mesmo tempo, o resto espera na FILA (15 a 30
+# dias); brinquedões e espaços esportivos um por vez, 30 dias cada; peças
+# de reposição em 3 dias. A regra mora em `montagem.py`; aqui só o que
+# fica gravado.
+
+PALAVRAS_DE_PROJETO_PADRAO = (
+    "brinquedão, brinquedões, trampolim, trampolins, cama elástica, escalada, "
+    "ninja, espaço esportivo, quadra, playground, parque, casinha, cenográfica"
+)
+
+
+class ConfiguracaoProducao(Prime):
+    """As regras da produção que o painel muda (uma linha só).
+
+    Os padrões são os do dono: 4 dias úteis até 2,5 m³ e 5 acima (sem
+    medida, 5); 3 em montagem ao mesmo tempo; 15 a 30 dias de fila;
+    brinquedões um por vez, 30 dias cada; peças em 3 dias.
+    """
+
+    limite_m3 = models.DecimalField(
+        "Até quantos m³ a máquina é de montagem curta",
+        max_digits=6, decimal_places=2, default=Decimal("2.50"),
+        validators=[MinValueValidator(Decimal("0.10")), MaxValueValidator(Decimal("99"))],
+    )
+    dias_ate_limite = models.PositiveSmallIntegerField(
+        "Dias úteis até o limite", default=4,
+        validators=[MinValueValidator(1), MaxValueValidator(60)],
+    )
+    dias_acima_limite = models.PositiveSmallIntegerField(
+        "Dias úteis acima do limite (e sem medida)", default=5,
+        validators=[MinValueValidator(1), MaxValueValidator(60)],
+    )
+    dias_pecas = models.PositiveSmallIntegerField(
+        "Dias úteis das peças de reposição e dos kits", default=3,
+        validators=[MinValueValidator(1), MaxValueValidator(60)],
+    )
+    dias_projeto = models.PositiveSmallIntegerField(
+        "Dias úteis de cada brinquedão / espaço", default=30,
+        validators=[MinValueValidator(1), MaxValueValidator(250)],
+    )
+    capacidade_maquinas = models.PositiveSmallIntegerField(
+        "Máquinas em montagem ao mesmo tempo", default=3,
+        validators=[MinValueValidator(1), MaxValueValidator(50)],
+    )
+    capacidade_projetos = models.PositiveSmallIntegerField(
+        "Brinquedões em montagem ao mesmo tempo", default=1,
+        validators=[MinValueValidator(1), MaxValueValidator(20)],
+    )
+    fila_min_dias = models.PositiveSmallIntegerField(
+        "Fila das máquinas: mínimo (dias úteis)", default=15,
+        validators=[MaxValueValidator(250)],
+    )
+    fila_max_dias = models.PositiveSmallIntegerField(
+        "Fila das máquinas: máximo (dias úteis)", default=30,
+        validators=[MaxValueValidator(250)],
+    )
+    categorias_projeto = models.ManyToManyField(
+        "core.CategoriasBrinquedos",
+        blank=True,
+        related_name="+",
+        verbose_name="Categorias de brinquedão / espaço",
+    )
+    palavras_projeto = models.TextField(
+        "Palavras de brinquedão / espaço",
+        blank=True,
+        default=PALAVRAS_DE_PROJETO_PADRAO,
+        help_text="Separadas por vírgula; valem no nome do brinquedo e da categoria.",
+    )
+
+    class Meta:
+        verbose_name = "Regras da produção"
+        verbose_name_plural = "Regras da produção"
+
+
+class ProducaoOrigem(Prime):
+    """Um pedido do site ou um orçamento aprovado, na produção.
+
+    Uma linha por origem: guarda o que é DELA (a chegada, que ordena a
+    fila; o dia em que ficou pronta e em que foi entregue; as etapas que
+    o cliente acompanha; os avisos já mandados). As máquinas, uma a uma,
+    são as `UnidadeMontagem`.
+    """
+
+    class Situacao(models.TextChoices):
+        FILA = "fila", "Na fila"
+        PRODUCAO = "producao", "Em produção"
+        PRONTA = "pronta", "Pronta"
+        ENTREGUE = "entregue", "Entregue"
+        CANCELADA = "cancelada", "Cancelada"
+
+    pedido = models.OneToOneField(
+        "core.Pedido", on_delete=models.CASCADE, null=True, blank=True, related_name="producao",
+    )
+    orcamento = models.OneToOneField(
+        Orcamento, on_delete=models.CASCADE, null=True, blank=True, related_name="producao",
+    )
+    chegada = models.DateTimeField("Entrou na produção em", db_index=True)
+    situacao = models.CharField(max_length=10, choices=Situacao.choices, default=Situacao.FILA, db_index=True)
+    pronto_em = models.DateTimeField(null=True, blank=True)
+    entregue_em = models.DateTimeField(null=True, blank=True)
+    cancelada_em = models.DateTimeField(null=True, blank=True)
+    #: O dia em que cada etapa ficou feita na ORIGEM (todas as máquinas).
+    etapas_em = models.JSONField(default=dict, blank=True)
+    #: {"enviados": [...], "pendentes": [...], "ultimo": "aaaa-mm-dd"}
+    avisos = models.JSONField(default=dict, blank=True)
+    #: O prazo de produção da origem foi escrito pela lista (e não pela
+    #: equipe): enquanto for, ele acompanha a previsão.
+    prazo_automatico = models.BooleanField(default=False)
+    #: A lista levou o pedido de retirada a "Pronto para retirada".
+    avancou_origem = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Produção de um pedido ou orçamento"
+        verbose_name_plural = "Produção dos pedidos e orçamentos"
+        ordering = ("chegada", "id")
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(pedido__isnull=False, orcamento__isnull=True)
+                    | models.Q(pedido__isnull=True, orcamento__isnull=False)
+                ),
+                name="producao_de_uma_origem_so",
+            ),
+        ]
+
+    def __str__(self):
+        if self.pedido_id:
+            return f"Produção do pedido #{self.pedido_id}"
+        return f"Produção do orçamento #{self.orcamento_id}"
+
+
+class UnidadeMontagem(Prime):
+    """Uma máquina (uma unidade) a montar: quantidade 3 são 3 linhas."""
+
+    class Trilha(models.TextChoices):
+        MAQUINA = "maquina", "Máquina"
+        PROJETO = "projeto", "Brinquedão / espaço"
+        PECA = "peca", "Peça de reposição"
+        KIT = "kit", "Kit eletrônico"
+
+    class Situacao(models.TextChoices):
+        FILA = "fila", "Na fila"
+        PRODUCAO = "producao", "Em produção"
+        PRONTA = "pronta", "Pronta"
+        ENTREGUE = "entregue", "Entregue"
+        CANCELADA = "cancelada", "Cancelada"
+
+    producao = models.ForeignKey(ProducaoOrigem, on_delete=models.CASCADE, related_name="unidades")
+    item_pedido = models.ForeignKey(
+        "core.ItemPedido", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    item_orcamento = models.ForeignKey(
+        ItemOrcamento, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    numero = models.PositiveSmallIntegerField(default=1)
+    de = models.PositiveSmallIntegerField(default=1)
+    nome = models.CharField(max_length=200)
+    variante = models.CharField("Adesivo / variante", max_length=80, blank=True)
+    brinquedo = models.ForeignKey(
+        "core.Brinquedos", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    peca = models.ForeignKey(
+        "core.PecasReposicao", on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    trilha = models.CharField(max_length=10, choices=Trilha.choices, default=Trilha.MAQUINA, db_index=True)
+    situacao = models.CharField(max_length=10, choices=Situacao.choices, default=Situacao.FILA, db_index=True)
+    #: A última etapa concluída ("" = nenhuma).
+    etapa = models.CharField(max_length=20, blank=True)
+    #: Quando cada etapa foi concluída ({"corte": "2026-11-18T10:00:00-03:00"}).
+    etapas_em = models.JSONField(default=dict, blank=True)
+    #: A data prevista de cada etapa ({"corte": "2026-11-19"}), calculada ao entrar.
+    previstas = models.JSONField(default=dict, blank=True)
+    dias = models.PositiveSmallIntegerField("Dias úteis de montagem", null=True, blank=True)
+    #: A ordem na fila (menor sai primeiro). Vazio fora da fila.
+    posicao = models.PositiveIntegerField(null=True, blank=True)
+    chegada = models.DateTimeField(db_index=True)
+    entrou_em = models.DateTimeField("Entrou em montagem em", null=True, blank=True)
+    previsao_de = models.DateField(null=True, blank=True)
+    previsao_ate = models.DateField(null=True, blank=True)
+    atualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+
+    class Meta:
+        verbose_name = "Unidade a montar"
+        verbose_name_plural = "Lista de montagem"
+        ordering = ("chegada", "producao_id", "id")
+        indexes = [
+            models.Index(fields=("trilha", "situacao"), name="montagem_trilha_situacao_idx"),
+        ]
+
+    def __str__(self):
+        return f"{self.nome} ({self.numero}/{self.de})"

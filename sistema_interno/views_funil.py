@@ -190,6 +190,22 @@ class PrazoProducaoView(FunilMixin, View):
             campos.append("producao_inicio")
         # `save` com a lista: o sinal do pedido só olha mudança de situação.
         alvo.save(update_fields=campos)
+        # O prazo agora é da EQUIPE: a lista de montagem para de escrever por
+        # cima dele (seção 108). Apagado, a lista volta a preencher.
+        from .models import ProducaoOrigem
+
+        ProducaoOrigem.objects.filter(
+            **({"orcamento": alvo} if isinstance(alvo, Orcamento) else {"pedido": alvo}),
+        ).update(prazo_automatico=False)
+        if dias is None:
+            from . import montagem
+
+            producao = ProducaoOrigem.objects.filter(
+                **({"orcamento": alvo} if isinstance(alvo, Orcamento) else {"pedido": alvo}),
+            ).first()
+            if producao is not None:
+                montagem.acertar_origem(producao)
+                alvo.refresh_from_db()
 
         dados = dados_do_prazo(alvo)
         if dias is None:

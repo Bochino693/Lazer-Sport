@@ -1,0 +1,54 @@
+{% comment %}
+  UMA MÁQUINA EM PRODUÇÃO (OU PRONTA) NA LISTA DE MONTAGEM (seção 108).
+
+  As etapas são rádios dentro de <label> (chips): o marcado é a ÚLTIMA
+  etapa feita; marcar uma da frente conclui as do meio (com o mesmo dia),
+  marcar uma de trás é correção e pergunta antes (lista-montagem.js, pela
+  folha do LSAviso). Embaixo de cada chip, o dia em que ficou feita ou a
+  previsão dela (o prazo de 4 ou 5 dias úteis dividido pelas etapas).
+{% endcomment %}
+<tr data-montagem-unidade="{{ u.pk }}" data-visao-nome="{{ u.nome }}">
+  <td data-rotulo="Máquina">
+    <strong class="lm-nome">{{ u.nome }}</strong>
+    {% if u.variante %}<span class="lm-variante"><i class="bi bi-palette" aria-hidden="true"></i> adesivo {{ u.variante }}</span>{% endif %}
+    <span class="ls-sub">{% if u.de > 1 %}Unidade {{ u.numero }} de {{ u.de }} · {% endif %}{{ u.trilha_texto }}{% if u.dias_texto %} · {{ u.dias_texto }}{% endif %}{% if u.volume_texto %} ({{ u.volume_texto }}){% endif %}</span>
+  </td>
+  <td data-rotulo="Origem">
+    <a class="lm-origem" href="{{ u.origem.url }}"><i class="bi {{ u.origem.icone }}" aria-hidden="true"></i> {{ u.origem.rotulo }}</a>
+    <span class="ls-sub">{{ u.origem.cliente }}</span>
+  </td>
+  <td data-rotulo="Prazo">
+    {% if u.situacao == "pronta" or u.situacao == "entregue" %}
+      <span class="lm-prazo ok"><i class="bi bi-check2-circle" aria-hidden="true"></i> {% if u.situacao == "entregue" %}Entregue{% else %}Pronta{% endif %}</span>
+      {% if u.previsao_texto %}<span class="ls-sub">em {{ u.previsao_texto }}</span>{% endif %}
+    {% else %}
+      <span class="lm-prazo"><i class="bi bi-calendar-check" aria-hidden="true"></i> {{ u.previsao_texto|default:"sem previsão" }}</span>
+      {% if u.entrou_em %}<span class="ls-sub">entrou em {{ u.entrou_em|date:"d/m" }}</span>{% endif %}
+    {% endif %}
+  </td>
+  <td data-rotulo="Etapas" class="lm-celula-etapas">
+    <fieldset class="lm-etapas" data-montagem-etapas="{{ u.pk }}" data-montagem-nome="{{ u.nome }}{% if u.de > 1 %} ({{ u.numero }}/{{ u.de }}){% endif %}"{% if not pode_mexer or u.situacao == "entregue" %} disabled{% endif %}>
+      <legend class="visually-hidden">Etapas de {{ u.nome }}</legend>
+      <label class="lm-etapa inicio"><input type="radio" name="etapa-{{ u.pk }}" value="" data-ordem="0"{% if not u.etapa %} checked{% endif %}><i class="bi bi-hourglass" aria-hidden="true"></i><span>A começar</span></label>
+      {% for e in u.etapas_vista %}
+        <label class="lm-etapa {{ e.estado }}"><input type="radio" name="etapa-{{ u.pk }}" value="{{ e.chave }}" data-ordem="{{ forloop.counter }}"{% if e.marcada %} checked{% endif %}><i class="bi {{ e.icone }}" aria-hidden="true"></i><span>{{ e.nome }}</span>{% if e.nota %}<small>{{ e.nota }}</small>{% endif %}</label>
+      {% endfor %}
+    </fieldset>
+  </td>
+  <td data-rotulo="Ações" class="lm-acoes">
+    <div class="lm-acoes-linha">
+      {% if ve_tudo or u.origem.tipo == "orcamento" %}
+      <button type="button" class="btn btn-sm btn-outline-primary" data-etiquetas-url="{{ u.origem.etiquetas }}" aria-haspopup="dialog" title="Etiquetas das máquinas de {{ u.origem.rotulo }}">
+        <i class="bi bi-upc-scan" aria-hidden="true"></i> Etiquetas
+      </button>
+      {% endif %}
+      {% if u.situacao == "pronta" %}
+        {% if u.origem.tipo == "orcamento" %}
+          {% if pode_mexer %}<button type="button" class="btn btn-sm btn-success" data-montagem-entregue="{{ u.pk }}" data-montagem-origem="{{ u.origem.rotulo }}"><i class="bi bi-flag-fill" aria-hidden="true"></i> Entregue</button>{% endif %}
+        {% else %}
+          <a class="lm-proximo" href="{{ u.origem.url }}"><i class="bi bi-arrow-right-circle" aria-hidden="true"></i> {% if u.origem.retirada %}{{ u.origem.situacao }}{% else %}Informe o envio em Pedidos{% endif %}</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </td>
+</tr>

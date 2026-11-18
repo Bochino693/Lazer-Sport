@@ -87,6 +87,7 @@
             <!-- PREÇOS -->
             <div class="combo-precos">
                 {% preco_pix_cartao combo.valor_combo de=combo.total_original rotulo="Preço especial do combo" sem_juros=combo.sem_juros_no_cartao %}
+                {% prazo_de_entrega combo %}
 
                 <div class="combo-saving">
                     <i class="fa-solid fa-piggy-bank" aria-hidden="true"></i>

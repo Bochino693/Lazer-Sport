@@ -245,6 +245,8 @@
                         <span class="produto-preco-nota">
                             Valor unitário. Retirada na fábrica; o frete é por conta do cliente.
                         </span>
+                        {# quando fica pronto: a montagem pelo m³ e a fila da fábrica (seção 108) #}
+                        {% prazo_de_entrega brinquedo %}
                     </div>
                 {% else %}
                     <div class="produto-compra consulta">

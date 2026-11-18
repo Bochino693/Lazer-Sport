@@ -1,0 +1,15 @@
+Olá, {{ nome }}!
+
+{{ titulo }}: a fábrica avançou com a sua compra.
+{% for fato in fatos %}
+- {{ fato }}{% endfor %}
+{% if previsao %}
+Entrega: {{ previsao }}.
+{% endif %}{% for grupo in grupos %}
+{% if grupo.titulo %}{{ grupo.titulo }}{% else %}As etapas{% endif %}:{% for etapa in grupo.etapas %}
+[{% if etapa.estado == 'feita' %}x{% else %} {% endif %}] {{ etapa.nome }}{% if etapa.nota %} — {{ etapa.nota }}{% endif %}{% endfor %}
+{% endfor %}
+Acompanhe em: {{ url_pedidos }}
+WhatsApp: {{ whatsapp }}
+
+Lazer & Sport Brinquedos

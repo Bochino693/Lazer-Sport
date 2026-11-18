@@ -1,0 +1,176 @@
+/* ======================================================================
+   A LISTA DE MONTAGEM (LEIA-ME-V10, seção 108) -- views_montagem.py
+
+   Só variáveis do tema (sol, lua e eclipse): nenhuma cor escrita à mão,
+   nenhum cartão branco ou cinza. As etapas são chips (rádios dentro de
+   <label>, nunca <select>): a feita em verde com o dia, a de agora acesa,
+   as próximas apagadas com a previsão embaixo. Lista e Cards como as
+   outras listas do painel (a tabela vira cartões pelo interno_modern.css).
+   ====================================================================== */
+
+.lm{display:grid;gap:18px;min-width:0}
+
+/* ---------------- os filtros ---------------- */
+.lm-filtros{
+  display:grid;gap:12px;padding:14px 16px;min-width:0;
+  border:1px solid var(--line);border-radius:var(--radius-lg);
+  background:linear-gradient(180deg,var(--acento-fundo),var(--panel) 70%);
+}
+.lm-filtro{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;align-items:start;min-width:0}
+.lm-filtro-rotulo{
+  padding-top:9px;color:var(--muted);font-size:.68rem;font-weight:950;
+  letter-spacing:.075em;text-transform:uppercase;
+}
+.lm-chips{display:flex;flex-wrap:wrap;gap:7px;min-width:0}
+.lm-chip{
+  position:relative;display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:6px 13px;
+  border:1px solid var(--line);border-radius:999px;background:var(--panel-2);
+  color:var(--text);font-size:.82rem;font-weight:850;line-height:1.15;text-decoration:none;cursor:pointer;
+  max-width:100%;
+}
+.lm-chip:hover{border-color:var(--acento-linha);background:var(--acento-fundo);color:var(--text)}
+.lm-chip:focus-visible,.lm-chip:has(input:focus-visible){outline:2px solid var(--acento);outline-offset:2px}
+.lm-chip.is-ativo,.lm-chip:has(input:checked){
+  border-color:var(--acento);background:rgba(var(--acento-rgb),.2);color:var(--acento-claro);
+  box-shadow:0 0 0 1px rgba(var(--acento-rgb),.35);
+}
+.lm-chip-brinquedo{flex-direction:column;align-items:flex-start;gap:1px;border-radius:14px;padding:6px 12px}
+.lm-chip-brinquedo strong{font-size:.82rem;font-weight:900;overflow-wrap:anywhere}
+.lm-chip-brinquedo small{color:var(--text-2);font-size:.7rem;font-weight:750}
+.lm-chip-brinquedo.is-ativo small{color:var(--acento-claro)}
+.lm-chip-marca input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.lm-chip-marca:has(input:checked)::before{content:"\2713";font-weight:900}
+
+/* ---------------- as seções e os grupos ---------------- */
+.lm-lista{display:grid;gap:14px;min-width:0;padding:4px 16px 18px}
+/* o contêiner tem GRUPOS de tabelas (e não uma tabela só): a regra comum do
+   "cartão que vira linha" (interno_modern.css) não vale aqui */
+.ls-content #lmLista.ls-visao-alvo{
+  display:grid!important;gap:14px!important;padding:4px 16px 18px!important;
+  border:0;border-radius:0;background:transparent;overflow:visible;
+}
+.lm-secao{
+  display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;margin:8px 0 0;
+  color:var(--text);font-size:1rem;font-weight:950;
+}
+.lm-secao i{color:var(--acento-texto)}
+.lm-secao small{color:var(--text-2);font-size:.76rem;font-weight:750}
+.lm-grupo{
+  min-width:0;border:1px solid var(--line);border-radius:var(--radius-lg);
+  background:var(--panel);overflow:hidden;
+}
+.lm-grupo-cabeca{
+  display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;
+  padding:10px 14px;border-bottom:1px solid var(--line-soft);background:var(--acento-fundo);
+}
+.lm-grupo-cabeca strong{color:var(--text);font-size:.95rem;font-weight:950}
+.lm-grupo-cabeca span{color:var(--acento-claro);font-size:.78rem;font-weight:850}
+.lm-tabela{width:100%;min-width:0}
+/* na lista, as colunas de todos os grupos alinham (a mesma largura em cada tabela) */
+.ls-content .lm-lista[data-visao="lista"] .lm-tabela{table-layout:fixed}
+.ls-content .lm-lista[data-visao="lista"] .lm-tabela:not(.lm-tabela-fila) th:nth-child(1){width:22%}
+.ls-content .lm-lista[data-visao="lista"] .lm-tabela:not(.lm-tabela-fila) th:nth-child(2){width:17%}
+.ls-content .lm-lista[data-visao="lista"] .lm-tabela:not(.lm-tabela-fila) th:nth-child(3){width:11%}
+.ls-content .lm-lista[data-visao="lista"] .lm-tabela:not(.lm-tabela-fila) th:nth-child(5){width:13%}
+.ls-content .lm-lista[data-visao="lista"] .lm-tabela-fila th:nth-child(1){width:9%}
+.ls-content .lm-lista[data-visao="lista"] .lm-tabela-fila th:nth-child(4){width:11%}
+.ls-content .lm-lista[data-visao="lista"] .lm-tabela-fila th:nth-child(6){width:11%}
+.lm-acoes .btn{white-space:nowrap}
+.lm-tabela td{vertical-align:top}
+.lm-nome{display:block;color:var(--text);font-weight:900;overflow-wrap:anywhere}
+.lm-variante{
+  display:inline-flex;align-items:center;gap:4px;margin:3px 0 2px;padding:2px 8px;border-radius:999px;
+  background:rgba(var(--violet-rgb),.14);color:var(--violet-claro);font-size:.72rem;font-weight:850;
+}
+.lm-origem{display:inline-flex;align-items:center;gap:5px;color:var(--acento-texto);font-weight:850;text-decoration:none}
+.lm-origem:hover{text-decoration:underline}
+.lm-prazo{display:inline-flex;align-items:center;gap:5px;color:var(--text);font-size:.82rem;font-weight:850;white-space:nowrap}
+.lm-prazo.ok{color:var(--green-texto)}
+.lm-prazo.fila{color:var(--yellow-texto);white-space:normal}
+
+/* ---------------- as etapas em chips ---------------- */
+.lm-celula-etapas{min-width:0}
+.lm-etapas{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;border:0;min-width:0}
+.lm-etapas[aria-busy="true"]{opacity:.55;pointer-events:none}
+.lm-etapa{
+  position:relative;display:inline-grid;grid-template-columns:auto auto;align-items:center;column-gap:5px;
+  min-height:40px;padding:5px 10px;border:1px solid var(--line);border-radius:12px;
+  background:var(--panel-2);color:var(--muted);font-size:.74rem;font-weight:850;line-height:1.15;cursor:pointer;
+}
+.lm-etapa input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.lm-etapa i{font-size:.9rem}
+.lm-etapa small{grid-column:1 / -1;color:var(--muted);font-size:.64rem;font-weight:800}
+.lm-etapa:hover{border-color:var(--acento-linha)}
+.lm-etapa:has(input:focus-visible){outline:2px solid var(--acento);outline-offset:2px}
+.lm-etapa.feita{border-color:var(--green-linha);background:var(--green-fundo);color:var(--green-texto)}
+.lm-etapa.feita small{color:var(--green-texto)}
+.lm-etapa.atual{border-color:var(--acento);background:rgba(var(--acento-rgb),.16);color:var(--acento-claro)}
+.lm-etapa.atual small{color:var(--acento-claro)}
+.lm-etapa:has(input:checked){box-shadow:0 0 0 2px rgba(var(--green-rgb),.45)}
+.lm-etapa.inicio:has(input:checked){box-shadow:0 0 0 2px rgba(var(--acento-rgb),.4);color:var(--text)}
+.lm-etapas:disabled .lm-etapa{cursor:default}
+.lm-etapas:disabled .lm-etapa input{cursor:default}
+
+/* ---------------- as ações e a fila ---------------- */
+.lm-acoes-linha{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.lm-proximo{display:inline-flex;align-items:center;gap:5px;color:var(--green-texto);font-size:.8rem;font-weight:850;text-decoration:none}
+.lm-posicao{
+  display:inline-grid;place-items:center;min-width:38px;height:38px;padding:0 6px;border-radius:12px;
+  background:rgba(var(--yellow-rgb),.16);color:var(--yellow-texto);font-weight:950;
+}
+.lm-ordem{display:inline-flex;gap:6px}
+.lm-seta{
+  display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);border-radius:12px;
+  background:var(--panel-2);color:var(--text);cursor:pointer;
+}
+.lm-seta:hover:not(:disabled){border-color:var(--acento-linha);background:var(--acento-fundo)}
+.lm-seta:disabled{opacity:.35;cursor:default}
+
+/* ---------------- as regras ---------------- */
+.lm-regras details{padding:4px 16px}
+.lm-regras summary{
+  display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 12px;
+  padding:12px 0;cursor:pointer;color:var(--text);font-weight:950;
+}
+.lm-regras summary small{color:var(--text-2);font-weight:750}
+.lm-regras-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px;padding:4px 0 16px}
+.lm-regras-grupo{
+  display:grid;gap:10px;margin:0;padding:12px 14px;min-width:0;
+  border:1px solid var(--line);border-radius:var(--radius-md);background:var(--panel-2);
+}
+.lm-regras-grupo legend{
+  float:none;width:auto;margin:0 0 4px;padding:0;color:var(--text-2);
+  font-size:.72rem;font-weight:950;letter-spacing:.06em;text-transform:uppercase;
+}
+.lm-regras-grupo label{display:grid;gap:4px;color:var(--text);font-size:.82rem;font-weight:800}
+.lm-regras-largo{grid-column:1 / -1}
+.lm-regras-botoes{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+
+/* ---------------- os cards (a tabela que vira cartões) ---------------- */
+.ls-content .lm-lista[data-visao="cards"] .lm-grupo{border:0;background:transparent;overflow:visible}
+.ls-content .lm-lista[data-visao="cards"] .lm-grupo-cabeca{border-radius:var(--radius-md);border:1px solid var(--line-soft)}
+.ls-content .lm-lista[data-visao="cards"] .lm-tabela tbody{padding:12px 0}
+
+/* ---------------- telas pequenas ---------------- */
+@media (max-width:640px){
+  /* no celular a LISTA também empilha: uma máquina por bloco, sem rolar de lado */
+  .ls-content .lm-lista[data-visao="lista"] .lm-tabela{display:block;table-layout:auto}
+  .ls-content .lm-lista[data-visao="lista"] .lm-tabela thead{display:none}
+  .ls-content .lm-lista[data-visao="lista"] .lm-tabela :is(tbody,tr,td){display:block;width:auto!important}
+  .ls-content .lm-lista[data-visao="lista"] .lm-tabela tr{padding:10px 0;border-bottom:1px solid var(--line-soft)}
+  .ls-content .lm-lista[data-visao="lista"] .lm-tabela td{padding:3px 12px!important;border:0!important;text-align:left!important}
+  .ls-content .lm-lista[data-visao="lista"] .lm-tabela td[data-rotulo]:not(:first-child)::before{
+    content:attr(data-rotulo);display:block;margin:4px 0 2px;color:var(--muted);
+    font-size:.64rem;font-weight:950;letter-spacing:.075em;text-transform:uppercase;
+  }
+  .ls-content .lm-lista .table-responsive{overflow:visible}
+  .ls-content #lmLista.ls-visao-alvo{padding:4px 10px 14px!important}
+  .lm-filtro{grid-template-columns:minmax(0,1fr);gap:4px}
+  /* os brinquedos numa fileira que corre de lado (dentro dela; a página não rola) */
+  .lm-chips-brinquedos{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+  .lm-chips-brinquedos .lm-chip{flex:0 0 auto}
+  .lm-filtro-rotulo{padding-top:0}
+  .lm-etapa{min-height:44px}
+  .lm-chip{min-height:42px}
+  .lm-regras details{padding:4px 12px}
+}

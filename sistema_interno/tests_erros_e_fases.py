@@ -177,6 +177,17 @@ class SituacaoTravadaTests(TestCase):
         orcamento.refresh_from_db()
         self.assertEqual(orcamento.status, Orcamento.Status.EM_NEGOCIACAO)
 
+    def test_com_pagamento_parcial_nao_ganha_outra_versao(self):
+        """Refazer deixaria o dinheiro registrado numa proposta "substituída"."""
+        orcamento = orcamento_aprovado()
+        orcamento.registrar_pagamento(Decimal("100"))
+        self.assertFalse(orcamento.pode_refazer)
+        resposta = self.client.post("/orcamentos/", {"action": "refazer", "id": orcamento.pk}, **AJAX)
+        self.assertEqual(resposta.status_code, 400)
+        self.assertIn("pagamento registrado", resposta.json()["msg"])
+        orcamento.refresh_from_db()
+        self.assertEqual(orcamento.status, Orcamento.Status.APROVADO)
+
     def test_aprovada_sem_assinatura_nem_pagamento_ainda_muda(self):
         orcamento = orcamento_aprovado()
         self.assertEqual(self.mudar(orcamento, "recusado").status_code, 200)

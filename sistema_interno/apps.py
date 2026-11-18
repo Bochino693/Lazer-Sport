@@ -14,6 +14,9 @@ class SistemaInternoConfig(AppConfig):
         é isso que estes ouvintes resolvem: gravou neste processo, o
         resumo cai na hora. Ver `pulso.py`.
         """
-        from . import pulso
+        from . import pulso, signals_montagem
 
         pulso.ligar_ouvintes()
+        # A lista de montagem acompanha o pedido pago e o orçamento
+        # aprovado sozinha (LEIA-ME-V10, seção 108).
+        signals_montagem.ligar()

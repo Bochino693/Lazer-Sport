@@ -8267,7 +8267,10 @@ class MeusPedidosView(LoginRequiredMixin, View):
         pedidos = _pedidos_com_foto(
             Pedido.objects
             .filter(cliente=perfil)
-            .select_related('carrinho_origem__frete')
+            # a produção de cada pedido (a fila e as etapas, seção 108) vem
+            # junto: nenhuma consulta a mais por pedido
+            .select_related('carrinho_origem__frete', 'producao')
+            .prefetch_related('producao__unidades')
             .order_by('-criacao')
         )
 
@@ -8277,8 +8280,14 @@ class MeusPedidosView(LoginRequiredMixin, View):
         # próprio pedido -- nenhuma consulta a mais por pedido.
         from .fases_pedido import acompanhamento_do_pedido
 
+        from sistema_interno.montagem import producao_vista_do_pedido
+
         for pedido in pedidos:
             pedido.andamento = acompanhamento_do_pedido(pedido)
+            # A FILA E AS ETAPAS DA FÁBRICA (LEIA-ME-V10, seção 108): a nota
+            # da Produção diz a posição na fila ou a etapa de agora, e as
+            # etapas aparecem embaixo da linha do tempo.
+            pedido.producao_vista = producao_vista_do_pedido(pedido)
 
         # o quadro do lado: quantos pedidos em cada momento da compra
         resumo = {'aguardando': 0, 'andamento': 0, 'finalizados': 0}

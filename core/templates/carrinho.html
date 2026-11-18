@@ -380,6 +380,8 @@
                       acompanha o total.
                     {% endcomment %}
                     <p class="ck-parcelamento" id="parcelamentoCarrinho" aria-live="polite"></p>
+                    {# quando fica pronto, com as máquinas do carrinho juntas na fila (seção 108) #}
+                    {% if itens %}{% prazo_de_entrega carrinho=carrinho %}{% endif %}
                 </div><!-- resumo-box -->
 
                 {% comment %}

@@ -297,9 +297,11 @@ def orcamentos_da_conta(usuario):
     return (
         Orcamento.objects
         .filter(conta=usuario, orcamento_refeito__isnull=True)
-        .select_related("ordem_servico")
+        # a produção (a fila e as etapas, seção 108) vem junto
+        .select_related("ordem_servico", "producao")
         .prefetch_related(
             "itens",
+            "producao__unidades",
             Prefetch(
                 "documentos_assinatura",
                 queryset=DocumentoAssinatura.objects
@@ -355,6 +357,8 @@ class Acompanhamento:
     aviso: str = ""
     #: A conversa com a equipe já escrita (posta pela tela do site).
     whatsapp: str = ""
+    #: A fila e as etapas da fábrica (sistema_interno.montagem, seção 108).
+    producao: object = None
 
     @property
     def fase_atual(self):
@@ -426,7 +430,21 @@ def acompanhamento(orcamento, *, hoje=None) -> Acompanhamento:
         documento and not assinado and svc_doc.motivo_da_suspensao(documento, orcamento)
     )
     ordem = _ordem_servico(orcamento)
-    concluido = bool(ordem and ordem.status == OrdemServico.Status.CONCLUIDA)
+    # A LISTA DE MONTAGEM (seção 108): a fila, as etapas, o pronto e o
+    # entregue da fábrica -- o mesmo fato que a equipe marca no painel.
+    from .montagem import _producao_ja_lida, acompanhamento_da_producao
+
+    fabrica = _producao_ja_lida(orcamento) if orcamento.pk else None
+    if fabrica is None and orcamento.pk and "producao" not in orcamento._state.fields_cache:
+        from .models import ProducaoOrigem
+
+        fabrica = (
+            ProducaoOrigem.objects.filter(orcamento=orcamento)
+            .exclude(situacao=ProducaoOrigem.Situacao.CANCELADA).first()
+        )
+    vista = acompanhamento_da_producao(fabrica) if fabrica is not None else None
+    entregue_na_lista = bool(fabrica and fabrica.situacao == fabrica.Situacao.ENTREGUE)
+    concluido = bool(ordem and ordem.status == OrdemServico.Status.CONCLUIDA) or entregue_na_lista
     pct = percentual_pago(orcamento)
 
     proposta = Fase("proposta", "Proposta")
@@ -434,7 +452,9 @@ def acompanhamento(orcamento, *, hoje=None) -> Acompanhamento:
     termo = Fase("termo", "Termo assinado")
     pagamento = Fase("pagamento", "Pagamento")
     producao = Fase("producao", "Produção")
-    entrega = Fase("entrega", "Concluído")
+    # "Entregue", o mesmo nome da última fase do pedido do site: os dois
+    # funis terminam igual (seção 108)
+    entrega = Fase("entrega", "Entregue")
     fases = [proposta, aprovacao, termo, pagamento, producao, entrega]
 
     # 1. A PROPOSTA
@@ -507,12 +527,21 @@ def acompanhamento(orcamento, *, hoje=None) -> Acompanhamento:
         producao.nota = orcamento.prazo_para_o_cliente
     elif aprovado:
         producao.nota = "A equipe informa o prazo"
+    if vista is not None:
+        producao.nota = vista.nota
+        if vista.pronta:
+            producao.estado = "feita"
 
-    # 6. CONCLUÍDO (a O.S. da entrega/instalação, quando a equipe abriu)
+    # 6. CONCLUÍDO (a O.S. da entrega/instalação, ou a entrega marcada na
+    # lista de montagem)
     if concluido:
         producao.estado = "feita"
         entrega.estado = "feita"
-        entrega.nota = f"Em {_dia(ordem.concluida_em)}" if ordem.concluida_em else "Concluído"
+        quando = ordem.concluida_em if (ordem and ordem.status == OrdemServico.Status.CONCLUIDA) else None
+        quando = quando or (fabrica.entregue_em if entregue_na_lista else None)
+        entrega.nota = f"Entregue em {_dia(quando)}" if quando else "Entregue"
+    elif vista is not None and vista.pronta:
+        entrega.nota = "Pronta: a equipe combina a entrega"
     elif ordem and ordem.agendada_para and ordem.status != OrdemServico.Status.CANCELADA:
         entrega.nota = f"Agendado para {_dia(ordem.agendada_para)}"
     elif aprovado:
@@ -540,9 +569,11 @@ def acompanhamento(orcamento, *, hoje=None) -> Acompanhamento:
     elif status == Status.AGUARDANDO_RESPOSTA:
         situacao, texto, cor = "resposta", "Esperando sua resposta", "amarelo"
     elif concluido:
-        situacao, texto, cor = "concluido", "Concluído", "verde"
+        situacao, texto, cor = "concluido", "Entregue", "verde"
     elif not assinado and documento is not None and not suspenso:
         situacao, texto, cor = "assinar", "Falta assinar o termo", "amarelo"
+    elif vista is not None and vista.pronta:
+        situacao, texto, cor = "producao", "Pronta para a entrega", "verde"
     elif orcamento.quitado:
         situacao, texto, cor = "producao", "Pago · em produção", "verde"
     elif orcamento.status_pagamento == Orcamento.StatusPagamento.PARCIAL:
@@ -579,6 +610,7 @@ def acompanhamento(orcamento, *, hoje=None) -> Acompanhamento:
         # proposta, nem o link dela abre (ver `OrcamentoPublicoView`).
         itens=list(orcamento.itens.all()) if publicado else [],
         aviso=aviso,
+        producao=vista,
     )
 
 

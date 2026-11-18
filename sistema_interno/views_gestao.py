@@ -1566,6 +1566,13 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "apontando para ela. Para o que vier depois, abra uma "
                 "proposta nova."
             )
+        if (orcamento.valor_pago or 0) > 0:
+            return (
+                "Esta proposta já tem pagamento registrado e não ganha outra "
+                "versão: o dinheiro recebido ficaria numa proposta "
+                "substituída. Zere o pagamento primeiro (Pagamento → “Nada "
+                "ainda”) ou abra uma proposta nova."
+            )
         if hasattr(orcamento, "ordem_servico"):
             return (
                 "Esta proposta já originou uma O.S. e não pode ganhar outra "
