@@ -269,7 +269,7 @@ class Regras:
             from core.models import Brinquedos
 
             self._catalogo = sorted(
-                Brinquedos.objects.only("pk", "nome_brinquedo", "altura_m", "largura_m", "profundidade_m"),
+                Brinquedos.objects.only("pk", "nome_brinquedo", "eh_kit", "altura_m", "largura_m", "profundidade_m"),
                 key=lambda b: -len(b.nome_brinquedo or ""),
             )
             self.carregar_categorias(self._catalogo)
@@ -303,6 +303,10 @@ class Linha:
 
 def _linha_do_brinquedo(regras, brinquedo, quantidade, variante="", nome="", dias_projeto=None, **origem):
     nome = nome or brinquedo.nome_brinquedo
+    # o kit eletrônico é um produto (LEIA-ME 107), mas sai como peça: separado,
+    # com a eletrônica testada e embalado, em 3 dias, sem a fila das máquinas
+    if getattr(brinquedo, "eh_kit", False):
+        return Linha(nome, quantidade, "kit", regras.config.dias_pecas, variante, brinquedo=brinquedo, **origem)
     if regras.e_projeto(brinquedo, nome):
         return Linha(nome, quantidade, "projeto", dias_projeto or regras.config.dias_projeto,
                      variante, brinquedo=brinquedo, **origem)
@@ -311,8 +315,7 @@ def _linha_do_brinquedo(regras, brinquedo, quantidade, variante="", nome="", dia
 
 
 def _linha_da_peca(regras, peca, quantidade, nome="", **origem):
-    trilha = "kit" if getattr(peca, "eh_kit", False) else "peca"
-    return Linha(nome or str(peca), quantidade, trilha, regras.config.dias_pecas, peca=peca, **origem)
+    return Linha(nome or str(peca), quantidade, "peca", regras.config.dias_pecas, peca=peca, **origem)
 
 
 def _linha_pelo_nome(regras, descricao, quantidade, dias_projeto=None, **origem):

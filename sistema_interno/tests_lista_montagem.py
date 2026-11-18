@@ -159,7 +159,9 @@ class ClassificacaoTests(Base):
 
     def test_peca_tres_dias_e_kit_com_eletronica_e_teste(self):
         peca = PecasReposicao.objects.create(nome="Maneta", descricao_peca="x", preco_venda=Decimal("10"))
-        kit = PecasReposicao.objects.create(nome="Kit Strike", descricao_peca="x", preco_venda=Decimal("10"), eh_kit=True)
+        kit = brinquedo("Kit Strike", (0.3, 0.3, 0.2))
+        type(kit).objects.filter(pk=kit.pk).update(eh_kit=True)
+        kit.refresh_from_db()
         pedido = self.pedido([(peca, 2, None), (kit, 1, None)])
         trilhas = sorted((u.trilha, u.dias, u.situacao) for u in self.unidades(pedido))
         self.assertEqual(trilhas, [("kit", 3, S.PRODUCAO), ("peca", 3, S.PRODUCAO), ("peca", 3, S.PRODUCAO)])

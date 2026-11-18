@@ -138,8 +138,9 @@ class SituacaoTravadaTests(TestCase):
         }, **AJAX)
 
     def assinar(self, orcamento):
-        from sistema_interno.tests_documento_assinatura import png_de_assinatura
+        from sistema_interno.tests_documento_assinatura import png_de_assinatura, preencher_dados_do_contrato
 
+        preencher_dados_do_contrato()  # o contrato exige os dados do vendedor (LEIA-ME 109)
         documento = svc.gerar(orcamento, self.vendas)
         svc.assinar(
             documento, nome="Clara Fases", cpf_cnpj="52998224725",

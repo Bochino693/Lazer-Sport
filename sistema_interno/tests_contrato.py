@@ -503,8 +503,12 @@ class ContratoTests(BaseDocumento):
         com_prazo = self.com_itens({"descricao": "Brinquedão", "quantidade": 1, "valor_unitario": Decimal("90000")}, prazo_producao_dias=30)
         terceira = self.secoes(svc.gerar(com_prazo, self.vendedor).conteudo)[2]
         self.assertIn("no prazo de 30 (trinta) dias úteis após a confirmação do pagamento.", terceira["texto"])
+        # sem prazo digitado: o da lista de montagem (montagem + fila, LEIA-ME 112), o maior da faixa
+        from . import montagem
+
+        dias = montagem.prazo_de_entrega(self.orcamento).dias_max
         sem_prazo = self.secoes(self.gerar().conteudo)[2]
-        self.assertIn("no prazo de 45 (quarenta e cinco) dias úteis", sem_prazo["texto"])
+        self.assertIn(f"no prazo de {dias:02d} (", sem_prazo["texto"])
 
     def test_fecho_com_a_cidade_e_a_data_por_extenso(self):
         from .tests_documento_assinatura import preencher_dados_do_contrato
@@ -592,7 +596,9 @@ class ContratoTests(BaseDocumento):
         self.client.force_login(self.vendedor)
         antes = self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/", **INTERNO).content.decode()
         self.assertIn("Entrega (Cláusula 3ª)", antes)
-        self.assertIn("45 dias úteis", antes)
+        from . import montagem
+
+        self.assertIn(f"{montagem.prazo_de_entrega(self.orcamento).dias_max} dias úteis", antes)
         self.gerar()
         depois = self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/", **INTERNO).content.decode()
         self.assertIn(REPRESENTANTE_FICTICIO["representante_nome"], depois)
