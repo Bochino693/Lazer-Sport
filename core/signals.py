@@ -202,7 +202,7 @@ def _invalidar_contexto_global(sender, **kwargs):
 # prontos.
 from sistema_interno.models import Cliente as _ClienteDoPainel  # noqa: E402
 
-for _modelo in (CategoriasBrinquedos, Estabelecimentos, _ClienteDoPainel):
+for _modelo in (CategoriasBrinquedos, Estabelecimentos, _ClienteDoPainel, Eventos):
     _identificador = _modelo._meta.label_lower
     post_save.connect(
         _invalidar_contexto_global,
@@ -269,3 +269,36 @@ def _ligar_anuncios():
 
 
 _ligar_anuncios()
+
+
+def _foto_de_peca_salva(sender, instance, **kwargs):
+    """A foto de peça que a equipe subiu perde o fundo branco depois do commit (LEIA-ME 102).
+
+    Só onde o recorte automático está ligado (no Render: as fotos estão no
+    Cloudinary). A foto já conferida não é conferida de novo; o recorte grava
+    com .update(), então este sinal não volta a rodar por causa dele.
+    """
+    from django.conf import settings
+
+    from . import recorte_peca
+
+    if kwargs.get("raw") or not getattr(settings, "RECORTE_PECAS_AUTOMATICO", False):
+        return
+    if not recorte_peca.precisa_conferir(instance):
+        return
+    pk = instance.pk
+    transaction.on_commit(lambda: recorte_peca.processar_em_segundo_plano(pk), robust=True)
+
+
+def _ligar_recorte_das_pecas():
+    from .models import ImagemPeca
+
+    post_save.connect(
+        _foto_de_peca_salva,
+        sender=ImagemPeca,
+        weak=False,
+        dispatch_uid="core.imagem_peca.sem_fundo",
+    )
+
+
+_ligar_recorte_das_pecas()

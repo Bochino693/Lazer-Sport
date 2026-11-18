@@ -87,10 +87,23 @@
     return quantidade === 1 ? um : varios;
   }
 
-  /* As iniciais numa cor estável (a cor sai do número da conta, não da posição). */
-  function avatar(iniciais, cor, classe) {
+  /* As iniciais numa cor estável (a cor sai do número da conta, não da posição).
+     Com a foto do Google da conta (`foto`, core.presenca.foto_da_conta), a foto
+     vai por cima das iniciais; se não carregar, some e ficam as iniciais. */
+  function avatar(iniciais, cor, classe, foto) {
     var no = el("span", "lsa-avatar is-c" + ((Number(cor) || 0) % CORES_DE_AVATAR) + (classe ? " " + classe : ""), iniciais || "?");
     no.setAttribute("aria-hidden", "true");
+    if (foto) {
+      var img = document.createElement("img");
+      img.alt = "";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.referrerPolicy = "no-referrer";
+      img.addEventListener("error", function () { img.remove(); no.classList.remove("tem-foto"); });
+      img.src = foto;
+      no.classList.add("tem-foto");
+      no.appendChild(img);
+    }
     return no;
   }
 
@@ -539,7 +552,7 @@
       linha.dataset.detalheAtalho = "nao";
       linha.setAttribute("role", "button");
       linha.setAttribute("aria-label", pessoa.nome + ", " + pessoa.papel_rotulo + ": ativo das " + pessoa.de + " às " + pessoa.ate + ". Abrir a ficha");
-      linha.appendChild(avatar(pessoa.iniciais, pessoa.cor, "is-pequeno"));
+      linha.appendChild(avatar(pessoa.iniciais, pessoa.cor, "is-pequeno", pessoa.foto));
       var nome = el("span", "lsa-dia-nome", pessoa.nome);
       linha.appendChild(nome);
       var horario = el("span", "lsa-dia-horas", pessoa.de === pessoa.ate ? pessoa.de : pessoa.de + " – " + pessoa.ate);
@@ -1337,7 +1350,7 @@
     lista.forEach(function (item, i) {
       var li = el("li", "lsa-ranking-item" + (item.avatar ? " tem-avatar" : ""));
       li.appendChild(el("span", "lsa-ranking-pos", i + 1));
-      if (item.avatar) li.appendChild(avatar(item.avatar.iniciais, item.avatar.cor, "is-pequeno" + (item.online ? " is-online" : "")));
+      if (item.avatar) li.appendChild(avatar(item.avatar.iniciais, item.avatar.cor, "is-pequeno" + (item.online ? " is-online" : ""), item.avatar.foto));
       var nome = el("span", "lsa-ranking-nome");
       var titulo = el("span");
       titulo.appendChild(linkDaFicha(item.nome, item.tipo || dados.tipo, item.id, { aba: "graficos", periodo: eu.periodo }));
@@ -1370,7 +1383,7 @@
     var ul = el("ul", "lsa-recentes-lista");
     lista.itens.forEach(function (item) {
       var li = el("li");
-      if (item.avatar) li.appendChild(avatar(item.avatar.iniciais, item.avatar.cor, "is-pequeno"));
+      if (item.avatar) li.appendChild(avatar(item.avatar.iniciais, item.avatar.cor, "is-pequeno", item.avatar.foto));
       var nome = el("span", "lsa-ranking-nome");
       var titulo = el("span");
       titulo.appendChild(linkDaFicha(item.nome, item.tipo, item.id, {}));
@@ -1484,7 +1497,7 @@
     var lugar = pessoa.onde_rotulo ? " no " + pessoa.onde_rotulo : "";
     cartao.setAttribute("aria-label", pessoa.nome + (pessoa.voce ? " (você)" : "") + ", " + pessoa.papel_rotulo +
       (pessoa.online ? ", online" + lugar + ", " + (pessoa.quando === "agora" ? "agora" : "último sinal " + pessoa.quando) : ", " + (pessoa.quando === "agora" ? "visto agora há pouco" : "visto " + pessoa.quando)) + ". Abrir a ficha");
-    cartao.appendChild(avatar(pessoa.iniciais, pessoa.cor, (compacto ? "is-pequeno" : "") + (pessoa.online ? " is-online" : "")));
+    cartao.appendChild(avatar(pessoa.iniciais, pessoa.cor, (compacto ? "is-pequeno" : "") + (pessoa.online ? " is-online" : ""), pessoa.foto));
     var texto = el("span", "lsa-pessoa-texto");
     var nome = el("span", "lsa-pessoa-nome");
     nome.appendChild(el("span", "", pessoa.nome));
@@ -1940,7 +1953,7 @@
       var capa = d.querySelector("[data-lsa-ficha-capa]");
       capa.textContent = "";
       if (ficha.avatar) {
-        capa.appendChild(avatar(ficha.avatar.iniciais, ficha.avatar.cor, "is-grande" + (ficha.presenca && ficha.presenca.online ? " is-online" : "")));
+        capa.appendChild(avatar(ficha.avatar.iniciais, ficha.avatar.cor, "is-grande" + (ficha.presenca && ficha.presenca.online ? " is-online" : ""), ficha.avatar.foto));
       } else if (ficha.imagem) {
         var img = el("img");
         img.alt = "";

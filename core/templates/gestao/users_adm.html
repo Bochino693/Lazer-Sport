@@ -121,7 +121,8 @@
               {% cartao_presenca usuario as cartao %}
               <td data-label="Usuário">
                 <div class="usr-identity">
-                  <span class="usr-avatar lsa-avatar is-c{{ cartao.cor }}" aria-hidden="true">{{ cartao.iniciais }}</span>
+                  {# Com a foto do Google da conta ela vai por cima das iniciais; se não carregar, some (onerror) e ficam as iniciais. #}
+                  <span class="usr-avatar lsa-avatar is-c{{ cartao.cor }}{% if cartao.foto %} tem-foto{% endif %}" aria-hidden="true">{{ cartao.iniciais }}{% if cartao.foto %}<img src="{{ cartao.foto }}" alt="" width="80" height="80" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('tem-foto');this.remove()">{% endif %}</span>
                   <span>
                     <span class="usr-name">{{ cartao.nome }}</span>
                     <span class="usr-username">@{{ usuario.username }}</span>

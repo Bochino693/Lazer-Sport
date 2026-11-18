@@ -53,6 +53,7 @@ TTL_GLOBAL = 60 * 30
 CHAVE_CATEGORIAS = "ctx:categorias_header:v1"
 CHAVE_ESTABELECIMENTOS = "ctx:estabelecimentos_globais:v1"
 CHAVE_CLIENTES_RODAPE = "ctx:clientes_rodape:v1"
+CHAVE_HA_EVENTOS = "ctx:ha_eventos:v1"
 
 _CATEGORIAS_OCULTAS = (
     "competitivos",
@@ -70,6 +71,7 @@ def limpar_cache_global():
         CHAVE_CATEGORIAS,
         CHAVE_ESTABELECIMENTOS,
         CHAVE_CLIENTES_RODAPE,
+        CHAVE_HA_EVENTOS,
     ])
 
 
@@ -97,6 +99,34 @@ def categorias_globais(request):
         return dados
 
     return {"categorias_header": SimpleLazyObject(_buscar)}
+
+
+def ha_eventos():
+    """Há evento publicado? Sem nenhum, a página "Eventos" (vazia) sai do menu e do sitemap."""
+    dados = cache.get(CHAVE_HA_EVENTOS)
+    if dados is None:
+        from .models import Eventos
+
+        dados = Eventos.objects.exists()
+        cache.set(CHAVE_HA_EVENTOS, dados, TTL_GLOBAL)
+    return dados
+
+
+def eventos_globais(request):
+    return {"ha_eventos": _Preguicoso(ha_eventos)}
+
+
+class _Preguicoso:
+    """Um booleano que só consulta quando o template pergunta."""
+
+    def __init__(self, funcao):
+        self._funcao = funcao
+        self._valor = None
+
+    def __bool__(self):
+        if self._valor is None:
+            self._valor = bool(self._funcao())
+        return self._valor
 
 
 def estabelecimentos_globais(request):

@@ -1483,6 +1483,24 @@ class ImagemPeca(Prime):
         storage=MediaCloudinaryStorage()
     )
 
+    # O recorte automático (core/recorte_peca.py, LEIA-ME seção 102): a foto de
+    # catálogo em fundo branco vira PNG sem fundo em `imagem` e a que a equipe
+    # subiu fica aqui, para desfazer (python manage.py pecas_sem_fundo --desfazer).
+    imagem_original = models.ImageField(
+        upload_to="pecas_reposicao/",
+        verbose_name="Foto original (antes do recorte)",
+        null=True,
+        blank=True,
+        storage=MediaCloudinaryStorage(),
+    )
+    recorte_de = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        editable=False,
+        help_text="O arquivo de `imagem` já conferido pelo recorte automático (com ou sem recorte).",
+    )
+
     peca_reposicao = models.ForeignKey(
         PecasReposicao,
         on_delete=models.CASCADE,

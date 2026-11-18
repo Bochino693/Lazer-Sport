@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import re
 
 from django.conf import settings
 from django.core.cache import cache
@@ -346,8 +347,32 @@ def iniciais(nome):
     return (partes[0][0] + partes[-1][0]).upper()
 
 
+def foto_da_conta(usuario, tamanho=160):
+    """A foto do Google de quem entrou com ele; "" quando não há (ficam as iniciais).
+
+    O dono: "nos clientes, não podemos pegar a foto do Google e pôr ali,
+    somente em caso de não haver que fica sem?". O allauth guarda a foto
+    (`picture`) na conta social. Só lê o que veio no `prefetch_related(
+    "socialaccount_set")` da lista: sem ele não faz uma consulta por pessoa
+    (devolve ""). A foto do Google vem pequena (s96); pede `tamanho` px.
+    """
+    contas = (getattr(usuario, "_prefetched_objects_cache", None) or {}).get("socialaccount_set")
+    if not contas:
+        return ""
+    for conta in contas:
+        extra = conta.extra_data if isinstance(conta.extra_data, dict) else {}
+        url = extra.get("picture") or ""
+        if not isinstance(url, str) or not url.startswith("https://"):
+            continue
+        if "googleusercontent.com" in url:
+            # ".../photo.jpg=s96-c" -> o mesmo recorte quadrado, maior
+            url = re.sub(r"=s\d+(-c)?$", f"=s{int(tamanho)}-c", url)
+        return url
+    return ""
+
+
 def cartao_da_conta(usuario, papel=None):
-    """O que toda lista de pessoas do painel mostra: nome, iniciais, cor e papel."""
+    """O que toda lista de pessoas do painel mostra: nome, iniciais, cor, papel e a foto do Google."""
     nome = nome_da_conta(usuario)
     papel = papel or papel_da_conta(usuario, getattr(usuario, "_tem_funcao", None))
     return {
@@ -356,6 +381,7 @@ def cartao_da_conta(usuario, papel=None):
         "usuario": usuario.username,
         "iniciais": iniciais(nome),
         "cor": usuario.pk % CORES_DE_AVATAR,
+        "foto": foto_da_conta(usuario),
         "papel": papel,
         "papel_rotulo": ROTULO_DO_PAPEL[papel],
     }
@@ -394,7 +420,11 @@ def _listas_de_agora(agora, contas):
     from .models import AcessoDiario
 
     corte_online = agora - dt.timedelta(minutes=ONLINE_MINUTOS)
-    base = User.objects.select_related("perfil", "presenca").annotate(_tem_funcao=tem_funcao_de_equipe())
+    base = (
+        User.objects.select_related("perfil", "presenca")
+        .prefetch_related("socialaccount_set")  # a foto do Google (foto_da_conta)
+        .annotate(_tem_funcao=tem_funcao_de_equipe())
+    )
     if contas:
         corte = agora - dt.timedelta(hours=RECENTES_HORAS)
         consulta = base.filter(Q(presenca__visto_em__gte=corte) | Q(last_login__gte=corte))

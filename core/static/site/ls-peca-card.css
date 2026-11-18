@@ -75,9 +75,12 @@
     overflow: hidden;
     aspect-ratio: 1 / 1;
     border-radius: 17px;
+    /* o palco azul do site (o mesmo do carrinho e de Meus pedidos): a foto da
+       peça chega sem o fundo branco (core/recorte_peca.py, LEIA-ME 102) e
+       fica inteira em cima dele, com a sombra no chão */
     background:
-        radial-gradient(70% 55% at 50% 38%, #ffffff 0%, rgba(255, 255, 255, 0) 70%),
-        linear-gradient(180deg, #f4f7fc 0%, #e4ebf6 62%, #cfdaeb 100%);
+        radial-gradient(60% 46% at 50% 36%, rgba(140, 200, 255, .42) 0%, rgba(140, 200, 255, 0) 70%),
+        radial-gradient(circle at 50% 35%, #4a8cf0 0%, #1d56c0 55%, #0d2a66 100%);
     color: inherit;
     text-decoration: none;
 }
@@ -91,7 +94,7 @@
     bottom: 9%;
     height: 9%;
     border-radius: 50%;
-    background: radial-gradient(closest-side, rgba(12, 32, 72, .34), transparent);
+    background: radial-gradient(closest-side, rgba(2, 10, 30, .55), transparent);
     transition: transform .5s cubic-bezier(.22, 1, .36, 1), opacity .5s ease;
 }
 
@@ -114,7 +117,7 @@
     width: 80%;
     height: 78%;
     object-fit: contain;
-    filter: drop-shadow(0 14px 14px rgba(15, 35, 70, .24));
+    filter: drop-shadow(0 14px 16px rgba(2, 10, 30, .45));
     transition: transform .55s cubic-bezier(.22, 1, .36, 1);
 }
 

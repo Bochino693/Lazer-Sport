@@ -5943,3 +5943,56 @@ Dependência nova: rjsmin (requirements.txt).
    Meus pedidos mostram o produto INTEIRO (object-fit: contain) sobre o palco
    azul, sem zoom nem corte.
    Testes: sistema_interno/tests_fila_de_emails.py.
+
+102) A FOTO DA PEÇA SEM O FUNDO BRANCO; A PÁGINA DE EVENTOS SÓ COM EVENTOS
+   O PEDIDO: "o site deve estar tinindo ... as apresentações de produtos, os
+   fundos". Na varredura do site no ar, as peças de reposição eram as únicas
+   ainda em foto de catálogo: o produto num fundo branco, que no tema escuro
+   virava um retângulo branco (nas fotos em pé, uma faixa branca com sobra
+   escura dos lados).
+   O RECORTE (core/recorte_peca.py, só Pillow): sai o branco que encosta na
+   borda da foto; sai o branco preso por dentro quando é o FUNDO visto por um
+   vão (a mesma cor do fundo e liso como ele: o miolo dos rolos de fio, o vão
+   da volta do cabo) ou quando é branco puro cercado de peça escura/colorida;
+   a sombra cinza neutra que escurece aos poucos até a peça vira sombra preta
+   translúcida. O branco da PEÇA fica: a caixa branca do controle, o fio
+   branco (têm tom e textura), o brilho rosado do disco, o topo da maneta
+   (a beira pula de uma vez, não é sombra). Foto que não é "produto no
+   branco" (fundo de verdade) fica como está. Foto pequena (a prévia de
+   375 px) sai 2x maior, com a beira suavizada, para não serrilhar no card.
+   NO CADASTRO (ImagemPeca): `imagem` passa a ser o PNG sem fundo e a foto que
+   a equipe subiu fica em `imagem_original`; `recorte_de` marca o que já foi
+   conferido (não confere de novo). A 0205 recorta as que já existem no
+   deploy (só no Render); a foto nova subida pelo painel é recortada sozinha
+   logo depois de salvar (sinal + thread; RECORTE_PECAS_AUTOMATICO, ligado
+   no Render). Comando:
+       python manage.py pecas_sem_fundo --simular
+       python manage.py pecas_sem_fundo [--so <id da peça>]
+       python manage.py pecas_sem_fundo --desfazer [--so <id>]   (a original volta)
+       python manage.py pecas_sem_fundo --refazer --so <id>
+   NO SITE: o card da peça (ls-peca-card.css) ganhou o palco azul do carrinho
+   no lugar do estúdio cinza-claro; a página da peça já tinha a vitrine azul
+   com sombra que acompanha o contorno.
+   EVENTOS: sem nenhum evento cadastrado, "Eventos Realizados" sai dos menus e
+   do sitemap (context processor eventos_globais, com cache que o sinal limpa
+   ao salvar um evento); a página continua no endereço.
+   Testes: core/tests_recorte_peca.py.
+
+103) A FOTO DO GOOGLE NAS CONTAS; OS CARTÕES DE CONTAS CENTRALIZADOS
+   O PEDIDO: "nos clientes, não podemos pegar a foto do Google e pôr ali,
+   somente em caso de não haver que fica sem?" e "além de centralizar o
+   conteúdo dos cards".
+   core.presenca.foto_da_conta: a foto (`picture`) que o allauth guarda na
+   conta social do Google, pedida em 160 px (a do Google vem em 96). Só lê o
+   que veio no prefetch_related("socialaccount_set") -- as listas pedem --,
+   para não fazer uma consulta por pessoa. Entra no `cartao_da_conta`, então
+   aparece na tela Contas de clientes (lista e cartões), na faixa "Agora", na
+   ficha da conta e nos rankings/recentes dos gráficos. A foto vai POR CIMA
+   das iniciais (referrerpolicy no-referrer, como o Google pede); se não
+   carregar, some e ficam as iniciais. Quem não tem foto continua com as
+   iniciais na cor de sempre.
+   CARTÕES (gestao-users_adm.css): rosto grande em cima, nome e @, contato,
+   perfil, status e cadastro centralizados, ações no meio do pé; no celular
+   sem o rótulo "USUÁRIO" repetido. NA LISTA: as ações numa fileira só (o
+   atalho "Gráficos" vira só o ícone), sem a linha dobrar de altura.
+   Testes: core/tests_foto_do_google.py.

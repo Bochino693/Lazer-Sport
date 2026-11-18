@@ -171,6 +171,9 @@
   color:var(--lsa-tom-texto);font-size:.74rem;font-weight:900;letter-spacing:.02em;line-height:1;text-transform:uppercase;
 }
 .lsa-avatar.is-pequeno{width:28px;height:28px;font-size:.62rem}
+/* a foto do Google da conta, por cima das iniciais (se não carregar, o JS a tira e ficam as iniciais) */
+.lsa-avatar>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.lsa-avatar.tem-foto{color:transparent;background:rgba(var(--lsa-tom-rgb),.2)}
 .lsa-avatar.is-grande{width:100%;height:100%;border-radius:inherit;font-size:1.05rem}
 .lsa-avatar.is-grande.is-online::after{right:4px;bottom:4px}
 /* o ponto verde no canto: online (na faixa, pela classe; na lista de contas, pelo `data-presenca` da linha) */

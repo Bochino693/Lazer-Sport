@@ -942,7 +942,7 @@ def detalhe_usuario(pk, usuario, pagina=1, so_atividade=False):
     from .presenca import cartao_da_conta, situacao_da_conta
 
     try:
-        conta = User.objects.select_related("perfil", "presenca").get(pk=pk)
+        conta = User.objects.select_related("perfil", "presenca").prefetch_related("socialaccount_set").get(pk=pk)
     except User.DoesNotExist:
         raise NaoEncontrado
 
@@ -1194,7 +1194,7 @@ def detalhe_usuario(pk, usuario, pagina=1, so_atividade=False):
         "imagem": None,
         "icone": "bi-person-circle",
         # as iniciais na cor da conta: as mesmas da faixa "Agora" e da lista
-        "avatar": {"iniciais": cartao["iniciais"], "cor": cartao["cor"]},
+        "avatar": {"iniciais": cartao["iniciais"], "cor": cartao["cor"], "foto": cartao["foto"]},
         "presenca": estado,
         "selos": selos,
         # seção sem nada a dizer (a conta que nunca comprou, que não joga) não aparece

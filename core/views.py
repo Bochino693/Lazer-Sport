@@ -5393,6 +5393,8 @@ class UserAdminView(AdminOnlyMixin, View):
 
         usuarios = (
             User.objects.select_related("perfil", "presenca")
+            # a foto do Google de quem entrou com ele (core.presenca.foto_da_conta)
+            .prefetch_related("socialaccount_set")
             .annotate(_tem_funcao=tem_funcao_de_equipe())
             .order_by("-date_joined", "-pk")
         )

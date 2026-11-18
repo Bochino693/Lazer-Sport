@@ -503,16 +503,16 @@ def _nomes_usuario(ids):
 
     validos = [i for i in ids if isinstance(i, int)]
     nomes = {}
-    contas = User.objects.filter(pk__in=validos).select_related("perfil", "presenca").annotate(
-        _tem_funcao=tem_funcao_de_equipe()
-    )
+    contas = User.objects.filter(pk__in=validos).select_related("perfil", "presenca").prefetch_related(
+        "socialaccount_set"
+    ).annotate(_tem_funcao=tem_funcao_de_equipe())
     for conta in contas:
         cartao = cartao_da_conta(conta)
         estado = situacao_da_conta(conta)
         nomes[conta.pk] = {
             "id": conta.pk,
             "nome": cartao["nome"],
-            "avatar": {"iniciais": cartao["iniciais"], "cor": cartao["cor"]},
+            "avatar": {"iniciais": cartao["iniciais"], "cor": cartao["cor"], "foto": cartao["foto"]},
             "detalhe": estado["texto"],
             "online": estado["online"],
         }
@@ -568,6 +568,7 @@ def _cadastros_recentes(jan):
     contas = (
         User.objects.filter(jan.filtro("date_joined", so_atual=True))
         .select_related("perfil")
+        .prefetch_related("socialaccount_set")
         .annotate(_tem_funcao=tem_funcao_de_equipe())
         .order_by("-date_joined", "-pk")[:CADASTROS_RECENTES]
     )
@@ -578,7 +579,7 @@ def _cadastros_recentes(jan):
             "id": conta.pk,
             "tipo": "usuario",
             "nome": cartao["nome"],
-            "avatar": {"iniciais": cartao["iniciais"], "cor": cartao["cor"]},
+            "avatar": {"iniciais": cartao["iniciais"], "cor": cartao["cor"], "foto": cartao["foto"]},
             "detalhe": cartao["papel_rotulo"],
             "quando": f"{timezone.localtime(conta.date_joined):%d/%m, %H:%M}",
         })

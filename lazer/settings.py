@@ -208,6 +208,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "core.context_processors.categorias_globais",
                 "core.context_processors.estabelecimentos_globais",
+                "core.context_processors.eventos_globais",
                 "core.context_processors.manutencao_notificacao",
                 "core.context_processors.carrinho_context",
                 "core.context_processors.pedidos_ativos_context",
@@ -779,6 +780,13 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "").strip()
 # fila_de_emails.py, LEIA-ME 101): o Render não roda o `worker:` do Procfile.
 FILA_DE_EMAILS_NO_SITE = os.getenv("FILA_DE_EMAILS_NO_SITE", "true").strip().lower() != "false"
 FILA_DE_EMAILS_INTERVALO = int(os.getenv("FILA_DE_EMAILS_INTERVALO", "60").strip() or "60")
+
+# A foto de peça em fundo branco perde o fundo ao subir pelo painel (LEIA-ME
+# seção 102; core/recorte_peca.py). Ligado no Render, onde as fotos estão no
+# Cloudinary; RECORTE_PECAS_AUTOMATICO=false desliga.
+RECORTE_PECAS_AUTOMATICO = os.getenv(
+    "RECORTE_PECAS_AUTOMATICO", "true" if IS_RENDER else "false"
+).strip().lower() in {"1", "true", "sim", "yes", "on"}
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
     EMAIL_HOST_USER or "nao-responda@lazersport.com.br",

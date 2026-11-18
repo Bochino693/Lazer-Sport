@@ -39,7 +39,11 @@ class PaginasEstaticasSitemap(SitemapDoSite):
     changefreq = "weekly"
 
     def items(self):
-        return ["home", "brinquedos", "loja", "eventos", "projetos", "pecas_reposicao", "estabelecimentos", "arena", "jogos"]
+        from .context_processors import ha_eventos
+
+        paginas = ["home", "brinquedos", "loja", "eventos", "projetos", "pecas_reposicao", "estabelecimentos", "arena", "jogos"]
+        # a página de eventos vazia ("Nenhum evento publicado ainda") não vai para o Google
+        return [p for p in paginas if p != "eventos" or ha_eventos()]
 
     def location(self, item):
         return reverse(item)

@@ -726,3 +726,57 @@
   .usr-table-wrap[data-visao="lista"] .usr-table th:nth-child(5),
   .usr-table-wrap[data-visao="lista"] .usr-table td:nth-child(5) { display: none; }
 }
+
+/* Cards: o conteúdo CENTRALIZADO, como os cartões de Clientes. O dono: "além
+   de centralizar o conteúdo dos cards". O rosto (a foto do Google da conta,
+   ou as iniciais) fica grande em cima, o nome e o @ embaixo dele; cada bloco
+   (contato, perfil, status, cadastro) centrado com o rótulo em cima; as
+   ações no pé, no meio. A especificidade passa a regra geral dos cartões
+   (interno_modern.css), que alinha tudo à esquerda. */
+.ls-content .usr-table-wrap.ls-visao-alvo[data-visao="cards"] .usr-table tbody tr:not([hidden]) { text-align: center; }
+.ls-content .usr-table-wrap.ls-visao-alvo[data-visao="cards"] .usr-table tbody td { text-align: center !important; }
+.ls-content .usr-table-wrap.ls-visao-alvo[data-visao="cards"] .usr-table tbody td::before { text-align: center; }
+.usr-table-wrap[data-visao="cards"] .usr-identity {
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+.usr-table-wrap[data-visao="cards"] .usr-avatar {
+  width: 76px;
+  height: 76px;
+  flex: 0 0 76px;
+  border-radius: 24px;
+  font-size: 1.35rem;
+  box-shadow: 0 10px 24px rgba(var(--sombra-rgb, 0, 0, 0), .22), inset 0 0 0 1px rgba(var(--lsa-tom-rgb, 255, 255, 255), .42);
+}
+.usr-table-wrap[data-visao="cards"] .usr-name {
+  max-width: none;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  font-size: 1rem;
+}
+.usr-table-wrap[data-visao="cards"] .usr-username { margin-top: 2px; }
+.usr-table-wrap[data-visao="cards"] .usr-contact-line { justify-content: center; overflow-wrap: anywhere; }
+.usr-table-wrap[data-visao="cards"] .usr-status,
+.usr-table-wrap[data-visao="cards"] .usr-chip { margin-inline: auto; }
+.usr-table-wrap[data-visao="cards"] td[data-label="Status"] {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.usr-table-wrap[data-visao="cards"] td[data-label="Status"]::before { flex: 0 0 100%; }
+.ls-content .usr-table-wrap.ls-visao-alvo[data-visao="cards"] .usr-table tbody td:last-child > .usr-actions { justify-content: center !important; flex-wrap: wrap; }
+.usr-table-wrap[data-visao="cards"] .usr-date-sub { display: inline; margin-left: 6px; }
+/* no celular o cartão não repete "USUÁRIO" em cima do rosto */
+.ls-content .usr-table-wrap.ls-visao-alvo[data-visao="cards"] .usr-table tbody td[data-label="Usuário"]::before { display: none !important; }
+
+/* Lista: as ações numa fileira só (sem a linha dobrar de altura); o atalho
+   "Gráficos" vira só o ícone, como os outros (o título diz o que é). */
+.usr-table-wrap[data-visao="lista"] .usr-actions { flex-wrap: nowrap; }
+.usr-table-wrap[data-visao="lista"] .usr-actions .lsa-atalho { font-size: 0; gap: 0; padding-inline: 10px; }
+.usr-table-wrap[data-visao="lista"] .usr-actions .lsa-atalho i { font-size: .95rem; }
