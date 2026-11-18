@@ -649,7 +649,8 @@ class CatalogImageMigrationTests(TestCase):
 
         resposta_catalogo_pecas = self.client.get(reverse("pecas_reposicao"))
         self.assertEqual(resposta_catalogo_pecas.status_code, 200)
-        self.assertContains(resposta_catalogo_pecas, "breadcrumb ls-breadcrumb")
+        # a vitrine de peças usa a trilha do topo das páginas novas (ls-pagina-trilha)
+        self.assertContains(resposta_catalogo_pecas, 'class="ls-pagina-trilha"')
         self.assertContains(resposta_catalogo_pecas, "data-scroll-reveal")
 
 
