@@ -493,8 +493,17 @@
       cabecalho(cartao, id, "bi-signpost-split", titulo, atual ? "Agora: " + atual : "");
       var lista = criar("div", "ls-folha-andamento-opcoes");
       var primeiro = null;
+      /* O sentido de cada passo (seção 107): o próximo vem primeiro e aceso;
+         as voltas são "Voltar para ..." e ficam num grupo de correção. */
+      var grupoDaCorrecao = false;
       opcoes.forEach(function (opcao) {
-        var item = criar("button", "ls-folha-andamento-opcao" + (opcao.valor === "cancelado" ? " perigo" : ""));
+        if (opcao.sentido === "voltar" && !grupoDaCorrecao) {
+          grupoDaCorrecao = true;
+          lista.appendChild(criar("p", "ls-folha-andamento-grupo", "Corrigir"));
+        }
+        var item = criar("button", "ls-folha-andamento-opcao"
+          + (opcao.valor === "cancelado" ? " perigo" : "")
+          + (opcao.sentido ? " " + opcao.sentido : ""));
         item.type = "button";
         item.appendChild(icone(opcao.icone));
         var textos = criar("span");

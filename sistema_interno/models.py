@@ -2253,6 +2253,40 @@ class Orcamento(Prime):
         ).exists()
 
     @property
+    def motivo_situacao_travada(self):
+        """Por que esta proposta APROVADA não pode mais trocar de situação ("" = pode).
+
+        A FASE QUE FICAVA SEM SENTIDO (LEIA-ME-V10, seção 107). O "Situação"
+        do painel levava qualquer proposta para Recusado, Expirado ou Em
+        negociação -- inclusive a que o cliente já tinha ASSINADO e PAGO. O
+        orçamento virava "Recusado" com a venda ainda na receita do
+        Financeiro, o termo assinado apontando para uma proposta recusada
+        e, em Meus pedidos, a linha do tempo dizia "Recusada" na Aprovação
+        com o Termo e o Pagamento feitos depois dela. Assinado ou com
+        dinheiro registrado, a aprovação é fato: a situação fica.
+
+        O pagamento se desfaz pelo próprio quadro do pagamento ("Nada
+        ainda"), que tira a venda junto; aí a situação volta a mudar. O
+        termo assinado não se desfaz pelo painel.
+        """
+        if self.status != self.Status.APROVADO or not self.pk:
+            return ""
+        if self.contrato_assinado:
+            return (
+                "O cliente já assinou o termo de compra desta proposta: ela "
+                "continua aprovada. Se a compra foi desfeita, fale com a Gestão."
+            )
+        if (self.valor_pago or Decimal("0.00")) > 0 or self.status_pagamento in (
+            self.StatusPagamento.PARCIAL, self.StatusPagamento.PAGO,
+        ):
+            return (
+                "Esta proposta já tem pagamento registrado. Para mudar a "
+                "situação, zere o pagamento primeiro (Pagamento → “Nada "
+                "ainda”): a venda sai junto."
+            )
+        return ""
+
+    @property
     def recusada(self):
         """O cliente disse não -- pela página dele ou pelo telefone.
 
