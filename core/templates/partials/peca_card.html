@@ -49,7 +49,7 @@
   {% endif %}
 
   <div class="pc-corpo">
-    <div class="pc-categorias">
+    <div class="pc-categorias{% if peca.eh_kit %} pc-categorias--kit{% endif %}">
       {% if peca.eh_kit %}
         <span class="pc-categoria pc-categoria--kit">Kit eletrônico</span>
         {% if peca.maquina %}<span class="pc-categoria">Para {{ peca.maquina.nome_brinquedo }}</span>{% endif %}

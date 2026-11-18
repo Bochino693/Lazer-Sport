@@ -746,6 +746,24 @@
 .kit-item:nth-child(4n+2) .kit-item-icone { background: linear-gradient(135deg, #e63946, #b91e30); }
 .kit-item:nth-child(4n+3) .kit-item-icone { background: linear-gradient(135deg, #12b886, #087f5b); }
 .kit-item:nth-child(4n+4) .kit-item-icone { background: linear-gradient(135deg, #f2ad19, #d77b00); }
+/* item com foto: a foto do produto no palco azul das peças (ls-peca-card.css) */
+.kit-item--foto { grid-template-columns: 64px minmax(0, 1fr) auto; min-height: 84px; }
+.kit-item-foto {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: radial-gradient(circle at 50% 35%, #4a8cf0 0%, #1d56c0 55%, #0d2a66 100%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .16), 0 8px 18px rgba(0, 40, 110, .3);
+}
+.kit-item-foto img {
+    width: 86%;
+    height: 86%;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .45));
+}
 .kit-item-texto { min-width: 0; display: grid; gap: 2px; }
 .kit-item-texto strong { color: #fff; font-size: .92rem; line-height: 1.25; overflow-wrap: anywhere; }
 .kit-item-texto a { color: inherit; text-decoration: none; }
@@ -801,8 +819,16 @@
 }
 @media (max-width: 600px) {
     .kit-item { grid-template-columns: 38px minmax(0, 1fr) auto; min-height: 58px; padding: 9px 10px; }
+    .kit-item--foto { grid-template-columns: 56px minmax(0, 1fr) auto; min-height: 74px; }
+    .kit-item-foto { width: 56px; height: 56px; border-radius: 14px; }
     .kit-item-icone { width: 38px; height: 38px; border-radius: 11px; font-size: .95rem; }
     .kit-maquina { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 11px; }
     .kit-maquina-foto { width: 56px; height: 56px; }
     .peca-faixa-kit { padding: 10px 10px; font-size: .74rem; letter-spacing: .1em; }
+}
+
+/* PC: a coluna da foto não estica até o fim da ficha (era um painel vazio
+   do tamanho da coluna de informações) e acompanha a rolagem. */
+@media (min-width: 921px) {
+    .peca-visual { align-self: start; position: sticky; top: 88px; }
 }

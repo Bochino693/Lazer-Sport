@@ -474,6 +474,15 @@
 /* a faixa ocupa o pé do palco: o "Ver detalhes" e o 3D sobem */
 .pc-card--kit .pc-media:has(.pc-faixa-kit) .pc-espiar { bottom: 46px; }
 
+/* o kit: "Kit eletrônico" + "Para <máquina>" quebram linha em vez de sumir no corte */
+.pc-categorias--kit {
+    flex-wrap: wrap;
+    -webkit-mask-image: none;
+    mask-image: none;
+}
+
+.pc-categorias--kit .pc-categoria { max-width: 100%; }
+
 .pc-categoria--kit {
     border-color: rgba(255, 210, 63, .42);
     background: rgba(255, 210, 63, .14);

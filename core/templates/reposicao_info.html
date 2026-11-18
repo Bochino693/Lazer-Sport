@@ -154,8 +154,8 @@
                     <h2 id="kit-itens-titulo"><i class="fas fa-box-open" aria-hidden="true"></i>O que vem no kit</h2>
                     <ul class="kit-itens">
                         {% for item in componentes %}
-                        <li class="kit-item">
-                            <span class="kit-item-icone"><i class="fa-solid {{ item.icone }}" aria-hidden="true"></i></span>
+                        <li class="kit-item{% if item.foto %} kit-item--foto{% endif %}">
+                            {% if item.foto %}<span class="kit-item-foto"><img src="{{ item.foto }}" alt="{{ item.nome }}" loading="lazy" decoding="async"></span>{% else %}<span class="kit-item-icone"><i class="fa-solid {{ item.icone }}" aria-hidden="true"></i></span>{% endif %}
                             <span class="kit-item-texto">
                                 {% if item.url_peca %}<a href="{{ item.url_peca }}#breadcrumb"><strong>{{ item.nome }}</strong></a>{% else %}<strong>{{ item.nome }}</strong>{% endif %}
                                 {% if item.detalhe %}<small>{{ item.detalhe }}</small>{% endif %}

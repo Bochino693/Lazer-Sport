@@ -66,6 +66,51 @@ def icone_do_componente(nome):
     return ICONE_PADRAO
 
 
+#: A FOTO DE CADA ITEM (o dono: "nos itens do kit, realmente ponha fotos dos
+#: produtos, algumas temos em peça de reposição outros puxe da web"). Primeiro
+#: a foto da PEÇA ligada ao item (cadastrada no painel, com o recorte
+#: automático); sem ela, a da biblioteca dos kits (site/kits/itens/<nome>.webp:
+#: fotos NOSSAS, ou de licença livre -- nunca de outra loja). Sem nenhuma, o
+#: ícone. Pela primeira palavra-chave do nome, como o ícone.
+FOTOS_DOS_ITENS = (
+    (("tv box", "tvbox", "android box"), "tv-box"),
+    (("webcam", "camera", "cameras"), "camera"),
+    (("zero delay",), "placa-zero-delay"),
+    (("sensor", "sensores"), "barra-de-sensores"),
+    (("arma", "pistola"), "arma"),
+    (("chicote",), "chicote"),
+    (("hdmi",), "cabo-hdmi"),
+    (("fonte",), "fonte"),
+)
+PASTA_DOS_ITENS = PASTA / "itens"
+
+
+def foto_da_biblioteca(nome):
+    """O endereço da foto do item na biblioteca dos kits, ou "" (sem foto para ele)."""
+    from django.templatetags.static import static
+
+    texto = _normalizar(nome)
+    for palavras, arquivo in FOTOS_DOS_ITENS:
+        if any(_contem(texto, palavra) for palavra in palavras):
+            if (PASTA_DOS_ITENS / f"{arquivo}.webp").exists():
+                return static(f"site/kits/itens/{arquivo}.webp")
+            return ""
+    return ""
+
+
+def foto_do_componente(item):
+    """A foto do item do kit: a da peça ligada a ele, a da biblioteca, ou ""."""
+    peca = item.peca if item.peca_id else None
+    if peca is not None:
+        for foto in peca.imagens_ordenadas:
+            if foto.imagem:
+                try:
+                    return foto.imagem.url
+                except Exception:  # noqa: BLE001 -- arquivo sumido: segue para a biblioteca
+                    break
+    return foto_da_biblioteca(item.nome)
+
+
 def resumo_dos_itens(componentes, quantos=3):
     """A lista curta do card: "7 itens: TV Box, Barra com 5 sensores, Câmera…".
 

@@ -132,7 +132,7 @@ html.ls-escuro:not(#_):not(#__) .ls-kits-faixa-sub {
 
 /* poucos kits: o cartão não estica a linha inteira */
 @media (min-width: 901px) {
-    .ls-kits-faixa-grade.pc-grade { grid-template-columns: repeat(auto-fill, minmax(250px, 290px)); }
+    .ls-kits-faixa-grade.pc-grade { grid-template-columns: repeat(auto-fit, minmax(250px, 290px)); justify-content: center; }
 }
 
 @media (max-width: 760px) {

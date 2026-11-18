@@ -6213,6 +6213,30 @@ Dependência nova: rjsmin (requirements.txt).
        NODE_PATH=<node_modules com playwright> node ferramentas/kits/gerar.js <pasta>
        python -I ferramentas/kits/para_webp.py <pasta>
    (ferramentas/kits/artes.html é a arte: os itens de cada kit estão lá.)
+   O TOPO DA ARTE FICA LIVRE: no card do site moram ali o selo "KIT" e os
+   botões de curtir e favoritar (no celular, até ~22% da altura). Por isso
+   a arte não tem selo nem logo nos cantos de cima (o logo vai na faixa de
+   baixo) e o ícone/logo do jogo começa abaixo dessa faixa -- conferido no
+   PC e no celular, nada por baixo dos botões.
+   A FOTO DE CADA ITEM (o dono: "nos itens do kit, realmente ponha fotos dos
+   produtos, algumas temos em peça de reposição outros puxe da web"): em
+   "O que vem no kit", cada item mostra, nesta ordem,
+     1) a foto da PEÇA ligada ao item (o campo "Peça" do item no painel;
+        a peça ganha foto pelo cadastro de Peças, com o recorte automático
+        da seção 102) -- o jeito de pôr a foto de QUALQUER item;
+     2) a foto da biblioteca dos kits, core/static/site/kits/itens/<nome>.webp
+        (core/kits.py, FOTOS_DOS_ITENS: tv-box, camera, placa-zero-delay,
+        barra-de-sensores, arma, chicote, cabo-hdmi, fonte);
+     3) o ícone, se não houver foto.
+   Na biblioteca hoje: cabo-hdmi.webp (a NOSSA foto, da peça Cabo HDMI).
+   Os outros esperam as fotos reais do dono: a câmera é SIGMA e a TV Box é
+   PRO ELETRONIC (o dono: "a minha camera é da sigma, a tv box é a pro
+   eletronic") -- foto genérica de outra marca não serve. Fotos de loja
+   (Magazine Luiza etc.) NÃO: buscar a foto em site de loja foi barrado e é
+   a mesma razão da arte de outro site. O Wikimedia Commons (licença livre)
+   não tem esses modelos, nem placa Zero Delay, barra de sensores ou a arma.
+   Quando chegar a foto: recortar (python -I, recorte_peca.recortar), caber
+   em 512 x 512 transparente e salvar com o nome da lista acima.
    Sobem para o Cloudinary SÓ NO RENDER, como capa de cada kit (só se o kit
    ainda não tem foto), com nome curto ("pecas_reposicao/kit-strike-kids-<assinatura>",
    conferido contra os 100 caracteres da coluna), num ponto de salvamento

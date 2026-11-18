@@ -17,6 +17,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
 from . import favoritos as servico_favoritos
+from . import kits
 from .home_cache import get_cached_catalog_page
 from .models import PecasReposicao
 
@@ -77,9 +78,10 @@ class KitDetalheView(View):
                 "detalhe": item.detalhe,
                 "quantidade": item.quantidade,
                 "icone": item.icone,
+                "foto": kits.foto_do_componente(item),
                 "url_peca": _url_da_peca_avulsa(item),
             }
-            for item in kit.componentes_kit.all()
+            for item in kit.componentes_kit.select_related("peca").prefetch_related("peca__imagem_peca_reposicao")
         ]
         maquina = kit.maquina if (kit.maquina_id and kit.maquina and kit.maquina.ativo) else None
         imagens = list(kit.imagens_ordenadas)

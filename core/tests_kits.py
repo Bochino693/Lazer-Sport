@@ -141,6 +141,22 @@ class VitrineTests(Base):
         self.assertIn("boliche-virtual", html)
         self.assertIn("peca-faixa-kit", html)
         self.assertNotIn("Imagem em atualização", html)
+        # o item com foto mostra a foto (o Cabo HDMI: a nossa); o sem foto, o ícone
+        self.assertIn('class="kit-item kit-item--foto"', html)
+        self.assertIn("site/kits/itens/cabo-hdmi.webp", html)
+
+    def test_a_foto_do_item_vem_da_peca_ligada_antes_da_biblioteca(self):
+        item = ComponenteKit.objects.get(kit=self.kit, nome="Cabo HDMI")
+        self.assertIn("site/kits/itens/cabo-hdmi.webp", kits.foto_do_componente(item))
+        ImagemPeca.objects.create(peca_reposicao=self.cabo, imagem="pecas_reposicao/cabo-hdmi-xy.webp", ordem=1)
+        item = ComponenteKit.objects.select_related("peca").get(pk=item.pk)
+        self.assertIn("cabo-hdmi-xy", kits.foto_do_componente(item))
+
+    def test_a_biblioteca_so_tem_foto_do_que_existe(self):
+        self.assertTrue(kits.foto_da_biblioteca("Cabo HDMI").endswith("site/kits/itens/cabo-hdmi.webp"))
+        # sem arquivo na biblioteca: "" (a página mostra o ícone)
+        self.assertEqual(kits.foto_da_biblioteca("Placa Zero Delay"), "")
+        self.assertEqual(kits.foto_da_biblioteca("Item sem nome conhecido"), "")
 
     def test_endereco_de_peca_leva_ao_kit_e_o_contrario(self):
         resposta = self.client.get(reverse("reposicao_detalhe", args=[self.kit.pk]))
@@ -376,10 +392,10 @@ class MigracaoDeDadosTests(TestCase):
 
         pasta = Path(kits.arquivo_da_foto("x")).parent
         self.assertEqual(
-            sorted(p.name for p in pasta.iterdir()),
+            sorted(p.name for p in pasta.glob("*.webp")),
             ["kit-boliche-virtual.webp", "kit-lazer-shot.webp", "kit-strike-kids.webp"],
         )
-        for arte in pasta.iterdir():
+        for arte in pasta.glob("*.webp"):
             with Image.open(arte) as imagem:
                 self.assertEqual(imagem.size, (1200, 1200), arte.name)
         for nome, _maquina, _chave, descricao, itens in kits.KITS_INICIAIS:
