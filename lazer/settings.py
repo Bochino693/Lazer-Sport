@@ -774,6 +774,11 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "true").strip().lower() == "true"
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "false").strip().lower() == "true"
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "").strip()
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "").strip()
+
+# A fila de e-mails das campanhas anda dentro do site (sistema_interno/
+# fila_de_emails.py, LEIA-ME 101): o Render não roda o `worker:` do Procfile.
+FILA_DE_EMAILS_NO_SITE = os.getenv("FILA_DE_EMAILS_NO_SITE", "true").strip().lower() != "false"
+FILA_DE_EMAILS_INTERVALO = int(os.getenv("FILA_DE_EMAILS_INTERVALO", "60").strip() or "60")
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
     EMAIL_HOST_USER or "nao-responda@lazersport.com.br",

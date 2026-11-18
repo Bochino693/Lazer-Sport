@@ -5515,6 +5515,10 @@ class UserAdminView(AdminOnlyMixin, View):
                     "status": "erro", "msg": str(erro),
                 }, status=400)
 
+            # o e-mail sai agora, sem prender o clique (sistema_interno/fila_de_emails.py)
+            from sistema_interno.fila_de_emails import disparar_agora
+
+            transaction.on_commit(disparar_agora)
             return JsonResponse({
                 "status": "sucesso",
                 "msg": "Oferta preparada para " + " e ".join([

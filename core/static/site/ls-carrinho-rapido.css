@@ -302,7 +302,10 @@ html.ls-cr-travado {
 .ls-cr-foto img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    padding: 5px;
+    border-radius: 16px;
+    /* o produto inteiro, sem zoom: o cliente vê o que está comprando */
+    object-fit: contain;
     display: block;
 }
 

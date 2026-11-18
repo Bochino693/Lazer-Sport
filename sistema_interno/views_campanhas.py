@@ -18,6 +18,8 @@ from .campanhas import (
     mensagem_whatsapp,
     url_publica,
 )
+from core.email_utils import smtp_configurado
+
 from .models import CampanhaDivulgacao, EntregaCampanha
 from .views import CriacaoInternoRequiredMixin
 
@@ -130,9 +132,13 @@ class CriarCampanhaView(CriacaoInternoRequiredMixin, View):
             return JsonResponse({"status": "erro", "msg": str(erro)}, status=400)
 
         detalhe = reverse("campanha_detalhe", args=[campanha.token])
+        # os e-mails começam a sair agora, sem prender o clique (fila_de_emails.py)
+        from .fila_de_emails import disparar_agora
+
+        transaction.on_commit(disparar_agora)
         return JsonResponse({
             "status": "sucesso",
-            "msg": "Campanha criada. Os e-mails entraram na fila e o WhatsApp está pronto para atendimento assistido.",
+            "msg": "Campanha criada. Os e-mails já estão saindo e o WhatsApp está pronto para atendimento assistido.",
             "detalhe": detalhe,
             "total": campanha.total_destinatarios,
             "ignorados": getattr(campanha, "ignorados_sem_canal", 0),
@@ -175,6 +181,11 @@ class CampanhaDetalheView(CriacaoInternoRequiredMixin, View):
             "emails": entregas.filter(canal=EntregaCampanha.Canal.EMAIL),
             "whatsapps": entregas.filter(canal=EntregaCampanha.Canal.WHATSAPP),
             "url_publica": url_publica(campanha),
+            # sem as credenciais do SMTP no servidor, nenhum e-mail sai: a tela diz
+            "smtp_ok": smtp_configurado(),
+            "emails_pendentes": entregas.filter(
+                canal=EntregaCampanha.Canal.EMAIL, status=EntregaCampanha.Status.PENDENTE,
+            ).count(),
         })
 
     @transaction.atomic
@@ -196,6 +207,11 @@ class CampanhaDetalheView(CriacaoInternoRequiredMixin, View):
             )
             campanha.recalcular()
             messages.success(request, f"{quantidade} e-mail(s) recolocado(s) na fila.")
+        elif acao == "enviar_agora":
+            from .fila_de_emails import disparar_agora
+
+            transaction.on_commit(disparar_agora)
+            messages.success(request, "Enviando os e-mails pendentes agora. Atualize a tela em alguns segundos.")
         elif acao == "cancelar":
             campanha.status = CampanhaDivulgacao.Status.CANCELADA
             campanha.save(update_fields=("status", "atualizado"))

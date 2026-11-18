@@ -160,3 +160,11 @@ def post_worker_init(worker):
         agendar(atraso=2.0, motivo="servidor subiu")
     except Exception as erro:  # o site sobe mesmo assim
         worker.log.warning(f"Aquecimento do cache não agendado: {erro!r}")
+    # A fila de e-mails das campanhas anda aqui dentro: o Render não roda o
+    # `worker:` do Procfile (sistema_interno/fila_de_emails.py, LEIA-ME 101).
+    try:
+        from sistema_interno.fila_de_emails import ligar
+
+        ligar()
+    except Exception as erro:  # o site sobe mesmo assim
+        worker.log.warning(f"Fila de e-mails das campanhas não ligada: {erro!r}")

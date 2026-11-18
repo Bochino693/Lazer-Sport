@@ -5912,3 +5912,34 @@ Dependência nova: rjsmin (requirements.txt).
    Testes: core/tests_boleto.py (as regras, gerar, reaproveitar, recusado,
    trocar para o Pix cancela o boleto, pago diz "boleto", as telas) e
    core/tests_publicar_na_loja.py.
+
+101) AS CAMPANHAS MANDAM E-MAIL SEM O WORKER; O PRODUTO INTEIRO NO CARRINHO
+   O PEDIDO: "minhas campanhas não estão disparando e-mail para os clientes"
+   e "a peça ficou com zoom no carrinho, parece que estamos escondendo o
+   produto do cliente".
+   A CAUSA DOS E-MAILS: a campanha grava um e-mail por cliente na fila
+   (EntregaCampanha "pendente") e quem mandava era só o `observar_pendencias`
+   -- a linha `worker:` do Procfile. O Render NÃO lê o Procfile: o worker só
+   roda se existir um serviço "Background Worker" criado no painel dele. Sem
+   ele, a fila nunca andava.
+   AGORA (sistema_interno/fila_de_emails.py): o próprio site esvazia a fila,
+     * na hora em que a campanha é criada (disparar_agora, numa thread depois
+       do commit: o clique não espera o SMTP) -- também a oferta mandada a
+       uma conta do site (core/views.py);
+     * e de minuto em minuto (ligar(), chamado pelo gunicorn em
+       post_worker_init), o que cobre as novas tentativas dos que falharam.
+     Lotes de 20, um esvaziamento por vez por processo; cada e-mail é travado
+     na fila antes de sair, então um worker de verdade pode conviver com isto
+     sem mandar duas vezes. FILA_DE_EMAILS_NO_SITE=false no Render desliga.
+   NO PAINEL (campanha_detalhe_inner.html): sem EMAIL_HOST_USER e
+   EMAIL_HOST_PASSWORD no servidor, a campanha mostra em vermelho que o
+   e-mail do site não está configurado (os e-mails ficam guardados e saem
+   assim que configurar); com e-mails na fila, "N e-mails na fila" e o botão
+   "Enviar agora".
+   O QUE AINDA SÓ O WORKER FAZ: os avisos urgentes por e-mail para a equipe e
+   as automações operacionais (observar_pendencias). Não foram ligados no
+   site de propósito: nunca rodaram no ar e mexem em dados -- o dono decide.
+   O CARRINHO: as miniaturas do carrinho, da folha do carrinho rápido e de
+   Meus pedidos mostram o produto INTEIRO (object-fit: contain) sobre o palco
+   azul, sem zoom nem corte.
+   Testes: sistema_interno/tests_fila_de_emails.py.
