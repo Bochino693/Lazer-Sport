@@ -193,6 +193,36 @@ class CadastroTests(TestCase):
         self.assertTrue(recorte_peca.precisa_conferir(ruim), "a que falhou fica para a próxima")
         self.assertFalse(recorte_peca.precisa_conferir(boa))
 
+    def test_nome_comprido_cabe_na_coluna(self):
+        # o caso do deploy: "bonecos-pebolim-frente-<hash>-1024-1024_nx4yyc" + "-sem-fundo.png"
+        # passava dos 100 caracteres (o PostgreSQL recusa; o SQLite dos testes não confere)
+        nome = "bonecos-pebolim-frente-ee78cafb65abff265417508856803055-1024-1024_nx4yyc.jpg"
+        foto = self._foto(_cabo_no_branco(), nome)
+        self.assertEqual(recorte_peca.processar(foto), "recortada")
+        foto.refresh_from_db()
+        limite = ImagemPeca._meta.get_field("imagem").max_length
+        self.assertLessEqual(len(foto.imagem.name), limite)
+        self.assertLessEqual(len(foto.imagem_original.name), limite)
+        self.assertLessEqual(len(recorte_peca._nome_do_recorte("x" * 300)), limite - 10)
+
+    def test_erro_de_banco_numa_foto_nao_desfaz_as_outras(self):
+        from django.db import DatabaseError
+
+        ruim = self._foto(_cabo_no_branco(), "ruim.jpg")
+        boa = self._foto(_caixa_branca(), "boa.jpg")
+        verdadeiro = recorte_peca.processar
+
+        def processar(foto, avisar=None):
+            if foto.pk == ruim.pk:
+                raise DatabaseError("value too long for type character varying(100)")
+            return verdadeiro(foto, avisar=avisar)
+
+        with mock.patch.object(recorte_peca, "processar", side_effect=processar):
+            resumo = recorte_peca.processar_todas(ImagemPeca, avisar=None)
+        self.assertEqual((resumo["falhou"], resumo["recortada"]), (1, 1))
+        boa.refresh_from_db()
+        self.assertFalse(recorte_peca.precisa_conferir(boa))
+
     def test_comando_desfazer_e_refazer(self):
         foto = self._foto(_cabo_no_branco())
         with mock.patch("sys.stdout"):
@@ -219,11 +249,12 @@ class CadastroTests(TestCase):
     def test_migracao_nao_faz_nada_fora_do_render(self):
         from importlib import import_module
 
-        migracao = import_module("core.migrations.0205_pecas_sem_fundo_branco")
-        with mock.patch.object(recorte_peca, "processar_todas") as todas:
-            with self.settings(IS_RENDER=False):
-                migracao.recortar(None, None)
-            todas.assert_not_called()
+        for nome in ("core.migrations.0205_pecas_sem_fundo_branco", "core.migrations.0206_pecas_sem_fundo_de_novo"):
+            migracao = import_module(nome)
+            with mock.patch.object(recorte_peca, "processar_todas") as todas:
+                with self.settings(IS_RENDER=False):
+                    migracao.recortar(None, None)
+                todas.assert_not_called()
 
 
 def BytesIO_text():

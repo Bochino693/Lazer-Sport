@@ -401,10 +401,19 @@ def baixar(imagem, tempo=25):
         return arquivo.read()
 
 
+#: A coluna do arquivo (ImageField) guarda até 100 caracteres. O nome do
+#: recorte cabe com folga: o Cloudinary ainda pode pôr um sufixo nele. (O
+#: primeiro deploy caiu aqui: a foto dos bonecos de pebolim tinha um nome de
+#: 85 caracteres e, com "-sem-fundo.png", passava de 100 -- no PostgreSQL
+#: isso aborta a transação; o SQLite dos testes não confere o tamanho.)
+LIMITE_DO_NOME = 100
+BASE_MAXIMA = 48
+
+
 def _nome_do_recorte(nome):
     import os
 
-    base = os.path.splitext(os.path.basename(nome or "peca"))[0][:80] or "peca"
+    base = os.path.splitext(os.path.basename(nome or "peca"))[0][:BASE_MAXIMA] or "peca"
     return f"pecas_reposicao/{base}{MARCA_DO_RECORTE}.png"
 
 
@@ -432,6 +441,9 @@ def processar(foto, avisar=None):
             avisar(f"  foto {foto.pk}: não é de fundo branco, fica como está")
         return "sem_recorte"
     novo = foto.imagem.storage.save(_nome_do_recorte(atual), ContentFile(png))
+    limite = getattr(Modelo._meta.get_field("imagem"), "max_length", None) or LIMITE_DO_NOME
+    if len(novo) > limite or len(atual) > limite:
+        raise ValueError(f"nome do arquivo com mais de {limite} caracteres: {novo!r}")
     Modelo.objects.filter(pk=foto.pk).update(imagem=novo, imagem_original=atual, recorte_de=novo)
     foto.imagem.name, foto.recorte_de = novo, novo
     foto.imagem_original.name = atual
@@ -458,9 +470,15 @@ def processar_todas(ImagemPeca, avisar=print, so=None):
     fotos = ImagemPeca.objects.exclude(imagem="").exclude(imagem__isnull=True).order_by("pk")
     if so:
         fotos = fotos.filter(peca_reposicao_id__in=so)
-    for foto in fotos.iterator():
+    from django.db import transaction
+
+    for foto in list(fotos):
         try:
-            resumo[processar(foto, avisar=avisar)] += 1
+            # cada foto no seu ponto de salvamento: um erro de banco numa
+            # foto (no PostgreSQL ele aborta a transação inteira da migração)
+            # desfaz só ela, e as outras seguem
+            with transaction.atomic():
+                resumo[processar(foto, avisar=avisar)] += 1
         except Exception as erro:  # noqa: BLE001 -- uma foto ruim não para as outras
             resumo["falhou"] += 1
             if avisar:
