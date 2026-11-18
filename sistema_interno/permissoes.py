@@ -170,6 +170,14 @@ def capacidades(user) -> dict[str, bool]:
         "vendas_financeiro": acesso_financeiro,
         "pedidos": acesso_financeiro,
         "manutencoes": producao or gestao,
+        # A LISTA DE MONTAGEM (seção 112) é da ENGENHARIA DE PRODUÇÃO: só ela
+        # (e o superusuário) marca as etapas, mexe na fila e nas regras. A
+        # Gestão e o Financeiro veem tudo sem mexer; Vendas e o Ambulante
+        # veem só o andamento e a previsão do que eles venderam (os próprios
+        # orçamentos). O menu e a view perguntam às mesmas três chaves.
+        "lista_montagem": producao or gestao or funcao_financeiro or vendas or ambulante,
+        "lista_montagem_editar": producao,
+        "lista_montagem_tudo": producao or gestao or funcao_financeiro,
         "ordens_servico": producao or acesso_financeiro or gestao,
         "ordens_servico_editar": producao or gestao,
         "ordens_servico_pagamento": acesso_financeiro,

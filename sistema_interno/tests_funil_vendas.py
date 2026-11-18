@@ -235,7 +235,8 @@ class PedidoViraVendaTests(BaseFunil):
         with self.captureOnCommitCallbacks() as pendentes:
             pedido.status = "em_preparacao"
             pedido.save(update_fields=["status"])
-        self.assertEqual(len(pendentes), 1)
+        # a venda e a lista de montagem (seção 112): cada uma acerta a sua
+        self.assertEqual(len(pendentes), 2)
 
 
 class UmFunilSoTests(BaseFunil):
@@ -472,8 +473,17 @@ class PrazoDeProducaoTests(BaseFunil):
         self.assertIn("Prazo de produção", html)
         self.assertIn("15 dias úteis após a aprovação", html)
 
+        # Sem prazo digitado, a proposta mostra o da lista de montagem (seção
+        # 108): a cama elástica é brinquedão -- 30 dias úteis, um por vez.
         sem_prazo = self.orcamento(status=Orcamento.Status.AGUARDANDO_RESPOSTA)
         html = self.client.get(f"/orcamento/{sem_prazo.token}/").content.decode()
+        self.assertIn("Prazo de produção", html)
+        self.assertIn("30 dias úteis após a aprovação", html)
+
+        # Só serviço (nada a montar): sem prazo
+        servico = self.orcamento(status=Orcamento.Status.AGUARDANDO_RESPOSTA,
+                                 maquinas=(("Montagem e instalação", 1),))
+        html = self.client.get(f"/orcamento/{servico.token}/").content.decode()
         self.assertNotIn("Prazo de produção", html)
 
 

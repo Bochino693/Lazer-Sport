@@ -1,0 +1,28 @@
+/* O prazo de entrega antes da compra (LEIA-ME-V10, seção 112): a montagem
+   pelo m³ e, com as vagas da fábrica ocupadas, a fila. */
+.ls-prazo-entrega {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin: 12px 0 0;
+    padding: 10px 14px;
+    border: 1px solid color-mix(in srgb, var(--ls-verde-neon, #2ee59d) 35%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--ls-verde-neon, #2ee59d) 8%, transparent);
+    color: inherit;
+    font-size: .9rem;
+    line-height: 1.4;
+    text-align: left;
+}
+.ls-prazo-entrega i {
+    margin-top: 3px;
+    color: var(--ls-verde-neon, #2ee59d);
+}
+.ls-prazo-entrega span { display: grid; gap: 2px; min-width: 0; }
+.ls-prazo-entrega strong { font-weight: 800; }
+.ls-prazo-entrega small { opacity: .82; font-size: .78rem; overflow-wrap: anywhere; }
+.ls-prazo-entrega.is-fila {
+    border-color: color-mix(in srgb, var(--ls-amarelo-neon, #ffd23f) 40%, transparent);
+    background: color-mix(in srgb, var(--ls-amarelo-neon, #ffd23f) 8%, transparent);
+}
+.ls-prazo-entrega.is-fila i { color: var(--ls-amarelo-neon, #ffd23f); }

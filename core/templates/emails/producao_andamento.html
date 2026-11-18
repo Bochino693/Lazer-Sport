@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ titulo }} — produção</title>
+</head>
+{# Tabelas e estilo inline: cliente de e-mail não roda flex/grid nem <style> externo. #}
+<body style="margin:0; padding:0; background:#f2f5fb; font-family:'Segoe UI',Arial,Helvetica,sans-serif; color:#2c3e50;">
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0;">
+    {{ fatos|join:" · " }}{% if previsao %} — {{ previsao }}{% endif %}
+  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f5fb; padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+               style="max-width:600px; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 8px 28px rgba(0,74,173,.12);">
+          <tr>
+            <td style="background:linear-gradient(90deg,#004AAD,#7a3cff); padding:28px 30px; text-align:center;">
+              <h1 style="margin:0 0 4px; color:#ffffff; font-size:23px; font-weight:800;">{{ fatos|last }}</h1>
+              <p style="margin:0; color:#e3e9ff; font-size:15px;">{{ titulo }}{% if previsao %} &middot; {{ previsao }}{% endif %}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:26px 30px 6px;">
+              <p style="margin:0 0 14px; font-size:16px; line-height:1.6;">
+                Olá, <strong>{{ nome }}</strong>! A fábrica avançou com a sua compra:
+              </p>
+              <ul style="margin:0 0 18px; padding-left:20px; font-size:15px; line-height:1.7;">
+                {% for fato in fatos %}<li><strong>{{ fato }}</strong></li>{% endfor %}
+              </ul>
+              {% for grupo in grupos %}
+              <p style="margin:0 0 8px; font-size:13px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#7b8aa0;">{% if grupo.titulo %}{{ grupo.titulo }}{% else %}As etapas{% endif %}</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 18px; font-size:14px;">
+                {% for etapa in grupo.etapas %}
+                <tr>
+                  <td style="padding:6px 0; width:28px; color:{% if etapa.estado == 'feita' %}#1a9c5b{% elif etapa.estado == 'atual' %}#004AAD{% else %}#a3adbd{% endif %}; font-weight:800;">{% if etapa.estado == 'feita' %}&#10003;{% elif etapa.estado == 'atual' %}&#9679;{% else %}&#9675;{% endif %}</td>
+                  <td style="padding:6px 0; {% if etapa.estado == 'futura' %}color:#7b8aa0;{% else %}font-weight:700;{% endif %}">{{ etapa.nome }}</td>
+                  <td style="padding:6px 0; text-align:right; color:#61708a;">{{ etapa.nota }}</td>
+                </tr>
+                {% endfor %}
+              </table>
+              {% endfor %}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:6px 30px 28px; text-align:center;">
+              <a href="{{ url_pedidos }}"
+                 style="display:inline-block; padding:15px 34px; background:#004AAD; color:#ffffff; font-size:16px; font-weight:700; text-decoration:none; border-radius:10px;">
+                Acompanhar em Meus pedidos
+              </a>
+              <p style="margin:16px 0 0; font-size:14px; color:#61708a;">
+                Dúvidas? <a href="{{ whatsapp }}" style="color:#004AAD;">Fale no WhatsApp</a>.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

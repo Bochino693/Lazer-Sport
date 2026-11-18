@@ -1,0 +1,37 @@
+{% comment %}
+  A FILA DE UMA LINHA (máquinas ou brinquedões), na ordem em que entram.
+  As setas mudam a ordem (Produção e Gestão) e as previsões se recalculam.
+{% endcomment %}
+<div class="table-responsive">
+  <table class="ls-table ls-visao-tabela lm-tabela lm-tabela-fila">
+    <thead>
+      <tr><th>Posição</th><th>Máquina</th><th>Origem</th><th>Chegou</th><th>Previsão de pronta</th>{% if pode_mexer %}<th class="text-end">Ordem</th>{% endif %}</tr>
+    </thead>
+    <tbody>
+      {% for u in fila %}
+        <tr data-montagem-unidade="{{ u.pk }}" data-visao-nome="{{ u.nome }}">
+          <td data-rotulo="Posição"><span class="lm-posicao">{{ u.posicao|default:forloop.counter }}º</span></td>
+          <td data-rotulo="Máquina">
+            <strong class="lm-nome">{{ u.nome }}</strong>
+            {% if u.variante %}<span class="lm-variante"><i class="bi bi-palette" aria-hidden="true"></i> adesivo {{ u.variante }}</span>{% endif %}
+            <span class="ls-sub">{% if u.de > 1 %}Unidade {{ u.numero }} de {{ u.de }} · {% endif %}{{ u.dias_texto }} de montagem{% if u.volume_texto %} ({{ u.volume_texto }}){% endif %}</span>
+          </td>
+          <td data-rotulo="Origem">
+            <a class="lm-origem" href="{{ u.origem.url }}"><i class="bi {{ u.origem.icone }}" aria-hidden="true"></i> {{ u.origem.rotulo }}</a>
+            <span class="ls-sub">{{ u.origem.cliente }}</span>
+          </td>
+          <td data-rotulo="Chegou"><time datetime="{{ u.chegada|date:'c' }}">{{ u.chegada|date:"d/m/Y" }}</time></td>
+          <td data-rotulo="Previsão de pronta"><span class="lm-prazo fila"><i class="bi bi-calendar-range" aria-hidden="true"></i> {{ u.previsao_texto|default:"—" }}</span></td>
+          {% if pode_mexer %}
+          <td data-rotulo="Ordem" class="text-end">
+            <div class="lm-ordem">
+              <button type="button" class="lm-seta" data-montagem-fila="subir" data-montagem-id="{{ u.pk }}"{% if u.posicao == 1 %} disabled{% endif %} aria-label="Subir {{ u.nome }} na fila"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
+              <button type="button" class="lm-seta" data-montagem-fila="descer" data-montagem-id="{{ u.pk }}"{% if forloop.last %} disabled{% endif %} aria-label="Descer {{ u.nome }} na fila"><i class="bi bi-arrow-down" aria-hidden="true"></i></button>
+            </div>
+          </td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>

@@ -66,6 +66,8 @@
         </li>
         {% endfor %}
     </ol>
+    {# a fila e as etapas da fábrica (seção 112) #}
+    {% include "partials/producao_etapas.html" with vista=cartao.producao %}
 
     {# O RESUMO: cada item com a quantidade, e o valor final #}
     <div class="oc-resumo">

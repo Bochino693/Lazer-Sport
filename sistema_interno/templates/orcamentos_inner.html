@@ -1044,14 +1044,15 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
       <div class="modal-body">
         <div id="situacaoErro" class="alert alert-danger d-none" role="alert"></div>
         <p class="mb-3"><strong id="situacaoNome"></strong></p>
-        <label class="form-label" for="situacaoStatus">Nova situação</label>
-        <select class="form-select" id="situacaoStatus" name="status">
+        {# A situação em chips (rádios dentro de <label>), nunca <select>: a de agora já vem marcada. #}
+        <fieldset class="ls-situacao-chips" id="situacaoStatus">
+          <legend class="form-label">Nova situação</legend>
           {% for valor, rotulo in status_opcoes %}
             {% if valor == 'aprovado' or valor == 'recusado' or valor == 'expirado' or valor == 'em_negociacao' %}
-              <option value="{{ valor }}">{{ rotulo }}</option>
+              <label class="ls-situacao-chip {{ valor }}"><input type="radio" name="status" value="{{ valor }}" required><span>{{ rotulo }}</span></label>
             {% endif %}
           {% endfor %}
-        </select>
+        </fieldset>
         <label class="form-label mt-3" for="situacaoMotivo" id="situacaoMotivoRotulo">Motivo ou observação</label>
         <textarea class="form-control" id="situacaoMotivo" name="motivo" rows="3" maxlength="600"
                   data-rotulo="o motivo"
@@ -2457,9 +2458,14 @@ LSTela.pronto(function () {
      Em "Recusado" ele é obrigatório: é a única chance de registrar o que
      o cliente falou, e é dele que a versão seguinte vai partir. Nas
      outras continua opcional, porque ali é observação. */
+  function escolhaDaSituacao() {
+    var marcado = situacaoStatus ? situacaoStatus.querySelector("input[name=status]:checked") : null;
+    return marcado ? marcado.value : "";
+  }
+
   function ajustarMotivoDaSituacao() {
     if (!situacaoStatus || !situacaoMotivo) return;
-    var escolha = situacaoStatus.value;
+    var escolha = escolhaDaSituacao();
     var recusa = escolha === "recusado";
 
     situacaoMotivo.required = recusa;
@@ -2489,10 +2495,18 @@ LSTela.pronto(function () {
 
   situacaoStatus?.addEventListener("change", ajustarMotivoDaSituacao);
 
-  Painel.aoClicar("[data-situacao]", function (b) {
+  /* SÓ O BOTÃO "Situação". A célula do acompanhamento também tinha
+     `data-situacao` (é a que o painel repinta), e o toque nela abria esta
+     janela sem a situação de agora -- a lista suspensa ficava em branco e
+     "Salvar" respondia "Situação inválida" (seção 111). */
+  Painel.aoClicar("button[data-situacao]", function (b) {
       Painel.erro("situacaoErro", "");
       Painel.valor("situacaoId", b.dataset.situacao);
-      Painel.valor("situacaoStatus", b.dataset.status);
+      if (situacaoStatus) {
+        situacaoStatus.querySelectorAll("input[name=status]").forEach(function (radio) {
+          radio.checked = radio.value === b.dataset.status;
+        });
+      }
       Painel.valor("situacaoMotivo", "");
       document.getElementById("situacaoNome").textContent = b.dataset.nome;
       ajustarMotivoDaSituacao();

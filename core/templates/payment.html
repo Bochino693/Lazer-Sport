@@ -397,6 +397,8 @@
                     <i class="fa-solid fa-truck-fast" aria-hidden="true"></i>
                     Frete por conta do cliente: indicamos transportadoras de confiança para a sua cidade.
                 </p>
+                {# quando fica pronto: a fila de agora + a montagem (seção 112) #}
+                {% if pedido_reservado %}{% prazo_de_entrega pedido=pedido_reservado %}{% elif not carrinho_vazio %}{% prazo_de_entrega carrinho=carrinho %}{% endif %}
                 <div class="ck-linha ck-linha--total summary-total-card">
                     <span>No Pix</span>
                     <strong class="money-brl" data-value="{{ total_final|stringformat:'f' }}">

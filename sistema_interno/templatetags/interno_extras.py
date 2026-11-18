@@ -194,3 +194,32 @@ def campo_prazo(objeto, compacto=False):
         "id_campo": f"prazo-{tipo}-{objeto.pk}",
         "compacto": compacto,
     }
+
+
+
+# ----------------------------------------------------------------------
+# O PRAZO DE ENTREGA ANTES DA COMPRA (LEIA-ME-V10, seção 112)
+# ----------------------------------------------------------------------
+@register.inclusion_tag("partials/prazo_entrega.html")
+def prazo_de_entrega(objeto=None, carrinho=None, quantidade=1, pedido=None):
+    """"Fica pronto em 4 dias úteis" -- ou com a fila: "20 a 35 dias úteis".
+
+    A conta é a da lista de montagem (sistema_interno.montagem): a fila de
+    agora + a montagem pelo m³; brinquedão um por vez; peça em 3 dias. Um
+    erro aqui nunca derruba a página do produto: a linha só não aparece.
+    """
+    import logging
+
+    from sistema_interno import montagem
+
+    try:
+        if pedido is not None:
+            prazo = montagem.prazo_de_entrega(pedido)
+        elif carrinho is not None:
+            prazo = montagem.prazo_do_carrinho(carrinho)
+        else:
+            prazo = montagem.prazo_do_produto(objeto, int(quantidade or 1))
+    except Exception:  # noqa: BLE001
+        logging.getLogger(__name__).exception("prazo_de_entrega: falhou")
+        prazo = None
+    return {"prazo": prazo}

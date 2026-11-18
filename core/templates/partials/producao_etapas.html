@@ -1,0 +1,30 @@
+{% comment %}
+  A PRODUÇÃO, COMO O CLIENTE ACOMPANHA (LEIA-ME-V10, seção 112).
+
+  Embaixo da linha do tempo do pedido e do orçamento: a fila ("Na fila de
+  produção — posição 2 — previsão entre 09/12 e 05/01") ou a etapa de agora,
+  e as etapas da fábrica (Corte de MDF, Montagem, Adesivo, Eletrônica,
+  Finalização, Teste de qualidade e Embalagem) com o dia em que cada uma
+  ficou feita ou a previsão dela. Os dados vêm prontos de
+  sistema_interno.montagem.acompanhamento_da_producao (`vista`).
+{% endcomment %}
+{% if vista %}
+<section class="pp-producao{% if vista.na_fila %} is-fila{% elif vista.pronta %} is-pronta{% endif %}" aria-label="Produção">
+    <p class="pp-producao-nota">
+        <i class="fa-solid fa-industry" aria-hidden="true"></i>
+        <span>{{ vista.nota }}</span>
+    </p>
+    {% for grupo in vista.grupos %}
+    {% if grupo.titulo %}<p class="pp-grupo">{{ grupo.titulo }}{% if grupo.posicao %} · na fila, posição {{ grupo.posicao }}{% endif %}</p>{% endif %}
+    <ol class="pp-etapas">
+        {% for etapa in grupo.etapas %}
+        <li class="pp-etapa is-{{ etapa.estado }}"{% if etapa.estado == 'atual' %} aria-current="step"{% endif %}>
+            <span class="pp-etapa-bola" aria-hidden="true">{% if etapa.estado == 'feita' %}<i class="fa-solid fa-check"></i>{% else %}{{ forloop.counter }}{% endif %}</span>
+            <span class="pp-etapa-nome">{{ etapa.nome }}</span>
+            {% if etapa.nota %}<small class="pp-etapa-nota">{{ etapa.nota }}</small>{% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+    {% endfor %}
+</section>
+{% endif %}

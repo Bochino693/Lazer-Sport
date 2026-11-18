@@ -1,0 +1,18 @@
+{% load interno_extras %}{% comment %}
+  QUANDO FICA PRONTO, ANTES DE COMPRAR (LEIA-ME-V10, seção 112).
+
+  O prazo da lista de montagem: 4 a 5 dias úteis pelo m³ da máquina, mais
+  a fila quando as vagas da fábrica estão ocupadas (15 a 30 dias úteis);
+  brinquedão um por vez; peças em 3 dias. A conta mora em
+  sistema_interno.montagem (a mesma do contrato e de Meus pedidos).
+{% endcomment %}
+{% if prazo and prazo.texto %}
+<link rel="stylesheet" href="{% estatico 'site/ls-prazo-entrega.css' %}">
+<p class="ls-prazo-entrega{% if prazo.fila %} is-fila{% endif %}">
+    <i class="fa-solid fa-industry" aria-hidden="true"></i>
+    <span>
+        <strong>Fica pronto em {{ prazo.texto }}{% if prazo.fila %}: fila de produção + montagem{% endif %}</strong>
+        {% if prazo.data_ate %}<small>Previsão: {% if prazo.data_de and prazo.data_de != prazo.data_ate %}entre {{ prazo.data_de|date:"d/m" }} e {% endif %}{{ prazo.data_ate|date:"d/m" }}, contando do pagamento{% if prazo.detalhe %} · {{ prazo.detalhe }}{% endif %}</small>{% endif %}
+    </span>
+</p>
+{% endif %}

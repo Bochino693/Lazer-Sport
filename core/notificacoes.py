@@ -278,3 +278,66 @@ def enviar_boleto(pedido, bloqueante=False):
         target=_enviar_boleto_agora, args=(pedido.pk,), name=f"email-boleto-{pedido.pk}", daemon=True,
     ).start()
     return True
+
+
+# ----------------------------------------------------------------------
+# A produção: a fila, as etapas e o "pronto" (LEIA-ME-V10, seção 112)
+# ----------------------------------------------------------------------
+def montar_email_producao(aviso):
+    """O e-mail do andamento da produção, montado do `aviso` da lista de montagem.
+
+    `aviso` vem pronto de sistema_interno.montagem.montar_aviso (o core não
+    depende do sistema_interno): o destinatário, o assunto, os fatos novos
+    (agrupados no dia), a linha do tempo das etapas e a previsão.
+    """
+    if not aviso or not aviso.get("para"):
+        return None
+    contexto = {
+        **aviso,
+        "url_pedidos": _url_absoluta(reverse("meus_pedidos") + "#pedidos"),
+        "url_site": _url_absoluta("/"),
+        "whatsapp": "https://wa.me/5511960563135",
+    }
+    corpo_html = render_to_string("emails/producao_andamento.html", contexto)
+    corpo_texto = render_to_string("emails/producao_andamento.txt", contexto)
+    mensagem = EmailMultiAlternatives(
+        subject=aviso["assunto"],
+        body=corpo_texto or strip_tags(corpo_html),
+        from_email=remetente(),
+        to=[aviso["para"]],
+        reply_to=responder_para(),
+    )
+    mensagem.attach_alternative(corpo_html, "text/html")
+    return mensagem
+
+
+def _enviar_producao_agora(aviso):
+    try:
+        if not settings.EMAIL_HOST_USER:
+            logger.warning("SMTP sem credencial: aviso da produção (%s) não enviado.", aviso.get("titulo"))
+            return False
+        mensagem = montar_email_producao(aviso)
+        if mensagem is None:
+            return False
+        mensagem.send(fail_silently=False)
+        logger.info("Aviso da produção enviado: %s.", aviso.get("assunto"))
+        return True
+    except Exception:
+        # A etapa está gravada e aparece em Meus pedidos: um SMTP fora do ar
+        # não desfaz nada (e não reenvia: um aviso por fato, sem spam).
+        logger.exception("Falha ao enviar o aviso da produção (%s).", aviso.get("titulo"))
+        return False
+    finally:
+        close_old_connections()
+
+
+def enviar_aviso_de_producao(aviso, bloqueante=False):
+    """Manda o aviso da produção (numa thread: quem chama é a tela da fábrica)."""
+    if not aviso:
+        return False
+    if bloqueante:
+        return _enviar_producao_agora(aviso)
+    threading.Thread(
+        target=_enviar_producao_agora, args=(aviso,), name="email-producao", daemon=True,
+    ).start()
+    return True

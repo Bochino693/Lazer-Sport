@@ -7016,3 +7016,284 @@ Dependência nova: rjsmin (requirements.txt).
    (fracas, boas, conta antiga entra, cabeçalhos, HSTS de produção num
    processo à parte). sistema_interno/tests_migracoes.py cobra também o app
    contas.
+
+111) PEDIDOS E ORÇAMENTOS SEM 500 E SEM FASE INDEFINIDA (A VARREDURA)
+   O PEDIDO: "tenho erros 500 nos pedidos, visualização de assinatura e etc,
+   além de troca de fases indefinidas, para começarmos o sistema de
+   produção."
+   COMO FOI ACHADO (sem acesso aos logs do ar): uma varredura com o test
+   client do Django -- dados sintéticos em TODOS os estados (pedidos em cada
+   situação, com frete e retirada, Pix/boleto/cartão em análise, pagos,
+   cancelados antes e depois de pagar e depois de sair; orçamentos em cada
+   fase, sem documento, com documento esperando, assinados, parciais,
+   pagos/venda, suspensos, com O.S. agendada e concluída, de ambulante, com
+   valor final; contas do site ligadas e não), entrando como superusuário e
+   como cada papel (Produção, Criação, Vendas, Ambulante, Financeiro,
+   Gestão), em TODAS as rotas GET do painel (interno.) e das telas de gestão
+   do core, cada transição oferecida pela tela (o andamento do pedido em
+   cada passo e nos que não são passo, o envio, o prazo, a situação, o
+   pagamento, refazer, enviar, excluir e o documento do orçamento) e as
+   páginas do cliente (a proposta, aprovar/ajustes/recusar, o link de
+   assinatura de 5 minutos, o assinado, Meus pedidos, vincular código,
+   assinar termo, devolver ao carrinho). Rodou no SQLite E num PostgreSQL 16
+   local (o banco do ar é Postgres) -- e foi no Postgres que o 500 apareceu.
+   Cada passo é desfeito depois (savepoint), para o seguinte partir do mesmo
+   estado. Os scripts ficaram fora do repositório (semear.py e varrer.py).
+   O QUE ESTAVA ERRADO, E O CONSERTO:
+     1. A RESPOSTA DO CLIENTE NA PROPOSTA DAVA 500 NO AR. POST em
+        /orcamento/<token>/ (aprovar, pedir ajustes, recusar):
+        "FOR UPDATE cannot be applied to the nullable side of an outer
+        join". carregar_orcamento_exibicao(bloquear=True) travava a
+        consulta inteira, com o cliente, o responsável e o aceite em LEFT
+        OUTER JOIN. O SQLite ignora a trava, por isso a suíte passava.
+        Conserto: select_for_update(of=("self",)) -- trava só a linha do
+        orçamento (core/views_orcamento.py). O teste monta o SQL que o
+        PostgreSQL receberia (o compilador do backend do Postgres, sem
+        conexão) e recusa "FOR UPDATE" sem "OF" com LEFT OUTER JOIN.
+     2. A PROPOSTA ASSINADA OU PAGA VIRAVA "RECUSADA". O "Situação" do
+        painel levava qualquer proposta aprovada para Recusado, Expirado ou
+        Em negociação: ficava "Recusada" com a venda na receita, o termo
+        assinado apontando para ela e, em Meus pedidos, a Aprovação parada
+        em vermelho com o Termo e o Pagamento feitos depois. Agora
+        Orcamento.motivo_situacao_travada: assinada, ou com pagamento
+        registrado (parcial ou pago), a aprovação fica; o servidor recusa
+        com a frase ("O cliente já assinou o termo..." / "zere o pagamento
+        primeiro (Pagamento -> “Nada ainda”): a venda sai junto") e a lista
+        não oferece o botão "Situação". Sem assinatura nem pagamento, muda
+        como antes. Pelo mesmo motivo, a proposta com pagamento PARCIAL
+        registrado não ganha "Nova proposta" (Refazer): o dinheiro ficaria
+        numa versão "substituída" (pode_refazer e a frase do servidor).
+     3. O TOQUE NA CÉLULA "ACOMPANHAMENTO" DA LISTA DE ORÇAMENTOS abria a
+        janela "Mudar situação" SEM a situação de agora: a célula (a que o
+        painel repinta) e o botão tinham o mesmo data-situacao, e o clique
+        era por delegação. A lista suspensa ficava em branco e "Salvar"
+        respondia "Situação inválida". A célula passou a data-situacao-
+        celula, o clique é só de button[data-situacao], e a janela trocou a
+        lista suspensa por chips (rádios dentro de <label>), com a de agora
+        marcada (.ls-situacao-chips, interno_modern.css).
+     4. A FOLHA DO ANDAMENTO DO PEDIDO NÃO DIZIA O SENTIDO DOS PASSOS: num
+        pedido em preparação ela listava "Pago", "Pronto para retirada",
+        "Finalizado", "Cancelado" do mesmo jeito, e "Pago" parecia a fase
+        seguinte. Agora cada opção leva o sentido (views_funil.
+        opcoes_de_andamento): o PRÓXIMO passo vem primeiro e aceso, pular
+        uma fase diz qual pula ("Pula “Pronto para retirada”"), as voltas
+        viram "Voltar para “Pago”" num grupo "Corrigir" (tracejadas, com a
+        dica de que as datas da frente são apagadas) e cancelar fica por
+        último, com a pergunta do LSAviso.
+   O QUE A VARREDURA NÃO ACHOU: nenhum 500 nas telas GET (1.528 respostas
+   200 por rodada), na tela do documento, no link de 5 minutos, na via em
+   PDF, no assinado, em Meus pedidos, nem nas transições do pedido (as datas
+   da seção 106 batem em todo passo). Os 4xx que aparecem são os esperados
+   (sem permissão, rota só POST, filtro inválido).
+   Testes: sistema_interno/tests_erros_e_fases.py (14; 11 falhavam antes do
+   conserto -- os outros 3 seguram o detector do SQL e o caminho que já
+   funcionava). Nenhum teste antigo precisou mudar.
+
+112) A LISTA DE MONTAGEM: A FILA, AS 7 ETAPAS E O PRAZO, DO PEDIDO E DO ORÇAMENTO
+   O PEDIDO, EM QUATRO RECADOS DO DONO:
+     "lista de montagem com todos os brinquedos que tem pra montar";
+     "todo brinquedo que sair, estiver aprovado o prazo de montagem são de 4
+     a 5 dias, dependendo do m cúbico, vc deve informar isso pro cliente
+     (...) dividido por 7 etapas, corte de mdf, montagem, adesivo,
+     eletrônica, finalização, teste de qualidade e embalagem, para ir
+     notificando os usuários, peças de reposição 3 dias para a entrega,
+     além de vc alinhar os dois funis";
+     "tem uma fila de espera, se já tiver sendo montado 3 brinquedos, deve
+     entrar na fila e ter uma previsão de 15 a 30 dias mais os da produção
+     (...) brinquedões entre outros só podem ser montados um por vez, com
+     prazo de 30 dias a cada um na fila";
+     "tenho 5 tipos de usuário (...) vc deve modularizar todas as funções".
+   O QUE JÁ EXISTIA E FOI USADO (nada duplicado): o prazo de produção em
+   dias úteis e o começo da contagem (seção 89, core/producao.py:
+   somar_dias_uteis, feriados) -- a lista ESCREVE nele; as datas das fases
+   do pedido (seção 106) -- a lista anda o pedido por Pedido.mudar_situacao;
+   as etiquetas por máquina (o botão "Etiquetas" de cada linha abre a mesma
+   folha de cópias, producao-etiquetas.js); a regra de "começar a produção"
+   (pedido pago, orçamento aprovado); o acompanhamento de Meus pedidos
+   (pedido e orçamento). As Ordens de produção (OP, guia de etapas por
+   produto e baixa de estoque) ficaram como estão: são o manual de fabricar
+   UM produto; a lista é a fila de TODAS as máquinas vendidas.
+   AS TRILHAS (sistema_interno/montagem.py), uma por unidade:
+     * MÁQUINA (o brinquedo normal): 7 etapas -- Corte de MDF, Montagem,
+       Adesivo, Eletrônica, Finalização, Teste de qualidade, Embalagem --
+       em 4 dias úteis até o limite de volume e 5 acima dele OU SEM MEDIDA
+       (o volume é altura × largura × profundidade do cadastro).
+       O LIMITE PADRÃO É 2,5 m³: os gabinetes (fliperama, garra, boxe,
+       pimbal, Lazer Shot, Homem-Aranha) ficam entre 0,7 e 2,3 m³ e montam
+       em 4; as pistas e mesas grandes (Basquete Street 6,5 m³, Dragon
+       Bowling 6,1, Pembolim 3,5, simulador 2,9) pedem 5. Sem medida vai 5
+       (o prazo longo é o que não falha com o cliente);
+     * BRINQUEDÃO / ESPAÇO (brinquedões, trampolins, cama elástica,
+       escaladas, área ninja, quadras, casinhas cenográficas...): fora das 7
+       etapas -- Fabricação, Finalização, Teste de qualidade --, 30 dias
+       úteis cada (ou o prazo que a EQUIPE digitou no orçamento), UM POR VEZ;
+       é brinquedão a categoria marcada nas regras OU uma das palavras no
+       nome do brinquedo ou da categoria;
+     * PEÇA DE REPOSIÇÃO: 3 dias úteis, Separação e Embalagem, sem fila;
+     * KIT ELETRÔNICO (PecasReposicao.eh_kit): é peça (3 dias, sem fila,
+       não disputa a vaga das máquinas), mas sai com Separação, Eletrônica,
+       Teste de qualidade e Embalagem -- é a parte elétrica da máquina, e
+       vai testada. (O cadastro do kit é de outra frente; a lista só lê.)
+     O que entra: o pedido do site (o brinquedo; o combo e a promoção abrem
+     nos brinquedos deles; a peça e o kit) e o orçamento (o item do
+     catálogo, o de produção, a peça e a linha escrita à mão -- que é
+     reconhecida pelo catálogo, "Air Game Kids Alienígenas" = Air Game Kids,
+     adesivo Alienígenas). SERVIÇO FICA DE FORA ("Montagem e instalação",
+     frete, transporte, visita, manutenção, garantia, taxa...). Quantidade 3
+     = 3 linhas ("Unidade 2 de 3"); o adesivo vai junto.
+   A FILA (montagem.distribuir): no máximo 3 MÁQUINAS em montagem ao mesmo
+   tempo e 1 BRINQUEDÃO (as duas linhas são separadas; as capacidades mudam
+   nas regras). Sem vaga, a máquina espera na fila pela ordem de chegada
+   (o pagamento do pedido, a aprovação do orçamento), com a previsão do
+   dono: 15 a 30 dias úteis de fila, contados da chegada, + a montagem dela
+   (a faixa muda nas regras); o brinquedão da fila espera os da frente: a
+   vaga dele abre quando o de cima termina (posição × 30 dias). Quando uma
+   máquina termina a Embalagem, a vaga libera e a primeira da fila entra
+   SOZINHA: as datas das etapas são calculadas naquele momento (o prazo
+   dividido pelas etapas: a etapa i de n termina em ceil(i × D / n) dias
+   úteis -- 4 dias: 1, 2, 2, 3, 3, 4, 4) e o cliente é avisado. Cancelado,
+   recusado ou substituído, sai da lista e a vaga libera. A ordem da fila
+   muda pelas setas (subir/descer) e a capacidade nas regras: as previsões
+   se recalculam na hora.
+   A ORIGEM ANDA JUNTO (sem fase indefinida; as datas da seção 106):
+     * pedido PAGO -> entra; a primeira etapa feita põe "Em preparação";
+     * tudo embalado na RETIRADA -> "Pronto para retirada" (enviado_em);
+       se uma máquina voltar atrás, o pedido volta a "Em preparação";
+     * no FRETE (pedidos antigos) o pedido fica "Em preparação" com as
+       máquinas prontas: quem marca "Saiu para entrega" é a equipe, com a
+       transportadora (a linha diz "Informe o envio em Pedidos");
+     * o painel de Pedidos manda também: "Saiu para entrega" deixa as
+       máquinas prontas, "Finalizado" as entrega, "Cancelado" as tira;
+     * ORÇAMENTO APROVADO -> entra; tudo pronto -> a Produção fica feita na
+       linha do tempo do cliente ("Pronta: a equipe combina a entrega") e a
+       linha ganha "Entregue" (a Produção marca, com a pergunta do
+       LSAviso) -> a última fase fica feita ("Entregue em dd/mm"). A O.S.
+       concluída continua valendo como antes.
+   O PRAZO NUM LUGAR SÓ -- para o contrato também:
+       sistema_interno.montagem.prazo_de_entrega(pedido_ou_orcamento)
+   devolve PrazoDeEntrega(dias_min, dias_max, data_de, data_ate, fila,
+   texto, detalhe). Antes da produção: a fila de agora + a montagem (o que
+   o cliente leria se comprasse agora); na produção: as datas das máquinas
+   (a última pronta). O prazo que a EQUIPE digitou vale por cima. Além
+   disso a lista ESCREVE o prazo de produção da origem (prazo_producao_dias,
+   seção 89) com os dias úteis do começo até a última máquina pronta,
+   enquanto a equipe não digitar outro (ProducaoOrigem.prazo_automatico):
+   é dele que já saíam a proposta, Meus pedidos, as etiquetas ("Pronto
+   em"), a coluna de Vendas e a ficha do pedido -- tudo diz a mesma data.
+   Digitar um prazo na tela (Pedidos, janela do orçamento) devolve o prazo
+   à equipe; apagar devolve à lista. Para a Cláusula 3ª do contrato (outra
+   frente): use montagem.prazo_de_entrega(orcamento).texto / .data_ate.
+   O CLIENTE VÊ, ANTES E DEPOIS:
+     * página do brinquedo, do combo e da promoção, carrinho e pagamento:
+       "Fica pronto em 4 dias úteis" (ou "19 a 34 dias úteis: fila de
+       produção + montagem", com a previsão em datas e o detalhe "fila de
+       produção: 15 a 30 dias úteis + montagem: 4 dias úteis") --
+       {% prazo_de_entrega %} (interno_extras) e partials/prazo_entrega.html
+       (site/ls-prazo-entrega.css). O carrinho conta as máquinas dele
+       juntas (3 vagas livres e 4 máquinas = fila). A página da PEÇA
+       (reposicao_info.html) não foi mexida -- é da frente do kit; o prazo
+       da peça aparece no carrinho e no pagamento;
+     * proposta do orçamento: sem prazo digitado, o "Prazo de produção"
+       mostra o da lista ("5 dias úteis após a aprovação", "+ (fila de
+       produção + montagem)" quando há fila); aprovada, a data;
+     * Meus pedidos (pedido e orçamento): a nota da Produção diz "Na fila de
+       produção — posição 2 — previsão entre 09/12 e 05/01" ou "Em produção
+       · Adesivo — previsão 25/11", e embaixo da linha do tempo, as etapas
+       da fábrica com o dia em que cada uma ficou feita ou "prev. dd/mm"
+       (partials/producao_etapas.html, .pp-* em meus_pedidos.css; em linha
+       no computador, em duas colunas no celular). Uma linha de etapas POR
+       TRILHA: a compra com máquina e brinquedão mostra "Máquinas" (as 7) e
+       "Brinquedão / espaço" (as 3) separadas, cada uma com a posição dela
+       na fila. Sem consulta a mais por pedido (select_related da produção
+       + prefetch das unidades);
+     * OS DOIS FUNIS ALINHADOS: os dois têm Pagamento -> Produção (com as
+       mesmas etapas) -> Entregue; a última fase do orçamento deixou de se
+       chamar "Concluído" e passou a "Entregue", como a do pedido.
+   OS AVISOS (e-mail pelo mesmo caminho dos transacionais: core/
+   notificacoes.enviar_aviso_de_producao, numa thread, só com o SMTP
+   configurado; emails/producao_andamento.html/.txt): "Entrou em produção",
+   cada etapa concluída pela ORIGEM inteira (todas as máquinas dela) e
+   "Tudo pronto: já pode retirar na fábrica". No máximo UM por fato, e um
+   por dia por origem: o primeiro fato do dia sai na hora, os outros do
+   mesmo dia esperam e saem JUNTOS no próximo envio (o próximo fato num
+   outro dia, ou a lista aberta no dia seguinte -- montagem.avisar_
+   pendentes); o "pronto" nunca espera. O e-mail leva a linha do tempo das
+   etapas e a previsão. Quem recebe: a conta do pedido; no orçamento, a
+   conta vinculada (seção 104) ou o e-mail do cadastro. A ORIGEM ANTIGA
+   (paga ou aprovada mais de 6 horas antes de chegar à lista -- a carga da
+   primeira vez) entra em silêncio: ninguém recebe "entrou em produção" de
+   uma compra de semanas atrás; o que acontecer depois é avisado.
+   A TELA (Produção > Lista de montagem, /producao/montagem/, interno.):
+   os cartões das vagas ("Máquinas em montagem 3 de 3", "Na fila",
+   "Brinquedões 1 de 1 · 2 na fila", "Prontas"); os filtros em chips
+   (situação, linha, brinquedo -- cada brinquedo com a contagem: "Air Game
+   Kids · 4 na fila, 1 em montagem"); "Em produção" agrupado por brinquedo,
+   cada máquina com a origem (Pedido #N / Orçamento nº ..., o cliente só
+   para a equipe), a previsão, as ETAPAS EM CHIPS (rádios dentro de
+   <label>: a marcada é a última feita; marcar uma da frente conclui as do
+   meio com o mesmo instante; marcar uma de trás é correção e pergunta
+   antes, pelo LSAviso) com o dia de cada uma ou a previsão, e as
+   Etiquetas; "Na fila — máquinas" e "Na fila — brinquedões" com a posição,
+   a chegada, a previsão e as setas; "Prontas" (o orçamento ganha
+   "Entregue"); "Entregues" no filtro; e as REGRAS (capacidades, limite de
+   m³, dias, fila, brinquedão: categorias em chips e palavras). Modos Lista
+   e Cards como as outras listas (no celular a lista empilha, sem rolar de
+   lado); tema sol, lua e eclipse só com as variáveis do tema
+   (interno/lista-montagem.css); lista-montagem.js por delegação, sem
+   alert/confirm. A lista se acerta sozinha ao abrir (montagem.
+   sincronizar_tudo: o que devia estar e não está, e o contrário). Na
+   tela de Pedidos da loja, a célula Produção de cada pedido mostra a fila
+   ou a etapa de agora ("Na fila de produção — posição 2 — previsão ...",
+   "Em produção · Adesivo"), com o elo para a lista.
+   QUEM (permissoes.capacidades, as mesmas no menu e na view):
+     lista_montagem         vê a tela (Engenharia de produção, Gestão,
+                            Financeiro, Vendas, Ambulante; o superusuário);
+     lista_montagem_editar  marca etapas, mexe na fila, nas regras e no
+                            "Entregue": SÓ a Engenharia de produção (e o
+                            superusuário). Os outros recebem 403;
+     lista_montagem_tudo    vê todas as origens (Produção, Gestão,
+                            Financeiro). Vendas e Ambulante veem só as
+                            máquinas dos orçamentos de que são responsáveis
+                            (o andamento e a previsão do que venderam).
+     Criação e site não entra (volta para a tela dela).
+   Banco: sistema_interno/0068_lista_de_montagem (só esquema:
+   ConfiguracaoProducao, ProducaoOrigem, UnidadeMontagem; depende só da
+   core 0111 -- nenhuma migração nova no core) e 0069_regras_da_producao
+   (só dados: a linha das regras com os padrões e as categorias de
+   brinquedão marcadas pelas palavras; rodar de novo não muda nada). Os
+   pedidos pagos e orçamentos aprovados de antes entram ao abrir a lista
+   (em silêncio).
+       python manage.py migrate sistema_interno
+   Código: sistema_interno/montagem.py (trilhas, prazos, fila, etapas,
+   avisos, prazo_de_entrega), signals_montagem.py (pedido e orçamento
+   mudando de situação, depois do commit), views_montagem.py, templates
+   lista_montagem_inner.html, partes/montagem_unidade.html e
+   montagem_fila.html, static interno/lista-montagem.css/.js, models
+   (ConfiguracaoProducao, ProducaoOrigem, UnidadeMontagem e
+   Orcamento.prazo_da_montagem_para_o_cliente), permissoes (as 3 chaves),
+   base_inner.html (o menu), views_funil.PrazoProducaoView (o prazo da
+   equipe), codigo_orcamento (as etapas e o "Entregue" do orçamento),
+   core/views.py (Meus pedidos), core/notificacoes.py, core/templates
+   (partials/producao_etapas.html, prazo_entrega.html, emails/
+   producao_andamento.*, as páginas do produto, do carrinho e do
+   pagamento), site/ls-prazo-entrega.css e meus_pedidos.css.
+   Testes: sistema_interno/tests_lista_montagem.py (a classificação -- 4/5
+   dias pelo m³, sem medida, brinquedão pela categoria e pela palavra,
+   peça, kit, combo e promoção abertos, orçamento sem o serviço e com o
+   catálogo reconhecido --, as 7 etapas dividindo o prazo, a fila de 3 e a
+   faixa de 15 a 30, a vaga que libera puxando a primeira e avisando, o
+   brinquedão um por vez, a ordem e a capacidade mudando, o cancelado
+   liberando a vaga, as etapas para a frente e para trás, o pedido em
+   preparação/pronto para retirada/voltando, o frete esperando a
+   transportadora, o finalizado entregando, o prazo da origem e o da
+   equipe, os avisos agrupados no dia e o pronto na hora, o silêncio da
+   carga antiga, o prazo antes da compra com e sem fila, a página do
+   produto, a proposta, a tela -- grupos, contagens, chips, sem <select>,
+   sem alert, só variáveis do tema --, cada função entrando na tela, Meus
+   pedidos sem consulta a mais e a migração 0069). Ajustados em
+   tests_funil_vendas.py: o sinal da situação agora tem dois ouvintes (a
+   venda e a lista) e a proposta sem prazo digitado mostra o da lista.
+   Conferido no Chromium (PC 1366 e celular 390, sol e lua): a lista em
+   cada filtro, Lista e Cards, a fila, as prontas, as regras, Pedidos,
+   Orçamentos e Meus pedidos com a fila e as etapas; sem rolagem
+   horizontal e sem erro de JS.

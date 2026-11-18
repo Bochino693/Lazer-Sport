@@ -172,6 +172,16 @@ def prazo_de_entrega_do_orcamento(orcamento) -> int:
     """
     dias = getattr(orcamento, "prazo_producao_dias", None)
     if dias is None:
+        # sem prazo digitado: o da lista de montagem (montagem + fila, seção 112),
+        # pelo MAIOR número da faixa -- o contrato promete o que a fábrica cumpre
+        try:
+            from . import montagem
+
+            prazo = montagem.prazo_de_entrega(orcamento)
+            if prazo is not None and getattr(prazo, "dias_max", None):
+                return max(int(prazo.dias_max), 0)
+        except Exception:  # noqa: BLE001 -- sem a lista, o padrão do contrato
+            pass
         return PRAZO_DE_ENTREGA_PADRAO
     return max(int(dias), 0)
 

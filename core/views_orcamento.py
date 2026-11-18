@@ -70,7 +70,14 @@ def carregar_orcamento_exibicao(*, bloquear=False, **filtros):
         )
     )
     if bloquear:
-        consulta = consulta.select_for_update()
+        # SÓ A LINHA DO ORÇAMENTO (`of=("self",)`). O cliente, o
+        # responsável e o aceite vêm por LEFT OUTER JOIN (os três podem
+        # faltar), e o PostgreSQL recusa "FOR UPDATE" no lado anulável de
+        # um JOIN: sem o `of`, TODA resposta do cliente na página da
+        # proposta (aprovar, pedir ajustes, recusar) estourava 500 no ar
+        # -- e passava nos testes, porque o SQLite ignora a trava inteira.
+        # Ver LEIA-ME-V10, seção 111.
+        consulta = consulta.select_for_update(of=("self",))
     return get_object_or_404(consulta, **filtros)
 
 

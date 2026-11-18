@@ -4940,6 +4940,15 @@ button.ls-incomplete-chip:focus-visible{outline:3px solid rgba(var(--red-rgb),.3
 .ls-folha-andamento-opcao:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
 .ls-folha-andamento-opcao.perigo>i{color:var(--red-texto);background:rgba(var(--red-rgb),.12)}
 .ls-folha-andamento-opcao.perigo strong{color:var(--red-texto)}
+/* o sentido de cada passo (seção 111): o próximo aceso, as voltas apagadas */
+.ls-folha-andamento-opcao.proximo{border-color:var(--acento-linha);background:var(--acento-fundo)}
+.ls-folha-andamento-opcao.proximo>i{color:var(--tinta);background:var(--acento)}
+.ls-folha-andamento-opcao.voltar{border-style:dashed}
+.ls-folha-andamento-opcao.voltar>i{color:var(--text-2);background:var(--panel-3)}
+.ls-folha-andamento-grupo{
+  margin:6px 2px 0;color:var(--text-2);font-size:.72rem;font-weight:900;
+  letter-spacing:.06em;text-transform:uppercase;
+}
 
 /* ------------------------------------ o envio do pedido (seção 106)
    "Para o cliente conseguir ver tudo certinho até a entrega": quem leva
@@ -6487,6 +6496,38 @@ a.ls-pager-pagina:hover,a.ls-pager-seta:hover{border-color:var(--line-forte);col
     justify-content:flex-start!important;max-width:100%;
   }
 }
+
+
+/* ======================================================================
+   A SITUAÇÃO DO ORÇAMENTO EM CHIPS (seção 111)
+
+   A janela "Mudar situação" tinha uma lista suspensa; agora são rádios
+   dentro de <label>, como a folha do envio. A situação de agora vem
+   marcada; a recusa continua pedindo o motivo.
+   ====================================================================== */
+.ls-situacao-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;border:0;min-width:0}
+.ls-situacao-chips legend{float:none;width:100%;margin:0 0 6px;padding:0}
+.ls-situacao-chip{
+  position:relative;display:inline-flex;align-items:center;min-height:40px;padding:7px 14px;
+  border:1px solid var(--line);border-radius:999px;background:var(--panel-2);
+  color:var(--text);font-size:.84rem;font-weight:850;line-height:1.15;cursor:pointer;
+}
+.ls-situacao-chip input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.ls-situacao-chip:hover{border-color:var(--acento-linha);background:var(--acento-fundo)}
+.ls-situacao-chip:has(input:focus-visible){outline:2px solid var(--acento);outline-offset:2px}
+.ls-situacao-chip:has(input:checked){border-color:var(--acento);background:rgba(var(--acento-rgb),.2);color:var(--acento-claro)}
+.ls-situacao-chip:has(input:checked)::before{content:"\2713";margin-right:6px;font-weight:900}
+.ls-situacao-chip.aprovado:has(input:checked){border-color:var(--green);background:rgba(var(--green-rgb),.18);color:var(--green-claro)}
+.ls-situacao-chip.recusado:has(input:checked){border-color:var(--red);background:rgba(var(--red-rgb),.16);color:var(--red-claro)}
+
+
+/* a fila e a etapa da lista de montagem na linha do pedido (seção 112) */
+.ls-montagem-elo{
+  display:inline-flex;align-items:flex-start;gap:5px;margin-top:4px;max-width:100%;
+  color:var(--apoio-texto);font-size:.74rem;font-weight:850;line-height:1.3;text-decoration:none;
+  overflow-wrap:anywhere;
+}
+.ls-montagem-elo:hover{text-decoration:underline}
 
 
 /* ======================================================================

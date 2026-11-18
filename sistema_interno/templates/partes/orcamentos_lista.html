@@ -162,12 +162,15 @@
                 {% endif %}
               </td>
               {% comment %}
-                data-situacao: a célula que o painel repinta sozinho
+                data-situacao-celula: a célula que o painel repinta sozinho
                 quando o cliente responde pela página pública. Sem isso a
                 mudança só aparecia ao recarregar -- e como a sessão dura
                 o dia inteiro, na prática só ao sair e entrar de novo.
+                (Chamava-se data-situacao, o mesmo nome do botão "Situação":
+                o toque em qualquer ponto da célula abria a janela de mudar
+                a situação SEM a situação de agora -- seção 111.)
               {% endcomment %}
-              <td data-rotulo="Acompanhamento" data-situacao="{{ orcamento.id }}">
+              <td data-rotulo="Acompanhamento" data-situacao-celula="{{ orcamento.id }}">
                 <div class="ls-situacao-card ls-situacao-orcamento">
                   <span class="ls-status
                     {% if orcamento.status == 'aprovado' %}success
@@ -357,7 +360,7 @@
                   aberta na mão para atendimento direto. As duas portas
                   estão na tela de Ordens de Serviço.
                 {% endcomment %}
-                {% if pode_editar_comercial and not orcamento.ordem_servico %}<button type="button" class="btn btn-sm btn-outline-secondary"
+                {% if pode_editar_comercial and not orcamento.ordem_servico and not orcamento.motivo_situacao_travada %}<button type="button" class="btn btn-sm btn-outline-secondary"
                         data-situacao="{{ orcamento.id }}"
                         data-nome="Orçamento ID {{ orcamento.id }} — {{ orcamento.destinatario }}"
                         data-status="{{ orcamento.status }}"

@@ -1346,6 +1346,12 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "A proposta já liberou uma O.S. e permanece congelada no "
                 "histórico comercial. Atualize somente a Ordem de Serviço."
             )
+        # Assinada ou com pagamento, a aprovação é fato: "Recusado" com a
+        # venda na receita e o termo assinado era uma fase sem sentido
+        # (LEIA-ME-V10, seção 111).
+        travada = orcamento.motivo_situacao_travada
+        if travada and status != orcamento.status:
+            raise ErroDeFormulario(travada)
 
         # O MOTIVO DA RECUSA É OBRIGATÓRIO, E NO SERVIDOR.
         #
@@ -1559,6 +1565,13 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "não ganha outra versão: o contrato assinado precisa continuar "
                 "apontando para ela. Para o que vier depois, abra uma "
                 "proposta nova."
+            )
+        if (orcamento.valor_pago or 0) > 0:
+            return (
+                "Esta proposta já tem pagamento registrado e não ganha outra "
+                "versão: o dinheiro recebido ficaria numa proposta "
+                "substituída. Zere o pagamento primeiro (Pagamento → “Nada "
+                "ainda”) ou abra uma proposta nova."
             )
         if hasattr(orcamento, "ordem_servico"):
             return (

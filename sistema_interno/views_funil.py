@@ -190,6 +190,22 @@ class PrazoProducaoView(FunilMixin, View):
             campos.append("producao_inicio")
         # `save` com a lista: o sinal do pedido só olha mudança de situação.
         alvo.save(update_fields=campos)
+        # O prazo agora é da EQUIPE: a lista de montagem para de escrever por
+        # cima dele (seção 112). Apagado, a lista volta a preencher.
+        from .models import ProducaoOrigem
+
+        ProducaoOrigem.objects.filter(
+            **({"orcamento": alvo} if isinstance(alvo, Orcamento) else {"pedido": alvo}),
+        ).update(prazo_automatico=False)
+        if dias is None:
+            from . import montagem
+
+            producao = ProducaoOrigem.objects.filter(
+                **({"orcamento": alvo} if isinstance(alvo, Orcamento) else {"pedido": alvo}),
+            ).first()
+            if producao is not None:
+                montagem.acertar_origem(producao)
+                alvo.refresh_from_db()
 
         dados = dados_do_prazo(alvo)
         if dias is None:
@@ -229,6 +245,14 @@ def opcoes_de_andamento(pedido) -> list[dict]:
     (seção 106). Na retirada ele vira "Pronto para retirada", sem
     transportadora.
     """
+    # O SENTIDO DE CADA PASSO (seção 111). A folha listava os passos todos
+    # do mesmo jeito -- "Pago", "Pronto para retirada", "Finalizado" -- e
+    # quem abria um pedido em preparação lia "Pago" como se fosse a fase
+    # seguinte. Agora cada opção diz para onde vai: o PRÓXIMO passo vem
+    # primeiro e aceso; pular uma fase diz qual pula; voltar é "Voltar
+    # para ..." (correção); cancelar fica por último.
+    andamento = list(pedido.ANDAMENTO)
+    aqui = andamento.index(pedido.status) if pedido.status in andamento else -1
     opcoes = []
     for passo in pedido.proximas_situacoes():
         rotulo, icone = ROTULO_DO_PASSO[passo]
@@ -237,8 +261,36 @@ def opcoes_de_andamento(pedido) -> list[dict]:
             opcao["rotulo"], opcao["icone"], opcao["dica"] = PASSO_DA_RETIRADA[passo]
         elif passo == "saiu_entrega":
             opcao["pede_envio"] = True
+        if passo == "cancelado":
+            opcao["sentido"] = "cancelar"
+        else:
+            destino = andamento.index(passo)
+            if destino == aqui + 1:
+                opcao["sentido"] = "proximo"
+            elif destino > aqui:
+                opcao["sentido"] = "pular"
+                pulados = [
+                    situacao_do_passo(pedido, andamento[i]) for i in range(aqui + 1, destino)
+                ]
+                opcao["dica"] = (opcao.get("dica") or "") + (
+                    " " if opcao.get("dica") else ""
+                ) + "Pula " + " e ".join(f"“{nome}”" for nome in pulados) + "."
+            else:
+                opcao["sentido"] = "voltar"
+                opcao["rotulo"] = f"Voltar para “{opcao['rotulo']}”"
+                opcao["icone"] = "bi-arrow-counterclockwise"
+                opcao["dica"] = "Correção: as datas das fases da frente são apagadas."
         opcoes.append(opcao)
+    ordem = {"proximo": 0, "pular": 1, "voltar": 2, "cancelar": 3}
+    opcoes.sort(key=lambda opcao: ordem[opcao["sentido"]])
     return opcoes
+
+
+def situacao_do_passo(pedido, passo) -> str:
+    """O nome da fase como a equipe lê (na retirada, "Pronto para retirada")."""
+    if pedido.retirada and passo in PASSO_DA_RETIRADA:
+        return PASSO_DA_RETIRADA[passo][0]
+    return ROTULO_DO_PASSO[passo][0]
 
 
 def dados_do_envio(pedido) -> dict:

@@ -1569,3 +1569,79 @@
     .pd-detalhes { animation: none; }
     .pd-alternar i { transition: none; }
 }
+
+
+/* ==========================================================================
+   A PRODUÇÃO: A FILA E AS ETAPAS DA FÁBRICA (LEIA-ME-V10, seção 112)
+   Embaixo da linha do tempo do pedido e do orçamento. No computador as
+   etapas ficam em linha (como as fases); no celular, em duas colunas.
+   ========================================================================== */
+.pp-producao {
+    margin: 12px 0 4px;
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--pd-cor) 28%, transparent);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--pd-cor) 8%, rgba(4, 10, 28, .5));
+}
+.pp-producao.is-fila { --pd-cor: var(--pd-amarelo); }
+.pp-producao.is-pronta { --pd-cor: var(--pd-verde); }
+.pp-producao-nota {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 0 10px;
+    color: var(--ck-texto);
+    font-size: .9rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+.pp-producao-nota i { color: var(--pd-cor); margin-top: 3px; }
+.pp-grupo {
+    margin: 10px 0 6px;
+    color: var(--ck-fraco);
+    font-size: .74rem;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+.pp-etapas + .pp-grupo { margin-top: 12px; }
+.pp-etapas {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.pp-etapa {
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+    min-width: 0;
+    padding: 8px 4px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .03);
+    color: var(--ck-fraco);
+    text-align: center;
+}
+.pp-etapa-bola {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid color-mix(in srgb, var(--ck-fraco) 45%, transparent);
+    font-size: .74rem;
+    font-weight: 800;
+}
+.pp-etapa-nome { font-size: .76rem; font-weight: 800; line-height: 1.2; overflow-wrap: anywhere; }
+.pp-etapa-nota { font-size: .7rem; opacity: .9; }
+.pp-etapa.is-feita { color: var(--pd-verde); }
+.pp-etapa.is-feita .pp-etapa-bola { border-color: var(--pd-verde); background: color-mix(in srgb, var(--pd-verde) 22%, transparent); }
+.pp-etapa.is-atual { color: var(--ck-texto); background: color-mix(in srgb, var(--pd-cor) 14%, transparent); }
+.pp-etapa.is-atual .pp-etapa-bola { border-color: var(--pd-cor); color: var(--pd-cor); box-shadow: 0 0 14px color-mix(in srgb, var(--pd-cor) 40%, transparent); }
+@media (max-width: 560px) {
+    .pp-etapas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pp-etapa { grid-template-columns: auto minmax(0, 1fr); justify-items: start; text-align: left; column-gap: 8px; }
+    .pp-etapa-bola { grid-row: span 2; }
+}
