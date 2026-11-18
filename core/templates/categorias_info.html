@@ -339,11 +339,16 @@
                 <i class="fa-brands fa-whatsapp"></i>
             </span>
             <div class="cat-cta-texto">
+                {% if vitrine.cta_titulo %}
+                <h2 id="cat-cta-titulo">{{ vitrine.cta_titulo }}</h2>
+                <p>{{ vitrine.cta_texto }}</p>
+                {% else %}
                 <h2 id="cat-cta-titulo">Quer {{ categoria.nome_categoria|lower }} no seu espaço?</h2>
                 <p>
                     Mande as medidas do lugar e o que você imagina. A fábrica responde
                     pelo WhatsApp com projeto, prazo e orçamento, sem compromisso.
                 </p>
+                {% endif %}
             </div>
             <div class="cat-cta-acoes">
                 <a class="cat-botao cat-botao--zap"

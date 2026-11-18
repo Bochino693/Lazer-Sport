@@ -1477,6 +1477,12 @@ class CategoriasInfoView(View):
                  "Ajuda para instalar e peças de reposição da fábrica."),
             ),
             "zap": "Olá! Quero um orçamento de kit eletrônico para a minha máquina.",
+            # a chamada do fim da página: o kit não vai "no seu espaço", vai na máquina
+            "cta_titulo": "Já tem a máquina e quer a eletrônica dela?",
+            "cta_texto": (
+                "Diga qual é a sua máquina (ou mande uma foto dela). A fábrica responde "
+                "pelo WhatsApp com o kit certo, o prazo e o orçamento, sem compromisso."
+            ),
         }),
         (("eletronic", "fliperama"), {
             "icone": "fa-gamepad",

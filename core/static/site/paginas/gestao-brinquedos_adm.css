@@ -321,7 +321,9 @@
     /* a coluna dos selos cabe o "2 adesivos" (frente dos adesivos) */
     /* e a das ações, os três botões mais o ícone de "Gráficos" (com 176px
        eles passavam por cima dos selos) */
-    --lv-colunas: 56px minmax(190px, 2fr) minmax(0, 2fr) 118px 112px 124px 232px;
+    /* a da loja cabe o "Na loja, sem preço" inteiro (com 112px ele passava por
+       cima do selo "Kit" -- o kit da loja sem preço é o mais comum, LEIA-ME 107) */
+    --lv-colunas: 56px minmax(190px, 2fr) minmax(0, 2fr) 118px 150px 124px 232px;
     --lv-areas: "foto titulo info valor estado selos acoes";
     /* tablet: duas linhas por brinquedo */
     --lv-colunas-tab: 56px minmax(0, 1fr) auto auto;
@@ -2120,8 +2122,8 @@ body:has(dialog.bq-janela[open]) {
 .bq-kit-corpo[hidden] { display: none; }
 
 .bq-kit-escolhida {
-    flex: 0 1 auto;
-    max-width: 45%;
+    flex: 0 0 auto;
+    max-width: 50%;
     padding: 6px 11px;
     border-radius: 999px;
     color: var(--muted);
@@ -2135,7 +2137,9 @@ body:has(dialog.bq-janela[open]) {
 
 .bq-kit-escolhida.is-on { color: var(--violet-claro); background: rgba(var(--violet-rgb), .18); }
 
-.bq-kit-maquinas { max-height: 178px; }
+/* a caixa das máquinas rola sozinha no PC; no tablet e no celular ela se abre
+   inteira, como a das categorias (nada de rolagem dentro de rolagem) */
+.bq-escolhas--lista.bq-kit-maquinas { max-height: 178px; }
 .bq-kit-maquinas .bq-opcao[hidden] { display: none; }
 .bq-kit-maquinas .bq-opcao--nenhuma { border-style: dashed; }
 
@@ -2319,11 +2323,15 @@ body:has(dialog.bq-janela[open]) {
 
 .bq-kit-escolha-vazia { color: var(--muted); font-size: .8rem; }
 
+@media (max-width: 900px) {
+    .bq-escolhas--lista.bq-kit-maquinas { max-height: none; overflow: visible; }
+}
+
 @media (max-width: 600px) {
     .gestao-integrada .ls-content .bq-secao.bq-kit { padding: 12px; }
     .bq-kit-linha { grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 10px; }
     .bq-kit-num { display: none; }
     .bq-kit-ordem { grid-auto-flow: column; justify-content: end; }
     .gestao-integrada .ls-content .bq-janela .bq-kit-ordem button { min-width: 44px; min-height: 40px; }
-    .bq-kit-escolhida { max-width: 40%; }
+    .bq-kit-escolhida { max-width: 46%; }
 }

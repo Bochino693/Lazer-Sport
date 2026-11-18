@@ -61,6 +61,7 @@ migracao_0170 = importlib.import_module("core.migrations.0170_variantes_sem_orig
 migracao_0181 = importlib.import_module("core.migrations.0181_adesivo_padrao_e_posicoes")
 migracao_0182 = importlib.import_module("core.migrations.0182_adesivo_padrao_de_todo_brinquedo")
 migracao_0183 = importlib.import_module("core.migrations.0183_posicoes_do_3d_dos_adesivos")
+migracao_0208 = importlib.import_module("core.migrations.0208_kits_iniciais")
 
 GLB_ALIEN = "site/arena/modelos/air-game-kids-alienigenas.glb"
 GLB_ASTRONAUTAS = "site/arena/modelos/air-game-kids-astronautas.glb"
@@ -294,7 +295,10 @@ class EstruturarTests(TransactionTestCase):
         variantes.estruturar(apps169, None, avisar=_calado)
         executor = MigrationExecutor(connection)
         executor.loader.build_graph()
-        executor.migrate(executor.loader.graph.leaf_nodes())
+        # sem os kits iniciais (0208/0212, LEIA-ME 107): eles viram produtos, e o
+        # SQLite, que refaz a tabela na 0211, daria a um deles o número da ficha apagada
+        with mock.patch.object(migracao_0208, "KITS", ()):
+            executor.migrate(executor.loader.graph.leaf_nodes())
 
         # um objeto só: a ficha sumiu; o adesivo tem o 3D e as fotos; o preço é 6990
         self.assertFalse(Brinquedos.objects.filter(pk=ficha.pk).exists())

@@ -195,10 +195,14 @@
   documento deveria dizer. Quem cuida do catálogo não tinha como
   saber quais itens estavam assim sem abrir um por um.
 {% endcomment %}
+          {% if brinquedo.eh_kit and not brinquedo.dimensoes_m %}
+          {# o kit é a parte elétrica: sem medidas não é falta (LEIA-ME 107) #}
+          {% else %}
           <p class="bq-medidas{% if not brinquedo.dimensoes_m %} is-falta{% endif %}">
             <i class="bi {% if brinquedo.dimensoes_m %}bi-rulers{% else %}bi-exclamation-triangle-fill{% endif %}" aria-hidden="true"></i>
             <span>{{ brinquedo.dimensoes_m|default:"Sem medidas — a proposta sai sem o tamanho" }}</span>
           </p>
+          {% endif %}
             {% if brinquedo.eh_kit %}
             <p class="bq-kit-resumo">
               <i class="bi bi-cpu" aria-hidden="true"></i>

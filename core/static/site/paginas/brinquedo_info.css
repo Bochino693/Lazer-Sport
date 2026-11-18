@@ -1788,12 +1788,16 @@
    biblioteca dos kits -- ou o ícone, o detalhe e a quantidade) e "Para a
    máquina X". Veio de reposicao_info.css, do tempo em que o kit era peça.
    ====================================================================== */
+/* a marca do kit: o selo "Kit" no lugar do pontinho, e a linha quebra no celular */
 .produto-marca.produto-marca--kit {
-    display: flex;
     flex-wrap: wrap;
-    align-items: center;
     gap: 6px 9px;
+    padding-left: 5px;
+    border-color: rgba(255, 210, 63, .38);
+    color: #ffe08a;
+    background: rgba(255, 210, 63, .1);
 }
+.produto-marca.produto-marca--kit::before { display: none; }
 
 /* ---- O que vem no kit ---- */
 .kit-itens {

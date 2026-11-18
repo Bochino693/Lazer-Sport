@@ -6126,6 +6126,12 @@ Dependência nova: rjsmin (requirements.txt).
    documento no painel; sem rolagem horizontal em Meus pedidos.
 
 105) O KIT ELETRÔNICO: A PARTE ELÉTRICA DA MÁQUINA, SEM A MÁQUINA
+   >>> MUDOU NA SEÇÃO 107: o kit deixou de ser uma peça marcada com vitrine
+   própria e virou um PRODUTO (Brinquedos com `eh_kit`), junto com as
+   máquinas, na tela Brinquedos do painel. O que vale hoje está na 107; o que
+   segue é o histórico (o pedido, os itens, as artes e a foto de cada item
+   continuam valendo; /kits/, a faixa da home, o kit no painel de Peças e
+   PecasReposicao.eh_kit/maquina não existem mais). <<<
    O PEDIDO: "no site, precisamos agora também do chamado kit, ele deve ter
    espaço entre os demais produtos, o kit seria o seguinte, os componentes
    eletrônicos sem a máquina para troca ou semi instalação, por exemplo,
@@ -6138,7 +6144,7 @@ Dependência nova: rjsmin (requirements.txt).
    jogo, essa image é de outro site." Ela saiu do repositório (nunca foi ao
    ar) e o jogo dela ("Boliche dos Bichinhos") saiu dos textos: o Boliche
    Virtual é o DRAGON BOWLING. Nunca usar arte de terceiros nos produtos.
-   O KIT É UMA PEÇA MARCADA, e não um sexto tipo no carrinho: a peça já passa
+   O KIT ERA UMA PEÇA MARCADA (até a seção 107), e não um sexto tipo no carrinho: a peça já passa
    pelo carrinho, Pix/cartão/boleto, parcelas sem juros, pedido, etiquetas e
    painel. PecasReposicao ganhou `eh_kit` (com índice) e `maquina` (FK
    opcional para Brinquedos, related_name "kits_eletronicos", SET_NULL); o
@@ -6149,7 +6155,8 @@ Dependência nova: rjsmin (requirements.txt).
    que o carrinho, a lista de desejos e o aplicativo aceitam); quem lista
    PEÇAS pede `pecas_avulsas_da_vitrine()` e quem lista KITS,
    `kits_da_vitrine()` (já com a máquina, as fotos e os itens).
-   ONDE APARECE:
+   ONDE APARECIA (até a seção 107; hoje /kits/ leva à categoria "Kits
+   eletrônicos" e /kits/<n>/ ao produto, 301):
      * /kits/ (KitsView, core/views_kits.py, templates kits.html e
        site/paginas/kits.css): o topo "Monte sua própria máquina" (a parte
        eletrônica completa, para montar a sua, trocar a eletrônica ou
@@ -6178,7 +6185,8 @@ Dependência nova: rjsmin (requirements.txt).
        salvar uma peça); a busca do site acha o kit pelo nome, pela máquina e
        pelos itens ("tv box"); o sitemap tem /kits/ (se houver kit) e cada
        kit (KitsSitemap).
-   O CARD: o mesmo da peça (partials/peca_card.html + ls-peca-card.css), com
+   O CARD (até a 107; hoje é o card das máquinas, partials/kit_no_card.html):
+   o mesmo da peça (partials/peca_card.html + ls-peca-card.css), com
    o selo "Kit" (com a palavra também no celular), os chips "Kit eletrônico"
    e "Para <máquina>" e a lista curta ("7 itens: TV Box, Barra com 5
    sensores, Câmera…", `resumo_do_kit`). KIT SEM FOTO mostra a foto da
@@ -6190,7 +6198,8 @@ Dependência nova: rjsmin (requirements.txt).
    (`_item_vendavel`, 404). A página da PEÇA sem preço também passou a dizer
    "Valor sob consulta" (antes mostrava o botão do carrinho, que falhava) e o
    JSON-LD sem preço não leva mais `"offers"` com "price": "0".
-   OS KITS INICIAIS (migração 0208, core/kits.py KITS_INICIAIS):
+   OS KITS INICIAIS (migração 0208 -- o código dela foi copiado para dentro do
+   arquivo da migração na 107 --, core/kits.py KITS_INICIAIS):
      * Kit Boliche Virtual: Placa Zero Delay, TV Box (com o jogo Dragon
        Bowling), Chicote, Cabo HDMI, Fonte, Webcam, Barra com 5 sensores;
      * Kit Strike Kids: TV Box (com o jogo Strike Kids), Barra com 5
@@ -6237,7 +6246,7 @@ Dependência nova: rjsmin (requirements.txt).
    não tem esses modelos, nem placa Zero Delay, barra de sensores ou a arma.
    Quando chegar a foto: recortar (python -I, recorte_peca.recortar), caber
    em 512 x 512 transparente e salvar com o nome da lista acima.
-   Sobem para o Cloudinary SÓ NO RENDER, como capa de cada kit (só se o kit
+   (Na 0208) sobem para o Cloudinary SÓ NO RENDER, como capa de cada kit (só se o kit
    ainda não tem foto), com nome curto ("pecas_reposicao/kit-strike-kids-<assinatura>",
    conferido contra os 100 caracteres da coluna), num ponto de salvamento
    próprio (no PostgreSQL um erro aborta a migração inteira) e com
@@ -6246,7 +6255,10 @@ Dependência nova: rjsmin (requirements.txt).
    teste. Se a foto não subir, o deploy segue e o aviso diz o comando:
        python manage.py kits_eletronicos            (cria os kits que faltam)
        python manage.py kits_eletronicos --foto     (e sobe as artes)
-   O PAINEL (Peças, interno.: core/views_gestao_produtos.py, gestao/
+   (Desde a 107 o comando cria os kits como PRODUTOS e a arte vira a capa do
+   produto: ver a seção 107.)
+   O PAINEL (até a 107; hoje o kit é editado na tela Brinquedos, seção 107)
+   (Peças, interno.: core/views_gestao_produtos.py, gestao/
    pecas_adm.html, site/paginas/gestao-pecas_adm.js/.css): no cadastro da
    peça, a chave "É um kit eletrônico" abre o editor do kit -- a máquina em
    chips de rádio com busca (nunca <select>; a máquina escolhida fica à vista
@@ -6268,9 +6280,9 @@ Dependência nova: rjsmin (requirements.txt).
    Ícones novos no recorte do Font Awesome do site (gerar.py): fa-microchip,
    fa-network-wired e fa-plug.
    Banco: core/0207_kit_eletronico (só esquema) e 0208_kits_iniciais (só
-   dados).
+   dados); a conversão em produto é a 0211/0212/0213 (seção 107).
        python manage.py migrate core
-   Testes: core/tests_kits.py (o kit fora das peças e dentro de /kits/, da
+   Testes (refeitos na 107): core/tests_kits.py (o kit fora das peças e dentro de /kits/, da
    home, da loja e da busca; a página com os itens, os ícones, a peça avulsa
    e a máquina; os redirecionamentos; sem preço: "Sob consulta", nada de
    R$ 0,00 e o carrinho recusando; com preço: carrinho e boleto como peça; a
@@ -6405,3 +6417,168 @@ Dependência nova: rjsmin (requirements.txt).
    depois de pagar) e o painel (a folha do andamento da retirada, a folha
    do envio vazia, com o aviso, preenchida e salva de verdade, a folha de
    corrigir o rastreio, no tema lua e no sol); sem rolagem horizontal.
+
+107) O KIT ELETRÔNICO É UM PRODUTO, JUNTO COM AS MÁQUINAS
+   O PEDIDO: o kit nasceu (seção 105) como uma peça marcada, com vitrine
+   própria (/kits/), uma faixa na home ("Kits eletrônicos -- monte sua
+   própria máquina") e item no menu. O dono: "vc criou outra sub section e
+   nem sei se outro objeto, mas eles devem estar junto com os produtos". O
+   kit passou a ser o MESMO objeto das máquinas (Brinquedos), nas mesmas
+   grades, com a mesma página, o mesmo carrinho e a mesma tela do painel.
+   O MODELO: Brinquedos ganhou `eh_kit` (com índice), `maquina` (FK para o
+   próprio Brinquedos, SET_NULL, related_name "kits_eletronicos": a máquina
+   em que o kit é instalado) e `id_kit_antigo` (o número da peça-kit de
+   antes, para os endereços antigos). ComponenteKit.kit aponta para o
+   Brinquedos (related_name "componentes_kit"); `peca` (o item que também é
+   vendido sozinho, o Cabo HDMI) continua apontando para a peça.
+   PecasReposicao perdeu `eh_kit` e `maquina` e voltou a ser só peça (saíram
+   pecas_avulsas_da_vitrine, kits_da_vitrine, url_publica, foto_do_card).
+   O que é do kit: Brinquedos.kits_da_vitrine() e .resumo_do_kit ("7 itens:
+   TV Box, ..."); core/kits.py: categoria_dos_kits / url_dos_kits (a
+   categoria "Kits eletrônicos", pelo nome), preparar_cards (os itens e a
+   máquina dos KITS da lista numa consulta só -- nenhuma quando a página não
+   tem kit), itens_da_pagina (a foto ou o ícone de cada item) e
+   url_da_peca_avulsa.
+   ONDE APARECE (o mesmo card das máquinas, nada de seção à parte):
+     * home, "Brinquedos em destaque": o selo "Kit" discreto no canto de
+       cima à esquerda da foto (o "À venda/Sob consulta" mora embaixo e a
+       estrela no outro canto) e, embaixo do nome, "7 itens: ..." no lugar
+       dos recursos da máquina (partials/kit_no_card.html; CSS no fim do
+       ls-tema.css). O quadro inicial (as máquinas em 3D) é só de máquinas;
+     * /brinquedos/: o selo no canto de cima à DIREITA (ali o estado mora à
+       esquerda), "Kit sob consulta", a linha dos itens, "Para a máquina X"
+       no lugar das medidas e, no quadro do preço, "Kit eletrônico · Valor
+       sob consulta · Diga qual é a sua máquina";
+     * a loja: com as máquinas (o filtro "Kits eletrônicos" saiu), o selo
+       amarelo "Kit eletrônico", "Para <máquina>" e a lista curta;
+     * as categorias: a "Kits eletrônicos" (criada pela 0212; o texto do
+       topo, os três argumentos e a chamada do fim são dela -- VITRINES em
+       CategoriasInfoView, antes de "eletronic") e as da máquina do kit;
+     * a busca: "Kit eletrônico", achado também pela máquina e pelos itens;
+     * o sitemap: o produto e a categoria (o /kits/ saiu);
+     * o menu (Peças e serviços, no PC e no celular) e a sugestão da busca:
+       "Kits eletrônicos" leva à CATEGORIA (`url_kits`, no context processor
+       eventos_globais, com cache que o sinal limpa ao salvar um brinquedo ou
+       uma categoria); sai sem a categoria ou sem kit no ar.
+     * NÃO aparece na Arena 3D, no "Monte seu espaço", como a máquina de um
+       jogo (/jogos/), nas páginas de tema (/boliche/...) nem na tela Objetos
+       3D do painel: "Kit Strike Kids" tem "Strike Kids" no nome e pegaria,
+       pelo nome, o 3D e o jogo da máquina.
+   "À VENDA" SÓ COM PREÇO: os cards da home e das categorias diziam "À
+   venda" para tudo o que estava marcado para a loja, mesmo sem preço;
+   agora seguem `disponivel_na_loja` (na loja E com preço), como /brinquedos/
+   e a página do produto -- e o filtro "À venda / Sob consulta" da categoria
+   também. O kit vai à loja sem preço, como ia a peça: "sob consulta".
+   A PÁGINA DO KIT é a do produto (brinquedo_info.html) com `eh_kit`: o
+   caminho passa pela categoria dos kits, o selo "Kit" na linha da marca
+   ("Kit eletrônico Lazer & Sport · monte sua própria máquina"), "Valor sob
+   consulta -- o valor do kit sai no orçamento" (sem preço) ou o carrinho,
+   o Pix e as parcelas (com preço), "O que vem no kit" (o markup e o CSS de
+   reposicao_info.html vieram para brinquedo_info.css: a foto da peça ligada
+   ao item, senão a da biblioteca core/static/site/kits/itens/, senão o
+   ícone; a quantidade; "Também vendido sozinho" leva à peça), "Para a
+   máquina X" e "Sobre este kit". Sem o 3D e sem os recursos da máquina. O
+   WhatsApp leva "Kit eletrônico: ..." e "Para a máquina: ...". A página da
+   MÁQUINA continua com "Já tem a máquina? Kit eletrônico completo", que
+   leva ao produto-kit (com o preço só se ele está à venda).
+   O CARRINHO: o kit vai como 'brinquedo' (a regra de sempre: na loja e com
+   preço); a folha, o carrinho e Meus pedidos dizem "Kit eletrônico".
+   OS ENDEREÇOS ANTIGOS (core/views_kits.py, 301, para sempre):
+     * /kits/ -> a categoria "Kits eletrônicos" (sem ela, /brinquedos/);
+     * /kits/<número da peça-kit>/ -> o produto (pelo `id_kit_antigo`); o
+       número de uma peça avulsa leva à peça, como antes; o resto, 404;
+     * /pecas/<número da peça-kit>/ -> o produto (links e pedidos antigos).
+     A vitrine (kits.html, kits.css), a faixa da home (home-kits.css e o
+     contexto `kits_home`) e o kit da página da peça (reposicao_info.html,
+     peca_card.html, ls-peca-card.css) saíram. A peça sem preço continua
+     "Valor sob consulta" (o acerto da 105 fica).
+   O PAINEL (Brinquedos, interno.: gestao/brinquedos_adm.html, gestao-
+   brinquedos_adm.js/.css, BrinquedoAdmin): no cadastro, a seção "Kit
+   eletrônico" com a chave "É um kit eletrônico" abre o editor que era da
+   tela de Peças: a máquina em chips de rádio com busca (nunca <select>; um
+   kit não é máquina de outro kit nem dele mesmo; a escolhida fica à vista;
+   no PC a caixa rola sozinha, no tablet e no celular se abre inteira), as
+   linhas do que vem no kit (nome, detalhe, quantidade com − e +, "Ligar a
+   uma peça avulsa" com a busca das peças, subir/descer/remover, "Adicionar
+   item") e tudo junto em `componentes_json`. Linha em branco não vira item;
+   kit sem item, quantidade fora de 1 a 99, peça ou máquina que não existe
+   voltam com a frase e nada muda. Desligada a chave, a lista nem vai (os
+   itens ficam guardados) e a máquina sai. O Esc na escolha da peça fecha
+   só ela. Preço, fotos, loja, categorias e nota são os campos de todo
+   produto. Na lista: o selo "Kit", "Para <máquina> · N itens" (sem o aviso
+   de medidas: o kit não tem) e o filtro "Tipo: Todos · Máquinas · Kits
+   eletrônicos" (?tipo=). A coluna "Loja" da lista passou de 112 para 150px:
+   o "Na loja, sem preço" passava por cima dos selos. Só variáveis do tema
+   (lua, sol, eclipse). A tela de PEÇAS voltou a ser só de peças (saíram o
+   editor, o filtro e o número dos kits; os dois defeitos acertados na 105
+   continuam acertados). No /system/, "Itens do kit" é inline do Brinquedo.
+   O BANCO (esquema e dados nunca no mesmo arquivo -- tests_migracoes):
+     * 0211_kit_vira_produto_inicio (só esquema): os campos novos do
+       Brinquedos, o `kit_produto` (vazio) no ComponenteKit, o `kit` antigo
+       aceitando vazio (para a volta da 0213) e o nome reverso da `maquina`
+       da peça trocado (nenhum SQL);
+     * 0212_kits_viram_produtos (só dados, código copiado para dentro do
+       arquivo): cada peça-kit vira um Brinquedos -- nome, descrição, preço,
+       parcelas, ativo e ajuste das curtidas da peça; voltagem, nota e
+       categorias da máquina; `exibir_na_loja`; `id_kit_antigo`; a MESMA foto
+       (o produto aponta para o arquivo que a peça já tinha no Cloudinary:
+       capa e frente da galeria no adesivo padrão, "com fundo"; nada sobe;
+       nome com mais de 100 letras não é copiado); a categoria "Kits
+       eletrônicos" (criada se falta, com a foto do primeiro kit de capa) e
+       as da máquina. Os itens, as curtidas/lista de desejos e o item de
+       carrinho passam para o produto. A peça sem mais nada apontando para
+       ela (pedido, orçamento, O.S., item de outro kit) é APAGADA (a foto no
+       Cloudinary fica: é do produto); com referência, fica DESLIGADA. Item
+       solto (de peça que deixou de ser kit) é apagado. Cada kit no seu
+       ponto de salvamento; se um falhar, a migração termina com o erro e
+       nada fica gravado (a 0213 apagaria os itens dele). Rodar de novo não
+       duplica (procura pelo número e pelo nome). Banco sem kit: nada.
+       EM PRODUÇÃO: as peças 24 (Kit Boliche Virtual), 25 (Kit Strike Kids)
+       e 26 (Kit Lazer Shot), cada uma com 7 itens e 1 foto, viram três
+       produtos (Sob consulta, na loja, nas categorias "Kits eletrônicos" e
+       nas da máquina). Sem preço, nenhuma pôde ir a um pedido: se também
+       nenhum orçamento ou O.S. do painel aponta para elas, as peças 24-26
+       são apagadas; senão ficam desligadas. O deploy imprime uma linha por
+       kit dizendo o que houve; /kits/24/, /pecas/24/... levam ao produto.
+     * 0213_kit_vira_produto_fim (só esquema): sai o `kit` antigo do item,
+       `kit_produto` vira `kit` (obrigatório), e saem `eh_kit` e `maquina` da
+       peça.
+     * a 0208 (os kits iniciais como peças) ganhou dentro dela a cópia do
+       código que usava de core/kits.py: num banco novo com o catálogo ela
+       cria as peças-kit e a 0212 as converte, como em produção.
+       python manage.py migrate core
+     ATENÇÃO NO SQLITE (o computador, não o Render): a 0211 refaz a tabela
+     dos brinquedos e o SQLite volta a contar os números a partir do maior
+     que existe; um kit pode ganhar o número de um brinquedo apagado antes
+     (o teste da 0169 em tests_variantes_produto.py roda sem os kits por
+     isso). O PostgreSQL nunca reaproveita número.
+   O COMANDO (core/management/commands/kits_eletronicos.py) cria os kits
+   iniciais que faltam já como PRODUTOS (pelo nome; a máquina pelo nome
+   inteiro; voltagem, nota e categorias dela; "Kits eletrônicos"); com
+   --foto sobe a arte do repositório como capa do kit que ainda não tem
+   foto (nome curto, conferido contra os 100 caracteres).
+       python manage.py kits_eletronicos [--foto]
+   AS ARTES NO CARD DE PRODUTO (para quem refaz as artes): no card da home
+   e das categorias, o selo "Kit" ocupa o canto de cima à esquerda (até
+   ~31% da largura e ~14% da altura no celular) e a estrela o de cima à
+   direita (~21% da altura no celular); o "Sob consulta / À venda" ocupa a
+   faixa de BAIXO à esquerda (de ~86% a ~97% da altura, até ~56% da largura
+   no celular; ~38% no PC). No /brinquedos/, o estado fica em cima à
+   esquerda e o selo em cima à direita; na loja, o selo "Kit eletrônico" em
+   cima à esquerda. A arte que põe texto ou logo na faixa de baixo à
+   esquerda fica, em parte, sob o "Sob consulta".
+   Testes: core/tests_kits.py (refeito: o kit na grade da home, no catálogo,
+   na loja, nas categorias, na busca; fora das peças, da Arena e dos jogos;
+   a página com os itens, as fotos, a máquina e sem o 3D; a chamada na
+   página da máquina; sem preço e com preço até o boleto; os endereços
+   antigos; o sitemap e o menu; o painel salvando, reordenando, os erros e o
+   filtro; a tela de Peças sem o kit; o comando; e a 0212 com os MODELOS
+   HISTÓRICOS -- o banco volta à 0211, ganha as peças-kit com foto, itens,
+   curtida, um pedido e um item solto, passa pela 0212 duas vezes e pela
+   0213). Ajustado: o teste da 0169 em tests_variantes_produto.py.
+   Conferido no Chromium (PC 1366 e celular 390), numa cópia do banco de
+   desenvolvimento migrada: a home com os kits na grade, /kits/ caindo na
+   categoria, a categoria, a página do kit, a da máquina, a loja, o
+   /brinquedos/ e o painel Brinquedos com um kit aberto (lua e sol) e a
+   escolha da peça avulsa; sem rolagem horizontal, sem erro de JavaScript e
+   sem elemento por cima de outro nos cards e no editor.
