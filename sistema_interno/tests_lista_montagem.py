@@ -751,3 +751,75 @@ class ParqueNaoEBrinquedaoTests(Base):
         corrigida = UnidadeMontagem.objects.get(pk=unidades[simulador.pk].pk)
         self.assertEqual((corrigida.trilha, corrigida.dias), ("maquina", self.config.dias_ate_limite))
         self.assertEqual(UnidadeMontagem.objects.get(pk=unidades[selva.pk].pk).trilha, "projeto")
+
+
+class EspacoEsportivoKidsTests(Base):
+    """A categoria de USO ("Espaço Esportivo Kids") não faz máquina virar brinquedão."""
+
+    def _categoria(self, nome):
+        return CategoriasBrinquedos.objects.create(nome_categoria=nome, imagem_categoria=f"c/{nome}.png")
+
+    def test_palavra_so_no_nome_categoria_so_marcada(self):
+        espaco = self._categoria("Espaço Esportivo Kids")
+        simulador = brinquedo("Simulador de Corrida Top Racer", (1.5, 0.58, 1.37), espaco)
+        quadra = brinquedo("Espaço Esportivo Modelo 1", (3, 10, 20), espaco)
+        regras = montagem.Regras.agora()
+        self.assertFalse(regras.e_projeto(simulador))
+        self.assertTrue(regras.e_projeto(quadra))  # a palavra no NOME vale
+        self.config.categorias_projeto.add(espaco)  # marcada no painel: vale
+        montagem.mudou()
+        self.assertTrue(montagem.Regras.agora().e_projeto(simulador))
+
+    def test_a_migracao_desmarca_so_a_categoria_de_uso(self):
+        import importlib
+
+        from django.apps import apps
+
+        migracao = importlib.import_module("sistema_interno.migrations.0077_espaco_esportivo_kids_nao_e_brinquedao")
+        espaco = self._categoria("Espaço Esportivo Kids")
+        brinquedoes = self._categoria("Brinquedões")
+        casinhas = self._categoria("Casinhas Cenográficas")
+        self.config.categorias_projeto.set([espaco, brinquedoes, casinhas])
+        migracao.desmarcar(apps, None)
+        migracao.desmarcar(apps, None)
+        self.assertEqual(set(self.config.categorias_projeto.all()), {brinquedoes, casinhas})
+
+    def test_reclassificar_devolve_as_maquinas_a_trilha_certa(self):
+        from sistema_interno.models import UnidadeMontagem
+
+        S = UnidadeMontagem.Situacao
+        espaco = self._categoria("Espaço Esportivo Kids")
+        self.config.categorias_projeto.add(espaco)
+        montagem.mudou()
+        air = brinquedo("Air Game Premium", (1.0, 1.0, 1.0), espaco)
+        sim = brinquedo("Simulador Top Racer", (1.0, 1.0, 1.0), espaco)
+        selva = brinquedo("Brinquedão Selva", (3, 4, 5))
+        pedido = self.pedido([(air, 1, None), (sim, 1, None), (selva, 1, None)])
+        por_nome = {u.nome: u for u in self.unidades(pedido)}
+        self.assertEqual({u.trilha for u in por_nome.values()}, {"projeto"})
+        # uma em produção (a vaga única de brinquedão), já com a fabricação feita
+        em_producao = next(u for u in por_nome.values() if u.situacao == S.PRODUCAO)
+        montagem.concluir_ate(em_producao, "fabricacao")
+
+        self.config.categorias_projeto.remove(espaco)
+        montagem.mudou()
+        mudadas = montagem.reclassificar()
+
+        depois = {u.nome: u for u in self.unidades(pedido)}
+        self.assertEqual(depois["Brinquedão Selva"].trilha, "projeto")
+        self.assertEqual(len(mudadas), 2)
+        self.assertEqual(depois["Air Game Premium"].trilha, "maquina")
+        self.assertEqual(depois["Simulador Top Racer"].trilha, "maquina")
+        for nome in ("Air Game Premium", "Simulador Top Racer"):
+            unidade = depois[nome]
+            self.assertEqual(unidade.dias, self.config.dias_ate_limite)
+            self.assertEqual(unidade.situacao, S.PRODUCAO)  # há vaga para as duas máquinas
+            self.assertTrue(unidade.previsao_ate)
+        # a que estava na vaga de brinquedão (a primeira do pedido) não perdeu a fabricação
+        self.assertEqual(em_producao.nome, "Air Game Premium")
+        feita = depois["Air Game Premium"]
+        self.assertEqual(set(feita.etapas_em), {"corte", "montagem", "adesivo", "eletronica"})
+        self.assertEqual(feita.etapa, "eletronica")
+        # e a vaga de brinquedão ficou para o Brinquedão Selva
+        self.assertEqual(depois["Brinquedão Selva"].situacao, S.PRODUCAO)
+        self.assertEqual(montagem.reclassificar(), [])  # de novo: nada muda

@@ -7127,12 +7127,21 @@ Dependência nova: rjsmin (requirements.txt).
        escaladas, área ninja, quadras, casinhas cenográficas...): fora das 7
        etapas -- Fabricação, Finalização, Teste de qualidade --, 30 dias
        úteis cada (ou o prazo que a EQUIPE digitou no orçamento), UM POR VEZ;
-       é brinquedão a categoria marcada nas regras OU uma das palavras no
-       nome do brinquedo ou da categoria. "Parque" NÃO é palavra de
-       brinquedão: pegava a categoria "Para Parques" (um público) e o
-       Simulador Top Racer saía com 30 dias (0074/0075 tiram a palavra, a
-       categoria marcada só por ela e devolvem à fila das máquinas quem
-       esperava como brinquedão);
+       é brinquedão a categoria MARCADA nas regras OU uma das palavras no
+       NOME do brinquedo. O nome da categoria não conta sozinho: a 0073
+       marcou "Espaço Esportivo Kids" pela palavra "espaço esportivo", e
+       essa categoria reúne ~40 máquinas comuns (as que vão num espaço
+       esportivo) -- quase toda máquina virava brinquedão, 30 dias, uma por
+       vez (o Simulador Top Racer mostrava 30 dias). 0076/0077 tiram a
+       marca das categorias de USO ("espaço esportivo", "quadra",
+       "parque"); as de TIPO (Brinquedão, Trampolins, Área Ninja, Casinhas
+       Cenográficas) continuam. "Parque" também saiu das palavras
+       (0074/0075). Quem já estava na lista volta à trilha certa sozinho:
+       montagem.reclassificar roda depois de cada migrate (apps.py), ao
+       abrir a lista e ao salvar as regras -- a máquina na fila só troca de
+       fila; a que está em produção troca de trilha sem perder as etapas
+       feitas (Fabricação = Corte, Montagem, Adesivo e Eletrônica) e com
+       as datas contadas de quando entrou;
      * PEÇA DE REPOSIÇÃO: 3 dias úteis, Separação e Embalagem, sem fila;
      * KIT ELETRÔNICO (Brinquedos.eh_kit, seção 107): é peça (3 dias, sem fila,
        não disputa a vaga das máquinas), mas sai com Separação, Eletrônica,
@@ -7477,3 +7486,59 @@ Dependência nova: rjsmin (requirements.txt).
    abono), jornada que atravessa a meia-noite, banco de horas/compensação
    e folha de pagamento, avisos do RH no sino (a faixa e o painel do RH
    cobrem), e o REP certificado.
+
+114) AS FUNÇÕES DA EQUIPE: QUEM ABRE O QUÊ (A AUDITORIA)
+   O PEDIDO: "se não me engano tenho 5 tipos de usuário, vendedores,
+   engenharia de produção e etc, vc deve modularizar todas as funções
+   nesse tópico, estoque e matéria entra na engenharia de produção."
+   São SEIS funções (sistema_interno/permissoes.py, FUNCOES), mais o
+   superusuário (o dono), que abre tudo. Uma pessoa pode ter mais de uma.
+   A conta é uma só -- permissoes.capacidades(user) --, e o menu e a view
+   perguntam à MESMA chave.
+
+     Função                    Abre
+     ------------------------  ---------------------------------------------
+     Engenharia de produção    Estoque, materiais e movimentações; ordens,
+                               guias e produtos de produção; lista de
+                               montagem (edita); manutenções; ordens de
+                               serviço; etiquetas; transportadoras
+     Criação e site            Catálogo, banners, combos, promoções,
+                               campanhas, cupons, eventos, projetos, peças,
+                               indicadores e engajamento do site
+     Vendas                    Clientes, orçamentos (os da central), mapa
+                               de clientes, projetos 3D pedidos, lista de
+                               montagem (só o que vendeu), transportadoras
+     Vendedor ambulante        Clientes, os PRÓPRIOS orçamentos, projetos 3D
+                               pedidos, lista de montagem (só o que vendeu)
+     Financeiro                Financeiro, vendas, pedidos, o bloco de preço
+                               dos orçamentos, ordens de serviço (pagamento),
+                               etiquetas, lista de montagem (vê), RH: a
+                               equipe para pagar (salário, banco, espelho)
+     Gestão                    Tudo isso para ver e supervisionar (estoque,
+                               clientes, orçamentos, financeiro, lista de
+                               montagem), dados do contrato, segurança das
+                               contas, RH completo (fichas, documentos,
+                               ponto, tarefas, termos)
+     Todos da equipe           O próprio ponto, as próprias tarefas, a
+                               própria ficha, o termo de exclusividade
+     Só o superusuário         Usuários da equipe, avaliação dos setores,
+                               contas de clientes, objetos 3D, jogos
+
+   O QUE A AUDITORIA ACHOU E CORRIGIU:
+     * a aba "Estoque" das abas do celular aparecia para Vendas, Ambulante
+       e Financeiro e devolvia ao início: agora a segunda aba é a da função
+       (Estoque, Clientes ou Financeiro);
+     * Etiquetas de transporte (lista os clientes com endereço) abria pela
+       URL para Criação, Vendas e Ambulante, que nem têm o item no menu:
+       agora só Produção, Financeiro e Gestão (como o menu);
+     * o Início da Gestão oferecia "Planejar produção" e "Escrever manual"
+       (telas só da Produção) e o cartão "ordens na produção" levava a
+       "Minha produção": para a Gestão viram a Lista de montagem e
+       "Equipe e ponto" (RH); cada atalho do Início pergunta à sua chave.
+   O TESTE QUE SEGURA ISTO: sistema_interno/tests_auditoria_funcoes.py --
+   cada função entra no painel e (1) abre todo link da tela de entrada dela
+   (menu, abas, atalhos, cartões) e (2) abre as telas da MATRIZ, e só elas.
+   Mudou uma permissão? Mude a MATRIZ junto; o teste mostra a diferença.
+   EM ABERTO (decisão do dono): Vendas e Vendedor ambulante continuam
+   separados (o ambulante só vê os próprios orçamentos). Se forem a mesma
+   coisa na prática, basta dar as duas funções à pessoa.

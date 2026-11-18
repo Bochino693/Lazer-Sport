@@ -637,10 +637,23 @@
         <i class="bi bi-file-earmark-text-fill"></i><span>Orçamentos</span>
         <span class="ls-aba-selo" data-selo="count_orcamentos" data-mostrar-zero="1" title="Em aberto">…</span>
       </a>
+      {# a segunda aba é a da função: só aparece o que a pessoa abre (seção 114) #}
+      {% if permissoes_interno.estoque %}
       <a class="ls-aba {% if request.resolver_match.url_name == 'stock' or request.resolver_match.url_name == 'estoque_inner' %}ativa{% endif %}"
          href="{% url 'stock' %}">
         <i class="bi bi-box-seam-fill"></i><span>Estoque</span>
       </a>
+      {% elif permissoes_interno.clientes %}
+      <a class="ls-aba {% if request.resolver_match.url_name == 'clientes_inner' %}ativa{% endif %}"
+         href="{% url 'clientes_inner' %}">
+        <i class="bi bi-people-fill"></i><span>Clientes</span>
+      </a>
+      {% elif permissoes_interno.financeiro %}
+      <a class="ls-aba {% if request.resolver_match.url_name == 'financeiro_inner' %}ativa{% endif %}"
+         href="{% url 'financeiro_inner' %}">
+        <i class="bi bi-cash-stack"></i><span>Financeiro</span>
+      </a>
+      {% endif %}
     {% elif permissoes_interno.producao %}
       <a class="ls-aba {% if request.resolver_match.url_name == 'minha_producao' %}ativa{% endif %}"
          href="{% url 'minha_producao' %}">

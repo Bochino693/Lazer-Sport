@@ -4828,7 +4828,7 @@ class ConfiguracaoProducao(Prime):
         "Palavras de brinquedão / espaço",
         blank=True,
         default=PALAVRAS_DE_PROJETO_PADRAO,
-        help_text="Separadas por vírgula; valem no nome do brinquedo e da categoria.",
+        help_text="Separadas por vírgula; valem no nome do brinquedo. Categoria conta quando marcada.",
     )
 
     class Meta:

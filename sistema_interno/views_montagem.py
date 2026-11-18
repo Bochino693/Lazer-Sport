@@ -419,6 +419,8 @@ class ListaMontagemView(InternoRequiredMixin, View):
         config.save()
         escolhidas = [int(pk) for pk in request.POST.getlist("categorias_projeto") if str(pk).isdigit()]
         config.categorias_projeto.set(escolhidas)
+        montagem.mudou()
+        montagem.reclassificar(timezone.now())  # quem já está na lista segue a regra nova
         montagem.distribuir(timezone.now(), config)
         montagem.mudou()
         return self.certo(request, "Regras da produção salvas: as previsões foram recalculadas.")

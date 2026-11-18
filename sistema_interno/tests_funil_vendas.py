@@ -767,8 +767,9 @@ class AndamentoETelasTests(BaseFunil):
         # Quem não é do funil não vê a fila.
         self.client.force_login(equipe("criador-fila", "criacao", "producao"))
         self.assertTrue(self.client.get("/etiquetas/", **INTERNO).context["fila_producao"])
+        # Só Criação nem abre a tela: ela lista clientes com endereço (seção 114).
         self.client.force_login(equipe("so-criacao", "criacao"))
-        self.assertEqual(self.client.get("/etiquetas/", **INTERNO).context["fila_producao"], [])
+        self.assertEqual(self.client.get("/etiquetas/", **INTERNO).status_code, 302)
 
     def test_o_script_do_funil_usa_as_folhas_de_aplicativo(self):
         script = (RAIZ / "static" / "interno" / "producao-etiquetas.js").read_text(encoding="utf-8")

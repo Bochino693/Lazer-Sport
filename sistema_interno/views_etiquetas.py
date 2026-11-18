@@ -30,6 +30,7 @@ from core.models import EnderecoEmpresa
 
 from . import clientes as svc
 from .models import Cliente, EnderecoCliente, Orcamento
+from .permissoes import FINANCEIRO, GESTAO, PRODUCAO
 from .rotas import texto_endereco
 from .views import InternoRequiredMixin
 
@@ -183,6 +184,11 @@ class EtiquetasInnerView(InternoRequiredMixin, View):
     """Monta e imprime etiquetas de frágil; nada é salvo."""
 
     template_name = "etiquetas_inner.html"
+
+    #: A tela lista os clientes com endereço: abre para quem despacha a
+    #: caixa -- a mesma regra do item no menu (Ordens de Serviço /
+    #: Manutenções). Criação, Vendas e Ambulante não chegam por URL.
+    funcoes_necessarias = (PRODUCAO, FINANCEIRO, GESTAO)
 
     #: Quantas propostas aprovadas viajam para a tela. O campo é uma
     #: busca, e não uma lista para rolar: mandar o histórico inteiro

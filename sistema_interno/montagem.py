@@ -240,18 +240,20 @@ class Regras:
     def e_projeto(self, brinquedo=None, nome="") -> bool:
         """Brinquedão, espaço esportivo, trampolim, escalada, ninja, casinha...
 
-        Pela CATEGORIA marcada no painel ou por uma das PALAVRAS no nome do
-        brinquedo ou da categoria. Sem cadastro, só pelo nome da linha.
+        Pela CATEGORIA marcada no painel ou por uma das PALAVRAS no NOME do
+        brinquedo (ou da linha escrita à mão). O nome da categoria NÃO
+        conta sozinho: "Espaço Esportivo Kids" reúne ~40 máquinas comuns
+        (as que vão num espaço esportivo) e, pela palavra, todas viravam
+        brinquedão -- 30 dias, uma por vez. Categoria vale quando marcada.
         """
         textos = [sem_acento(nome)]
         if brinquedo is not None:
             textos.append(sem_acento(brinquedo.nome_brinquedo))
             if brinquedo.pk not in self._categorias:
                 self.carregar_categorias([brinquedo])
-            for categoria_id, nome_categoria in self._categorias.get(brinquedo.pk, []):
+            for categoria_id, _nome_categoria in self._categorias.get(brinquedo.pk, []):
                 if categoria_id in self.categorias_projeto:
                     return True
-                textos.append(sem_acento(nome_categoria))
         return any(palavra in texto for palavra in self.palavras_projeto for texto in textos if texto)
 
     def dias_da_maquina(self, brinquedo=None) -> int:
@@ -559,6 +561,90 @@ def _prever_fila(trilha, producao, fila, config):
         fim = somar_dias_uteis(comeco, unidade.dias)
         unidade.previsao_de = unidade.previsao_ate = fim
         vagas.append(fim)
+
+
+#: A etapa feita numa trilha, dita na outra (a máquina que trocou de trilha
+#: porque a regra mudou não perde o que a fábrica já fez).
+_FABRICACAO = ("corte", "montagem", "adesivo", "eletronica")
+
+
+def _etapas_na_trilha(feitas, de, para) -> dict:
+    feitas = dict(feitas or {})
+    chaves = {chave for chave, _, _ in etapas_da(para)}
+    novas = {chave: quando for chave, quando in feitas.items() if chave in chaves}
+    if de == "projeto" and para == "maquina" and "fabricacao" in feitas:
+        for chave in _FABRICACAO:
+            novas.setdefault(chave, feitas["fabricacao"])
+    if de == "maquina" and para == "projeto" and all(chave in feitas for chave in _FABRICACAO):
+        novas["fabricacao"] = max(feitas[chave] for chave in _FABRICACAO)
+    return novas
+
+
+def reclassificar(agora=None) -> list:
+    """A regra de brinquedão mudou: quem espera ou está sendo feito segue a trilha certa.
+
+    Roda ao salvar as regras, ao abrir a lista (`sincronizar_tudo`) e depois
+    de cada `migrate` do deploy (apps.py). A máquina na fila só troca de
+    fila; a que está em produção troca de trilha com as etapas já feitas e
+    as datas contadas de quando ela entrou. A que terminaria a trilha nova
+    só com a troca fica para o painel. Pronta e entregue não mudam.
+    """
+    from .models import UnidadeMontagem
+
+    S = UnidadeMontagem.Situacao
+    agora = agora or timezone.now()
+    vivas = list(
+        UnidadeMontagem.objects
+        .filter(situacao__in=(S.FILA, S.PRODUCAO), trilha__in=COM_FILA, brinquedo__isnull=False)
+        .select_related("brinquedo", "producao", "producao__orcamento")
+    )
+    if not vivas:
+        return []
+    regras = Regras.agora()
+    regras.carregar_categorias([u.brinquedo for u in vivas])
+    mudadas = []
+    for unidade in vivas:
+        brinquedo = unidade.brinquedo
+        if getattr(brinquedo, "eh_kit", False):
+            continue
+        nova = "projeto" if regras.e_projeto(brinquedo) else "maquina"
+        if nova == unidade.trilha:
+            continue
+        chaves = [chave for chave, _, _ in etapas_da(nova)]
+        feitas = _etapas_na_trilha(unidade.etapas_em, unidade.trilha, nova)
+        if unidade.situacao == S.PRODUCAO and chaves[-1] in feitas:
+            continue
+        if nova == "maquina":
+            dias = regras.dias_da_maquina(brinquedo)
+        else:
+            producao = unidade.producao
+            dias = dias_de_projeto_do_orcamento(producao.orcamento, producao) or regras.config.dias_projeto
+        unidade.trilha, unidade.dias = nova, dias
+        unidade.etapas_em = feitas
+        unidade.etapa = next((chave for chave in reversed(chaves) if chave in feitas), "")
+        if unidade.situacao == S.PRODUCAO:
+            unidade.previstas = datas_das_etapas(nova, dia_local(unidade.entrou_em) or hoje(), dias)
+            fim = _data(unidade.previstas.get(chaves[-1]))
+            unidade.previsao_de = unidade.previsao_ate = fim
+        else:
+            unidade.posicao = None
+            unidade.previstas = {}
+        unidade.atualizado = agora
+        mudadas.append(unidade)
+    if not mudadas:
+        return []
+    UnidadeMontagem.objects.bulk_update(mudadas, [
+        "trilha", "dias", "etapas_em", "etapa", "previstas", "previsao_de", "previsao_ate", "posicao", "atualizado",
+    ])
+    entraram = distribuir(agora)
+    from .models import ProducaoOrigem
+
+    origens = {u.producao_id for u in mudadas} | {u.producao_id for u in entraram}
+    for producao in ProducaoOrigem.objects.filter(pk__in=origens):
+        acertar_origem(producao, agora=agora)
+        sincronizar_tarefas(producao)
+    logger.info("Lista de montagem: %s máquina(s) trocaram de trilha pela regra nova.", len(mudadas))
+    return mudadas
 
 
 def mover_na_fila(unidade, direcao) -> bool:
@@ -1050,6 +1136,8 @@ def sincronizar_tudo():
         orcamento__status=Orcamento.Status.APROVADO,
     ).values_list("orcamento_id", flat=True):
         sincronizar_orcamento(pk)
+    # e a máquina que a regra de agora põe em outra trilha (seção 112)
+    reclassificar()
 
 
 # ----------------------------------------------------------------------
