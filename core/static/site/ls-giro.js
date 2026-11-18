@@ -91,6 +91,38 @@
     return camada;
   };
 
+  // O nome do adesivo nunca fica em cima de outro selo do card (o dono: "nos
+  // cards, temos sobreposições de elementos, isso não deve ocorrer de forma
+  // alguma"). O "Sob consulta" e outros selos moram no mesmo canto em alguns
+  // cards: a etiqueta mede quem cruza com ela e sobe acima deles.
+  const SELOS = ".produto-status, .card-selo, [class*='-selo'], [class*='badge'], [class*='-status'], [class*='-tag']";
+  const afastar = (etiqueta) => {
+    if (!etiqueta || !etiqueta.isConnected) return;
+    etiqueta.style.bottom = "";
+    const minha = etiqueta.getBoundingClientRect();
+    if (!minha.width || !minha.height) return;
+    const card = etiqueta.parentElement.closest("a, [data-card-link], .card-produto, .card-mini, .catalogo-card, .loja-card, .ls-result") || etiqueta.parentElement;
+    let sobe = 0;
+    card.querySelectorAll(SELOS).forEach((outro) => {
+      if (outro === etiqueta || etiqueta.contains(outro) || outro.contains(etiqueta)) return;
+      const r = outro.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      if (r.left < minha.right && r.right > minha.left && r.top < minha.bottom && r.bottom > minha.top) {
+        sobe = Math.max(sobe, minha.bottom - r.top + 6);
+      }
+    });
+    if (sobe) {
+      const base = parseFloat(window.getComputedStyle(etiqueta).bottom) || 10;
+      etiqueta.style.bottom = `${Math.ceil(base + sobe)}px`;
+    }
+  };
+  const afastarTodas = () => estados.forEach((estado) => afastar(estado.etiqueta));
+  let esperaDoAjuste = 0;
+  window.addEventListener("resize", () => {
+    window.clearTimeout(esperaDoAjuste);
+    esperaDoAjuste = window.setTimeout(afastarTodas, 150);
+  });
+
   // o nome do adesivo no canto do card: some, troca e volta junto com a foto
   const nomeDoAdesivo = (estado, indice) => {
     const etiqueta = estado.etiqueta;
@@ -100,6 +132,7 @@
     window.setTimeout(() => {
       etiqueta.querySelector("b").textContent = nome;
       etiqueta.classList.remove("card-giro-adesivo--trocando");
+      afastar(etiqueta);
     }, NOME);
   };
 
@@ -193,6 +226,7 @@
         etiqueta.append(nome);
         caixa.appendChild(etiqueta);
         estado.etiqueta = etiqueta;
+        window.requestAnimationFrame(() => afastar(etiqueta));
       }
       estados.set(caixa, estado);
       const card = caixa.closest("a, [data-card-link], .card-produto, .catalogo-card, .loja-card, .ls-result") || caixa;
