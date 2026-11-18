@@ -26,6 +26,20 @@
           </div>
           <a href="{{ link }}" style="display:block;padding:16px 22px;border-radius:14px;background:#2a2fc4;color:#fff;text-decoration:none;text-align:center;font-weight:bold">Abrir proposta e responder</a>
           <p style="margin:22px 0 0;color:#64748b;font-size:13px;line-height:1.5">No link você pode aprovar ou recusar com segurança. Se o botão não abrir, copie: {{ link }}</p>
+          {% comment %}
+            O CÓDIGO DO ORÇAMENTO (LEIA-ME-V10, seção 104). O dono: "o cliente
+            fez o orçamento conosco pelo telefone, aí faz o cadastro, mas como
+            saber que aquele orçamento vai virar um pedido do site? através do
+            código". Este é o modelo que o painel manda (o `core` vem antes do
+            `sistema_interno` na busca de templates; o de lá fica por baixo).
+          {% endcomment %}
+          {% if orcamento.codigo %}
+          <div style="margin:22px 0 0;padding:16px 18px;border:1px solid #c9cff5;border-radius:16px;background:#eef0ff">
+            <span style="color:#2a2fc4;font-size:12px;font-weight:bold;letter-spacing:.7px;text-transform:uppercase">Código do orçamento</span><br>
+            <strong style="display:inline-block;margin:6px 0 8px;padding:6px 12px;border-radius:10px;background:#fff;border:1px solid #c9cff5;color:#0a1046;font-size:20px;letter-spacing:2px">{{ orcamento.codigo }}</strong>
+            <p style="margin:0;color:#334155;font-size:14px;line-height:1.55">Crie sua conta em <a href="https://www.lazersport.com.br/registrar/" style="color:#2a2fc4;font-weight:bold">lazersport.com.br</a> e informe este código em <strong>Meus pedidos</strong> para acompanhar tudo pela internet: resposta, assinatura, pagamento e produção.</p>
+          </div>
+          {% endif %}
         </td></tr>
       </table>
     </td></tr>

@@ -197,7 +197,8 @@ def avisar_a_equipe(orcamento, usuario, *, digitado=""):
 
     Como no pedido novo do site e na resposta da proposta: a equipe sabe
     na hora que aquele cliente do telefone agora acompanha pelo site --
-    e, se não reconhecer a conta, desfaz antes de qualquer outra fase.
+    e, se não reconhecer a conta, desfaz (`manage.py conta_do_orcamento`)
+    antes de qualquer outra fase.
     Nada disto pode estragar o vínculo, que já está gravado: falhou, vai
     para o log.
     """
@@ -303,7 +304,9 @@ def orcamentos_da_conta(usuario):
                 "documentos_assinatura",
                 queryset=DocumentoAssinatura.objects
                 .exclude(situacao=DocumentoAssinatura.Situacao.SUBSTITUIDO)
-                .defer("assinatura_png", "conteudo")
+                # sem a imagem do traço; o retrato fica (a suspensão do
+                # termo antigo olha o modelo dele)
+                .defer("assinatura_png")
                 .order_by("-id"),
                 to_attr="documentos_vivos",
             ),
@@ -379,7 +382,7 @@ def _documento_vivo(orcamento):
         documentos = list(
             orcamento.documentos_assinatura
             .exclude(situacao=DocumentoAssinatura.Situacao.SUBSTITUIDO)
-            .defer("assinatura_png", "conteudo").order_by("-id")
+            .defer("assinatura_png").order_by("-id")
         )
     return documentos[0] if documentos else None
 

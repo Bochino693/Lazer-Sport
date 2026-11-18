@@ -5996,3 +5996,131 @@ Dependência nova: rjsmin (requirements.txt).
    sem o rótulo "USUÁRIO" repetido. NA LISTA: as ações numa fileira só (o
    atalho "Gráficos" vira só o ícone), sem a linha dobrar de altura.
    Testes: core/tests_foto_do_google.py.
+
+104) O CÓDIGO DO ORÇAMENTO: A PROPOSTA DO TELEFONE ACOMPANHADA EM MEUS PEDIDOS
+   O PEDIDO: "quando tiver em meus pedidos, vai ter código do pedido, para o
+   caso do seguinte: o cliente fez o orçamento conosco pelo telefone, aí faz
+   o cadastro, mas como saber que aquele orçamento vai virar um pedido do
+   site? através do código, fazendo assim o acompanhamento e mudança de
+   fases pela internet sem necessidade de contato."
+   O CÓDIGO (Orcamento.codigo): "LS-" e seis sinais sorteados de um alfabeto
+   SEM 0/O/1/I/L (23456789 + as letras menos O, I e L: 31 sinais, ~887
+   milhões de combinações), feito para ser DITADO pelo telefone. Único, nasce
+   com o orçamento (gerar_codigo_orcamento; o sorteio repetido é refeito no
+   save). Cada VERSÃO tem o seu código. O token de 32 letras continua sendo a
+   chave do LINK da proposta; o código é a chave que se digita.
+   ONDE APARECE: na proposta do cliente (/orcamento/<token>/) -- na capa
+   ("Código") e numa faixa "Código do orçamento: LS-... · Crie sua conta em
+   lazersport.com.br e informe este código em Meus pedidos para acompanhar
+   tudo pela internet" (sai também no PDF, que é a mesma página impressa; a
+   folha continua em uma A4); no e-mail da proposta (o modelo que vale é o
+   core/templates/emails/orcamento_enviado.html -- o do sistema_interno fica
+   por baixo na busca de templates, e foi acertado junto) e no texto simples
+   do e-mail; na mensagem do WhatsApp ("Código do orçamento: *LS-...*", sem
+   "_"); no painel, na barra da PRÉVIA ("Código LS-... · vinculado à conta
+   @fulano em dd/mm" ou "ainda sem conta do site vinculada" -- a barra não
+   sai na impressão e não existe na página do cliente) e na tela do
+   documento para assinatura. A janela do orçamento recebe "codigo", "conta"
+   e "vinculado_em" no JSON (OrcamentosInnerView.serializar) e a busca da
+   lista acha pelo código (servidor e índice local); o selo/coluna na LISTA
+   e a linha na janela (orcamentos_inner.html / partes/orcamentos_lista.html)
+   ficaram para depois -- outra frente estava nessas telas.
+   MEUS PEDIDOS (/meus-pedidos/): o quadro "Tem um código de orçamento?"
+   (bilhete amarelo, campo + "Vincular", POST com CSRF) fica no alto, mesmo
+   sem nenhuma compra; "?codigo=LS-..." no endereço já preenche o campo.
+   As respostas são toasts do site (LSAviso): vinculado ("O orçamento LS-...
+   agora está na sua conta"); código de versão antiga ("é de uma versão
+   anterior: vinculamos a versão 3, a que vale agora"); já é seu; não
+   encontrado (o campo volta preenchido para corrigir a letra; nas 3 últimas
+   tentativas diz quantas restam); de OUTRA conta (não muda de dono, não diz
+   qual é a outra conta, e o toast traz "Falar com a equipe" no WhatsApp);
+   formato errado ("LS e seis letras e números, sem 0, O, 1, I nem L");
+   recusado/expirado vinculam e dizem a situação.
+   O FREIO: 8 erros (não encontrado ou de outra conta) por hora, por conta E
+   por IP, no cache; na 9ª o código nem é procurado e o toast diz a hora em
+   que pode tentar de novo. Formato errado e campo vazio não gastam
+   tentativa (nem vão ao banco). O cache é o LocMem de cada processo: com
+   vários workers o teto é por worker (o mesmo do freio da assinatura).
+   O VÍNCULO: liga à conta a NEGOCIAÇÃO INTEIRA (todas as versões), com
+   Orcamento.conta (FK para o usuário, SET_NULL) e vinculado_em; a versão
+   nova que a equipe criar depois (Refazer, ou qualquer caminho) nasce na
+   mesma conta (Orcamento.save). Se qualquer versão já é de outra conta, nada
+   muda: quem resolve é a equipe. A equipe é avisada: uma linha no histórico
+   do orçamento (o sino: "Fulano (@fulano) (cliente) vinculou à conta do site
+   o orçamento #N", com o código; AtividadeOrcamento.Tipo.VINCULADO) e o push
+   de quem cuida da proposta ("Orçamento #N: cliente vinculou no site" --
+   número no título, nome do cliente do outro lado do login).
+   O CARTÃO DE CADA ORÇAMENTO (só os da conta logada, só a versão mais nova
+   de cada negociação, numa conta fixa de consultas): o código em letras
+   largas, a versão, a validade (enquanto espera resposta) ou o dia da
+   aprovação, os itens (nome × quantidade), o valor final (com o texto da
+   forma de pagamento), a situação num chip colorido e a LINHA DO TEMPO:
+   Proposta -> Aprovação -> Termo assinado -> Pagamento -> Produção ->
+   Concluído, cada fase pelo FATO dela (codigo_orcamento.acompanhamento):
+   enviada; aprovada em dd/mm (ou recusada / validade encerrada / trocada por
+   outra versão: a corrente PARA, em vermelho); o termo pronto para assinar,
+   em preparação pela equipe, suspenso ou assinado em dd/mm; o pagamento
+   pendente, "Parcial · 40% pago" ou pago em dd/mm; a produção ("Começou em
+   dd/mm · previsão dd/mm", "Pronta entrega", ou a promessa antes da
+   aprovação); concluído quando a O.S. ligada ao orçamento é concluída
+   ("Agendado para dd/mm" enquanto agendada; sem O.S., a forma de envio). A
+   primeira fase que falta fica acesa. No computador e no tablet as seis
+   fases ficam em linha; no celular, em coluna, com o fio descendo (como o
+   rastreio de um app). Rascunho mostra só "a equipe está montando": sem
+   itens, sem valores, sem link.
+   O QUE O CLIENTE FAZ SOZINHO, NO CARTÃO: "Ver e responder a proposta" (a
+   página pública, para aprovar, pedir ajustes ou recusar); "Assinar o
+   termo" quando o termo foi gerado e espera assinatura (POST: o link de 5
+   minutos sai NA HORA, pela mesma documento_assinatura.emitir_link do
+   painel -- conta no documento --, e o cliente cai direto em /assinar/...;
+   só a conta vinculada consegue; sem termo, assinado ou suspenso, um toast
+   explica); "Ver termo assinado" (/assinado/<código do documento>/); o Pix
+   do orçamento enquanto falta pagar (as duas chaves com "Copiar", quanto
+   falta e a barra do que já entrou); "Falar com a equipe" no WhatsApp, com
+   o código na mensagem. O termo continua sendo GERADO pela equipe (seção
+   81): sem ele, a fase diz "A equipe está preparando o termo".
+   DESFAZER OU TROCAR A CONTA (o código caiu na conta errada; ainda não há
+   botão no painel):
+       python manage.py conta_do_orcamento LS-7K3QX9              (mostra)
+       python manage.py conta_do_orcamento LS-7K3QX9 --desvincular
+       python manage.py conta_do_orcamento LS-7K3QX9 --para <login>
+   (vale para todas as versões da negociação).
+   PAGAMENTO ONLINE (Mercado Pago) NÃO ENTROU: a fase e o Pix mostram o que
+   pagar, e a equipe registra o recebido no painel, como sempre.
+   SEGURANÇA: as rotas novas não têm id (o código vai no corpo do POST, a
+   conta é a da sessão): /meus-pedidos/orcamento/vincular/ e
+   /meus-pedidos/orcamento/assinar/, só POST, só logado, com CSRF. O cartão
+   nunca mostra o nome do cliente do orçamento nem dados de outra conta; a
+   página pública de um orçamento vinculado diz só que ele "já está ligado
+   a uma conta do site".
+   Banco: sistema_interno/0065_orcamento_codigo_e_conta (só esquema: o
+   código NULO e sem "único", a conta, vinculado_em e a escolha "vinculado"
+   do histórico), 0066_codigos_dos_orcamentos (só dados: um código sorteado
+   para cada orçamento antigo, sem repetir; rodar de novo não troca nada) e
+   0067_orcamento_codigo_unico (só esquema: único e obrigatório, com o
+   sorteio como padrão). Em três arquivos de propósito: o "único" com padrão
+   sorteado numa migração só daria o MESMO código a todas as linhas antigas.
+       python manage.py migrate sistema_interno
+   Código: sistema_interno/codigo_orcamento.py (normalizar, versão mais
+   nova, vincular, freio, fases), core/views_codigo_orcamento.py (as duas
+   rotas e os recados), MeusPedidosView (core/views.py), templates
+   core/templates/partials/orcamento_vincular.html e orcamento_cartao.html,
+   meus_pedidos.html, site/paginas/meus_pedidos.css (as classes oc-*),
+   orcamento_publico.html/.css, emails/orcamento_enviado.html (core e
+   sistema_interno), views_gestao.py (WhatsApp, e-mail, serializar, busca),
+   notificacoes.avisar_orcamento_vinculado, avisos.py (o sino),
+   documento_assinatura_inner.html, management/commands/conta_do_orcamento.py.
+   Testes: core/tests_codigo_do_orcamento.py (formato e unicidade, o
+   repetido sorteado de novo, o que a pessoa digita, a versão nova na mesma
+   conta -- inclusive pelo Refazer do painel --, as migrações, vincular em
+   todos os casos, o freio por conta e por IP, a versão antiga levando à
+   nova, CSRF/login/GET, Meus pedidos só com os da conta e sem crescer em
+   consultas, rascunho sem valores, as fases de cada situação, o link de
+   assinatura só para o dono, e o código na página do cliente, no WhatsApp,
+   no e-mail, na prévia, no JSON da janela e na busca; o comando que
+   desfaz ou troca a conta).
+   Conferido no Chromium (PC 1366 e celular 390): o quadro do código, os
+   toasts (não encontrado, de outra conta, versão antiga, freio), os
+   cartões em cada fase, o "Assinar o termo" levando à assinatura, a página
+   do cliente com o código (e o PDF numa folha), a prévia e a tela do
+   documento no painel; sem rolagem horizontal em Meus pedidos.

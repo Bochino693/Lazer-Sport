@@ -3490,6 +3490,16 @@ a.ls-metric-card.active{border-color:var(--metric);box-shadow:0 0 0 2px rgba(var
 .ls-os-body .ls-versao-chip{
   border-color:var(--os-linha-forte);background:var(--os-verniz);color:var(--os-tinta);
 }
+/* o código do orçamento (o cliente digita em Meus pedidos) e a conta que já o vinculou */
+.ls-orc-codigo,.ls-orc-conta{
+  display:flex;align-items:center;gap:4px;width:max-content;max-width:100%;margin-top:5px;
+  font-size:.66rem;font-weight:900;letter-spacing:.04em;line-height:1.2;white-space:nowrap;
+}
+.ls-orc-codigo{
+  padding:2px 7px;border:1px dashed rgba(var(--acento-rgb),.5);border-radius:7px;
+  color:var(--acento-claro);background:rgba(var(--acento-rgb),.08);font-variant-numeric:tabular-nums;
+}
+.ls-orc-conta{color:var(--green-texto,var(--muted));overflow:hidden;text-overflow:ellipsis}
 
 /* Linha da versão congelada: presente, e claramente fora da fila. Não
    escondida -- é nela que se confere o que tinha sido combinado antes --

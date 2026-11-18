@@ -93,6 +93,9 @@
               {% endcomment %}
               <td data-rotulo="ID">
                 <span class="ls-number">{{ orcamento.id }}</span>{% if orcamento.versao > 1 %}<span class="ls-versao-chip" title="Esta é a versão {{ orcamento.versao }} desta proposta">v{{ orcamento.versao }}</span>{% endif %}
+                {# O código que o cliente digita em Meus pedidos (LEIA-ME 104) e, se já digitou, a conta dele. #}
+                {% if orcamento.codigo %}<span class="ls-orc-codigo" title="Código do orçamento: o cliente informa em Meus pedidos para acompanhar pelo site">{{ orcamento.codigo }}</span>{% endif %}
+                {% if orcamento.conta_id %}<span class="ls-orc-conta" title="Vinculado à conta do site{% if orcamento.vinculado_em %} em {{ orcamento.vinculado_em|date:'d/m/Y' }}{% endif %}"><i class="bi bi-person-check" aria-hidden="true"></i> @{{ orcamento.conta.get_username }}</span>{% endif %}
               </td>
               <td data-rotulo="Cliente">
                 <span class="material-nome">{{ orcamento.destinatario }}</span>
