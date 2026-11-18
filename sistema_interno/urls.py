@@ -50,6 +50,7 @@ from .views_funil import (
     PrazoProducaoView,
 )
 from .views_montagem import ListaMontagemView
+from .views_notas_entrada import ArquivoNotaEntradaView, NotaEntradaView, NotasEntradaView
 from .views_transportadoras import TransportadorasInnerView
 from .views_dados_contrato import DadosContratoInnerView
 from .views_documento_assinatura import (
@@ -137,6 +138,10 @@ urlpatterns = [
     path('estoque/movimentacoes/', MovimentacoesInnerView.as_view(), name='movimentacoes_inner'),
     path('estoque/clientes/buscar/', BuscaClientesEstoqueView.as_view(), name='buscar_clientes_estoque'),
     path('estoque/dashboard/', DashboardEstoqueView.as_view(), name='dashboard_estoque'),
+    # A entrada de nota fiscal (seção 115): o Financeiro lança, a Produção vê.
+    path('estoque/notas/', NotasEntradaView.as_view(), name='notas_entrada'),
+    path('estoque/notas/<int:pk>/', NotaEntradaView.as_view(), name='nota_entrada'),
+    path('estoque/notas/<int:pk>/arquivo/', ArquivoNotaEntradaView.as_view(), name='nota_entrada_arquivo'),
 
     # ---------------- financeiro ----------------
     path('financeiro/', FinanceiroInnerView.as_view(), name='financeiro_inner'),

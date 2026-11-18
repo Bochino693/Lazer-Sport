@@ -60,6 +60,10 @@ BLOCOS = {
         Item("Estoque", "stock", "bi-box-seam-fill", "estoque", ativo=("estoque_inner",)),
         Item("Materiais", "materiais_inner", "bi-tools", "estoque"),
         Item("Movimentações", "movimentacoes_inner", "bi-arrow-left-right", "estoque"),
+        # a nota fiscal do fornecedor (PDF ou XML) que entra no estoque (seção 115):
+        # o Financeiro lança, a Produção e a Gestão veem
+        Item("Notas de entrada", "notas_entrada", "bi-receipt-cutoff", "entrada_nota_ver",
+             ativo=("nota_entrada",)),
     ),
     "Produção": (
         Item("Lista de montagem", "lista_montagem", "bi-list-ol", "lista_montagem"),
@@ -117,7 +121,7 @@ BLOCOS_DA_FUNCAO = {
     "criacao": ("Site e aplicativo",),
     "vendas": ("Comercial", "Produção", "Logística"),
     "ambulante": ("Comercial", "Produção"),
-    "financeiro": ("Financeiro", "Comercial", "Operação", "Produção"),
+    "financeiro": ("Financeiro", "Estoque", "Comercial", "Operação", "Produção"),
     "gestao": ("Painel", "Comercial", "Financeiro", "Estoque", "Produção", "Operação", "Logística"),
 }
 
@@ -145,6 +149,10 @@ ACOES_DA_FUNCAO = {
     "gestao": (
         ("Novo orçamento", "orcamentos_inner", "?novo=1", "orcamentos_criar", "bi-file-earmark-plus"),
         ("Abrir Ordem de Serviço", "ordens_servico_inner", "?novo=1", "ordens_servico_editar", "bi-clipboard2-plus"),
+        ("Lançar nota de entrada", "notas_entrada", "", "entrada_nota", "bi-receipt-cutoff"),
+    ),
+    "financeiro": (
+        ("Lançar nota de entrada", "notas_entrada", "", "entrada_nota", "bi-receipt-cutoff"),
     ),
 }
 

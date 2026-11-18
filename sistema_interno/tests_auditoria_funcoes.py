@@ -44,6 +44,9 @@ MATRIZ = {
     "financeiro_inner": FINANCEIRO,
     "vendas_inner": FINANCEIRO,
     "pedidos_inner": FINANCEIRO,
+    # a entrada de nota fiscal (seção 115): o Financeiro (e a Gestão) lança,
+    # a Engenharia de produção vê as notas lançadas
+    "notas_entrada": FINANCEIRO | {"producao"},
     # engenharia de produção: estoque e materiais são dela
     "stock": PRODUCAO,
     "estoque_inner": PRODUCAO,

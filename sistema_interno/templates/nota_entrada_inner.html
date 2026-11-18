@@ -1,0 +1,279 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+{% block title %}NF-e {{ nota.numero_e_serie }} | Lazer &amp; Sport{% endblock %}
+{% block top_title %}Entrada de nota{% endblock %}
+{% block body_class %}ls-commercial-body{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="notas-entrada" href="{% estatico 'interno/notas-entrada.css' %}">
+{% endblock %}
+
+{% block content %}
+{% comment %}
+  A CONFERÊNCIA DA NOTA (views_notas_entrada.NotaEntradaView; seção 115).
+
+  Em conferência, para quem lança: o fornecedor e a nota em cima, a data
+  de entrada, e um cartão por linha -- o que a nota diz à esquerda, o que
+  entra no estoque à direita. A ligação com o material troca na hora (a
+  busca roda no aparelho, notas-entrada.js); sem JavaScript, o formulário
+  continua lançando a ligação que veio da leitura. Nada de lista suspensa:
+  a unidade é chip de rádio, o local é campo de texto com sugestões.
+
+  Lançada: a mesma tela, só leitura, com o material, o local e a entrada
+  no estoque de cada linha.
+{% endcomment %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Entrada de nota · {% if nota.lancada %}lançada{% else %}conferência{% endif %}</span>
+    <h1>NF-e {{ nota.numero_e_serie }}</h1>
+    <p>{{ nota.fornecedor.nome|default:nota.fornecedor_nome|default:"Fornecedor não lido" }}{% if nota.fornecedor_cnpj %} · {{ nota.cnpj_formatado }}{% endif %}{% if nota.emissao %} · emitida em {{ nota.emissao|date:"d/m/Y" }}{% endif %} · <strong>R$ {{ nota.valor_total|moeda }}</strong></p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'notas_entrada' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Notas
+    </a>
+    {% if nota.arquivo %}
+    <a href="{% url 'nota_entrada_arquivo' nota.pk %}" class="btn btn-outline-secondary" target="_blank" rel="noopener">
+      <i class="bi {% if nota.formato == 'pdf' %}bi-file-earmark-pdf{% else %}bi-filetype-xml{% endif %} me-1" aria-hidden="true"></i> {% if nota.formato == 'pdf' %}Ver o PDF{% else %}Baixar o XML{% endif %}
+    </a>
+    {% endif %}
+  </div>
+</section>
+
+{% if nota.lancada %}
+<div class="ls-ne-faixa ok" role="status">
+  <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+  <div>
+    <strong>Lançada no estoque{% if nota.lancada_em %} em {{ nota.lancada_em|date:"d/m/Y \à\s H:i" }}{% endif %}{% if nota.lancada_por %} por {{ nota.lancada_por.get_full_name|default:nota.lancada_por.get_username }}{% endif %}.</strong>
+    <span>Data de entrada: {{ nota.data_entrada|date:"d/m/Y" }} · {{ resumo.pecas }} unidade{{ resumo.pecas|pluralize }} em {{ resumo.linhas }} linha{{ resumo.linhas|pluralize }}{% if resumo.fora %} ({{ resumo.fora }} fora do estoque){% endif %}{% if nota.compra %} · compra de R$ {{ nota.compra.valor|moeda }} no Financeiro{% endif %}.</span>
+  </div>
+</div>
+{% elif editar and nota.avisos %}
+<div class="ls-ne-faixa atencao" role="status">
+  <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+  <div>
+    <strong>Confira antes de lançar:</strong>
+    <ul>{% for aviso in nota.avisos %}<li>{{ aviso }}</li>{% endfor %}</ul>
+  </div>
+</div>
+{% endif %}
+
+{% if editar %}
+<form method="post" action="{% url 'nota_entrada' nota.pk %}" id="formConferencia" class="ls-ne-conferencia" novalidate
+      data-total="{{ nota.valor_total|stringformat:'s' }}" data-numero="{{ nota.numero_e_serie }}">
+  {% csrf_token %}
+
+  <div class="ls-ne-topo">
+    <section class="ls-ne-cartao" aria-labelledby="neFornecedor">
+      <h2 id="neFornecedor"><i class="bi bi-building" aria-hidden="true"></i> Fornecedor</h2>
+      {% if fornecedor_cadastrado %}
+        <p class="ls-ne-selo ok"><i class="bi bi-check2-circle" aria-hidden="true"></i> Já cadastrado: <strong>{{ fornecedor_cadastrado.nome }}</strong></p>
+        <input type="hidden" name="fornecedor_nome" value="{{ nota.fornecedor_nome }}">
+      {% else %}
+        <p class="ls-ne-selo novo"><i class="bi bi-plus-circle" aria-hidden="true"></i> Fornecedor novo: será cadastrado ao lançar.</p>
+        <label class="ls-ne-campo">
+          <span>Nome (razão social)</span>
+          <input class="form-control" type="text" name="fornecedor_nome" maxlength="120" value="{{ nota.fornecedor_nome }}" autocomplete="off">
+        </label>
+      {% endif %}
+      <label class="ls-ne-campo">
+        <span>CNPJ / CPF {% if nota.chave_acesso %}<small>(da chave de acesso)</small>{% endif %}</span>
+        <input class="form-control" type="text" name="fornecedor_cnpj" maxlength="20" inputmode="numeric" value="{{ nota.cnpj_formatado }}" {% if nota.chave_acesso %}readonly{% endif %}>
+      </label>
+    </section>
+
+    <section class="ls-ne-cartao" aria-labelledby="neDados">
+      <h2 id="neDados"><i class="bi bi-receipt" aria-hidden="true"></i> A nota</h2>
+      <div class="ls-ne-grade">
+        <label class="ls-ne-campo">
+          <span>Número</span>
+          <input class="form-control" type="text" name="numero" maxlength="12" inputmode="numeric" value="{{ nota.numero }}" {% if nota.chave_acesso %}readonly{% endif %}>
+        </label>
+        <label class="ls-ne-campo">
+          <span>Série</span>
+          <input class="form-control" type="text" name="serie" maxlength="3" inputmode="numeric" value="{{ nota.serie }}" {% if nota.chave_acesso %}readonly{% endif %}>
+        </label>
+        <label class="ls-ne-campo">
+          <span>Emissão</span>
+          <input class="form-control" type="date" name="emissao" value="{{ nota.emissao|date:'Y-m-d' }}">
+        </label>
+        <div class="ls-ne-campo">
+          <span>Total da nota</span>
+          <strong class="ls-ne-valor">R$ {{ nota.valor_total|moeda }}</strong>
+          {% if nota.valor_produtos != nota.valor_total %}<small>Produtos: R$ {{ nota.valor_produtos|moeda }}</small>{% endif %}
+        </div>
+      </div>
+      {% if nota.chave_acesso %}<p class="ls-ne-chave"><span>Chave de acesso</span><code>{{ nota.chave_formatada }}</code></p>{% endif %}
+    </section>
+
+    <section class="ls-ne-cartao ls-ne-entrada" aria-labelledby="neEntradaTitulo">
+      <h2 id="neEntradaTitulo"><i class="bi bi-calendar-check" aria-hidden="true"></i> Entrada</h2>
+      <label class="ls-ne-campo">
+        <span>Data de entrada no estoque</span>
+        <input class="form-control" type="date" name="data_entrada" id="neDataEntrada" required max="{{ hoje|date:'Y-m-d' }}" value="{{ nota.data_entrada|date:'Y-m-d' }}">
+      </label>
+      <p class="ls-ne-nota">Vale para o histórico do estoque e para o mês da compra no Financeiro.</p>
+      <dl class="ls-ne-resumo" id="neResumo">
+        <div><dt>Linhas</dt><dd>{{ resumo.linhas }}{% if resumo.somadas %} <small>({{ resumo.linhas_nota }} na nota)</small>{% endif %}</dd></div>
+        <div><dt>Materiais novos</dt><dd data-ne-resumo="novos">{{ resumo.novos }}</dd></div>
+        <div><dt>Fora do estoque</dt><dd data-ne-resumo="fora">{{ resumo.fora }}</dd></div>
+        <div><dt>Unidades</dt><dd data-ne-resumo="pecas">{{ resumo.pecas }}</dd></div>
+      </dl>
+    </section>
+  </div>
+
+  {% if resumo.somadas %}
+  <p class="ls-ne-somados"><i class="bi bi-layers-fill" aria-hidden="true"></i> {{ resumo.somadas }} produto{{ resumo.somadas|pluralize }} aparece{{ resumo.somadas|pluralize:"m" }} em mais de uma linha da nota e {{ resumo.somadas|pluralize:"foi,foram" }} somado{{ resumo.somadas|pluralize }} numa linha só.</p>
+  {% endif %}
+
+  <datalist id="neLocais">{% for local in locais %}<option value="{{ local }}">{% endfor %}</datalist>
+
+  <div class="ls-ne-itens">
+    {% for item in itens %}
+    <article class="ls-ne-item" data-ne-item="{{ item.pk }}" data-ordem="{{ item.ordem }}"
+             data-total="{{ item.valor_total|stringformat:'s' }}" data-descricao="{{ item.descricao }}"
+             data-estado="{{ item.ligacao }}">
+      <header class="ls-ne-item-cabeca">
+        <span class="ls-ne-ordem">{{ item.ordem }}</span>
+        <div class="ls-ne-item-titulo">
+          <strong>{{ item.descricao }}</strong>
+          <small>
+            {% if item.codigo %}Cód. {{ item.codigo }}{% endif %}{% if item.ncm %} · NCM {{ item.ncm }}{% endif %}
+            {% if item.linhas_somadas|length > 1 %}<span class="ls-ne-somado"><i class="bi bi-layers" aria-hidden="true"></i> linhas {{ item.linhas_nota }} da nota, somadas</span>{% endif %}
+          </small>
+          {% if item.complemento %}<small class="ls-ne-complemento">{{ item.complemento }}</small>{% endif %}
+        </div>
+        <div class="ls-ne-item-nota">
+          <span>{{ item.quantidade_nota|da_nota }} {{ item.unidade_nota }} × R$ {{ item.valor_unitario_nota|da_nota:2 }}</span>
+          <strong>R$ {{ item.valor_total|moeda }}</strong>
+        </div>
+      </header>
+
+      <div class="ls-ne-ligacao">
+        <input type="hidden" name="item-{{ item.pk }}-material" value="{{ item.escolha }}" data-ne-escolha>
+        <div class="ls-ne-ligado">
+          <span class="ls-ne-estado" data-ne-estado-rotulo>
+            {% if item.ligacao == "codigo" %}<i class="bi bi-upc-scan"></i> Pelo código do fornecedor
+            {% elif item.ligacao == "nome" %}<i class="bi bi-check2-circle"></i> Mesmo nome
+            {% elif item.ligacao == "parecido" %}<i class="bi bi-question-circle"></i> Nome parecido ({{ item.semelhanca }}%) — confira
+            {% elif item.ligacao == "manual" %}<i class="bi bi-hand-index"></i> Escolhido na conferência
+            {% elif item.ligacao == "fora" %}<i class="bi bi-slash-circle"></i> Não entra no estoque
+            {% else %}<i class="bi bi-plus-circle"></i> Material novo — será criado{% endif %}
+          </span>
+          <strong class="ls-ne-material" data-ne-material>{% if item.material %}{{ item.material.nome_material }}{% if item.material.codigo_interno %} <small>{{ item.material.codigo_interno }}</small>{% endif %}{% elif item.ligacao == "fora" %}—{% else %}{{ item.nome_material }}{% endif %}</strong>
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-ne-trocar aria-expanded="false">
+            <i class="bi bi-arrow-left-right me-1" aria-hidden="true"></i> Trocar
+          </button>
+        </div>
+        <div class="ls-ne-escolher" data-ne-painel hidden>
+          <div class="ls-ne-busca-material">
+            <i class="bi bi-search" aria-hidden="true"></i>
+            <input type="search" class="form-control" placeholder="Buscar material pelo nome ou código…" autocomplete="off" data-ne-busca aria-label="Buscar material">
+          </div>
+          <div class="ls-ne-opcoes" data-ne-resultados role="list"></div>
+          <div class="ls-ne-opcoes-fixas">
+            <button type="button" class="ls-ne-opcao novo" data-ne-novo><i class="bi bi-plus-circle" aria-hidden="true"></i> Criar material novo</button>
+            <button type="button" class="ls-ne-opcao fora" data-ne-fora><i class="bi bi-slash-circle" aria-hidden="true"></i> Não entra no estoque <small>(serviço, frete, uso na hora)</small></button>
+          </div>
+        </div>
+        <label class="ls-ne-campo ls-ne-nome" data-ne-nome-grupo {% if item.material or item.ligacao == "fora" %}hidden{% endif %}>
+          <span>Nome do material novo</span>
+          <input class="form-control" type="text" name="item-{{ item.pk }}-nome" maxlength="90" value="{{ item.nome_material }}" data-ne-nome>
+        </label>
+      </div>
+
+      <div class="ls-ne-estoque" data-ne-estoque>
+        <label class="ls-ne-campo ls-ne-qtd">
+          <span>Entra no estoque</span>
+          <input class="form-control" type="text" name="item-{{ item.pk }}-quantidade" inputmode="numeric" value="{{ item.quantidade }}" data-ne-quantidade>
+        </label>
+        <fieldset class="ls-ne-unidades">
+          <legend>Unidade</legend>
+          <div class="ls-ne-chips" role="radiogroup">
+            {% for valor, rotulo, curto in unidades %}
+            <label class="ls-ne-chip" title="{{ rotulo }}">
+              <input type="radio" name="item-{{ item.pk }}-unidade" value="{{ valor }}" {% if item.unidade == valor %}checked{% endif %} data-ne-unidade data-curto="{{ curto }}" aria-label="{{ rotulo }}">
+              <span>{{ curto }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </fieldset>
+        <label class="ls-ne-campo ls-ne-local">
+          <span>Local de guarda</span>
+          <input class="form-control" type="text" name="item-{{ item.pk }}-local" maxlength="90" list="neLocais" value="{{ item.local|default:local_padrao }}" data-ne-local>
+        </label>
+        <p class="ls-ne-custo" data-ne-custo>{% if item.custo_por_unidade != None %}R$ {{ item.custo_por_unidade|da_nota:2 }} por {{ item.unidade }}{% endif %}</p>
+      </div>
+      <p class="ls-ne-aviso" data-ne-aviso {% if not item.aviso %}hidden{% endif %}><i class="bi bi-info-circle" aria-hidden="true"></i> <span>{{ item.aviso }}</span></p>
+      <p class="ls-ne-aviso soma" data-ne-soma hidden><i class="bi bi-layers" aria-hidden="true"></i> <span></span></p>
+    </article>
+    {% endfor %}
+  </div>
+
+  <div class="ls-ne-rodape">
+    <p><i class="bi bi-info-circle" aria-hidden="true"></i> Ao lançar: o fornecedor e os materiais novos são cadastrados, cada material entra no estoque (os do mesmo material e local, somados) e a compra vai para o Financeiro.</p>
+    <div class="ls-ne-rodape-acoes">
+      <button type="submit" name="action" value="guardar" class="btn btn-outline-secondary btn-lg">
+        <i class="bi bi-save me-1" aria-hidden="true"></i> Salvar e continuar depois
+      </button>
+      <button type="submit" name="action" value="lancar" class="btn btn-success btn-lg" data-ne-lancar>
+        <i class="bi bi-box-arrow-in-down me-1" aria-hidden="true"></i> Lançar no estoque
+      </button>
+    </div>
+  </div>
+</form>
+
+<form method="post" action="{% url 'nota_entrada' nota.pk %}" class="ls-ne-descartar"
+      data-ls-confirmar="A leitura desta nota e o arquivo são apagados. Nada entrou no estoque, então nada sai."
+      data-ls-confirmar-titulo="Descartar esta leitura?" data-ls-confirmar-botao="Descartar" data-ls-perigo>
+  {% csrf_token %}
+  <input type="hidden" name="action" value="descartar">
+  <button type="submit" class="btn btn-link ls-ne-link-perigo"><i class="bi bi-trash3 me-1" aria-hidden="true"></i> Descartar esta leitura</button>
+</form>
+
+{{ materiais_dados|json_script:"neMateriais" }}
+
+{% else %}
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div>
+      <h2>O que entrou</h2>
+      <p>Cada linha com o material, o local e a entrada no estoque.{% if resumo.somadas %} Linhas repetidas da nota aparecem somadas.{% endif %}</p>
+    </div>
+    {% include "includes/lista_ou_cards.html" with alvo="neItensLancados" chave="nota-entrada-itens" %}
+  </div>
+  <div class="ls-data-body">
+    <div class="table-responsive ls-commercial-table-wrap ls-visao-alvo" id="neItensLancados" data-visao="lista">
+      <table class="ls-table ls-commercial-table ls-visao-tabela ls-ne-tabela">
+        <thead>
+          <tr><th data-coluna="Linha">#</th><th data-coluna="Na nota">Na nota</th><th data-coluna="Material">Material</th><th data-coluna="Entrou" class="text-end">Entrou</th><th data-coluna="Local">Local</th><th data-coluna="Valor" class="text-end">Valor</th></tr>
+        </thead>
+        <tbody>
+          {% for item in itens %}
+          <tr>
+            <td data-rotulo="Linha"><strong>{{ item.ordem }}</strong>{% if item.linhas_somadas|length > 1 %}<span class="d-block ls-subtext">linhas {{ item.linhas_nota }}</span>{% endif %}</td>
+            <td data-rotulo="Na nota">{{ item.descricao }}<span class="d-block ls-subtext">{% if item.codigo %}Cód. {{ item.codigo }} · {% endif %}{{ item.quantidade_nota|da_nota }} {{ item.unidade_nota }}</span></td>
+            <td data-rotulo="Material">
+              {% if item.ligacao == "fora" %}<span class="ls-status neutral">Não entrou no estoque</span>
+              {% elif item.material %}<strong>{{ item.material.nome_material }}</strong>{% if item.material.codigo_interno %}<span class="d-block ls-subtext">{{ item.material.codigo_interno }}</span>{% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td data-rotulo="Entrou" class="text-end ls-number">{% if item.ligacao == "fora" %}—{% else %}+{{ item.quantidade }} {{ item.unidade }}{% endif %}</td>
+            <td data-rotulo="Local">{{ item.local|default:"—" }}{% if item.movimento %}<span class="d-block ls-subtext">saldo depois: {{ item.movimento.quantidade_resultante }}</span>{% endif %}</td>
+            <td data-rotulo="Valor" class="text-end"><span class="ls-money">R$ {{ item.valor_total|moeda }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% if nota.lancada and permissoes_interno.estoque %}
+<p class="ls-ne-rodape-link"><a href="{% url 'movimentacoes_inner' %}?q={{ nota.documento|urlencode }}"><i class="bi bi-clock-history me-1" aria-hidden="true"></i> Ver estas entradas no histórico do estoque</a></p>
+{% endif %}
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="{% estatico 'interno/notas-entrada.js' %}"></script>
+{% endblock %}

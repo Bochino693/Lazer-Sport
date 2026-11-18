@@ -1,0 +1,160 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+{% block title %}Entrada de nota | Lazer &amp; Sport{% endblock %}
+{% block top_title %}Entrada de nota{% endblock %}
+{% block body_class %}ls-commercial-body{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="notas-entrada" href="{% estatico 'interno/notas-entrada.css' %}">
+{% endblock %}
+
+{% block content %}
+{% comment %}
+  ENTRADA DE NOTA FISCAL (views_notas_entrada.py; LEIA-ME-V10, seção 115).
+  Em cima, o envio do arquivo (só para quem lança: Financeiro e Gestão);
+  embaixo, as notas -- em conferência e lançadas --, em Lista ou Cards.
+  A Produção chega aqui para CONSULTAR o que entrou: vê só as lançadas.
+{% endcomment %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Estoque · compras</span>
+    <h1>Entrada de nota</h1>
+    <p>Suba o PDF (DANFE) ou o XML da nota do fornecedor: o sistema lê fornecedor, número, data e itens, liga cada item a um material e soma os repetidos. Você confere e lança — o estoque, o fornecedor e a compra no Financeiro saem juntos.</p>
+  </div>
+  {% if permissoes_interno.estoque %}
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'movimentacoes_inner' %}?tipo=entrada" class="btn btn-outline-secondary">
+      <i class="bi bi-clock-history me-1" aria-hidden="true"></i> Entradas no estoque
+    </a>
+  </div>
+  {% endif %}
+</section>
+
+{% if pode_lancar %}
+<section class="ls-ne-envio" aria-labelledby="neEnvioTitulo">
+  <form method="post" enctype="multipart/form-data" action="{% url 'notas_entrada' %}" id="formNotaArquivo" class="ls-ne-envio-form">
+    {% csrf_token %}
+    <label class="ls-ne-soltar" for="neArquivo" id="neSoltar">
+      <i class="bi bi-receipt-cutoff" aria-hidden="true"></i>
+      <strong id="neEnvioTitulo">Escolha a nota: PDF (DANFE) ou XML da NF-e</strong>
+      <span id="neArquivoNome">Toque para escolher, ou arraste o arquivo para cá.</span>
+      <small>Até {{ tamanho_maximo_mb }} MB. Se tiver os dois, prefira o XML: é o documento fiscal, sem erro de leitura.</small>
+    </label>
+    <input type="file" name="arquivo" id="neArquivo" class="ls-ne-arquivo"
+           accept=".pdf,.xml,application/pdf,application/xml,text/xml" required>
+    <div class="ls-ne-envio-acoes">
+      <button type="submit" class="btn btn-success btn-lg" id="neLer">
+        <i class="bi bi-magic me-1" aria-hidden="true"></i> Ler a nota
+      </button>
+    </div>
+  </form>
+  <ol class="ls-ne-passos">
+    <li><i class="bi bi-1-circle-fill" aria-hidden="true"></i><span><strong>Ler.</strong> Fornecedor, CNPJ, número, série, emissão, chave e cada item (código, descrição, unidade, quantidade e valores).</span></li>
+    <li><i class="bi bi-2-circle-fill" aria-hidden="true"></i><span><strong>Conferir.</strong> Cada item já vem ligado a um material — ou marcado como novo. Itens repetidos aparecem somados. Ajuste o que precisar.</span></li>
+    <li><i class="bi bi-3-circle-fill" aria-hidden="true"></i><span><strong>Lançar.</strong> Entra no estoque com a data de entrada, a nota e quem lançou; fornecedor e materiais novos são cadastrados; a compra vai para o Financeiro.</span></li>
+  </ol>
+  <p class="ls-ne-privacidade"><i class="bi bi-shield-lock" aria-hidden="true"></i> O arquivo fica guardado com a nota, sem endereço público: só abre por aqui, para quem pode ver as notas.</p>
+</section>
+{% endif %}
+
+<section class="ls-metrics ls-ne-metricas">
+  <a class="ls-metric-card ls-budget-filter-card blue {% if filtro == 'todas' %}active{% endif %}" href="?situacao=todas{% if busca %}&amp;q={{ busca|urlencode }}{% endif %}">
+    <div class="ls-metric-head"><span class="ls-metric-label">Todas</span><span class="ls-metric-icon"><i class="bi bi-receipt"></i></span></div>
+    <strong class="ls-metric-value">{{ total_conferencia|add:total_lancadas }}</strong>
+    <span class="ls-metric-note">{% if filtro == 'todas' %}Filtro ativo{% else %}Toque para filtrar{% endif %}</span>
+  </a>
+  {% if pode_lancar %}
+  <a class="ls-metric-card ls-budget-filter-card yellow {% if filtro == 'conferencia' %}active{% endif %}" href="?situacao=conferencia{% if busca %}&amp;q={{ busca|urlencode }}{% endif %}">
+    <div class="ls-metric-head"><span class="ls-metric-label">Em conferência</span><span class="ls-metric-icon"><i class="bi bi-hourglass-split"></i></span></div>
+    <strong class="ls-metric-value">{{ total_conferencia }}</strong>
+    <span class="ls-metric-note">{% if filtro == 'conferencia' %}Filtro ativo{% else %}Lidas, ainda fora do estoque{% endif %}</span>
+  </a>
+  {% endif %}
+  <a class="ls-metric-card ls-budget-filter-card green {% if filtro == 'lancada' %}active{% endif %}" href="?situacao=lancada{% if busca %}&amp;q={{ busca|urlencode }}{% endif %}">
+    <div class="ls-metric-head"><span class="ls-metric-label">Lançadas</span><span class="ls-metric-icon"><i class="bi bi-box-seam"></i></span></div>
+    <strong class="ls-metric-value">{{ total_lancadas }}</strong>
+    <span class="ls-metric-note">{% if filtro == 'lancada' %}Filtro ativo{% else %}No estoque{% endif %}</span>
+  </a>
+  <div class="ls-metric-card violet">
+    <div class="ls-metric-head"><span class="ls-metric-label">Entradas do mês</span><span class="ls-metric-icon"><i class="bi bi-cash-stack"></i></span></div>
+    <strong class="ls-metric-value">R$ {{ lancado_no_mes|moeda }}</strong>
+    <span class="ls-metric-note">{{ notas_no_mes }} nota{{ notas_no_mes|pluralize }} pela data de entrada</span>
+  </div>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div>
+      <h2>Notas</h2>
+      <p>{{ pagina.paginator.count }} nota{{ pagina.paginator.count|pluralize }}{% if busca %} com “{{ busca }}”{% endif %}. Toque numa nota para {% if pode_lancar %}conferir ou {% endif %}ver o que entrou.</p>
+    </div>
+    {% include "includes/lista_ou_cards.html" with alvo="neLista" chave="notas-entrada" %}
+  </div>
+  <div class="ls-data-body">
+    <form method="get" class="ls-ne-busca" role="search" action="{% url 'notas_entrada' %}">
+      <input type="hidden" name="situacao" value="{{ filtro }}">
+      <i class="bi bi-search" aria-hidden="true"></i>
+      <input type="search" name="q" value="{{ busca }}" autocomplete="off"
+             placeholder="Fornecedor, número, CNPJ, chave ou material…" aria-label="Buscar nota">
+    </form>
+
+    <div class="table-responsive ls-commercial-table-wrap ls-visao-alvo" id="neLista" data-visao="lista">
+      <table class="ls-table ls-commercial-table ls-visao-tabela ls-ne-tabela">
+        <thead>
+          <tr>
+            <th data-coluna="Nota">Nota</th><th data-coluna="Fornecedor">Fornecedor</th>
+            <th data-coluna="Itens" class="text-end">Itens</th><th data-coluna="Total" class="text-end">Total</th>
+            <th data-coluna="Entrada">Entrada</th><th data-coluna="Situação">Situação</th><th data-coluna="Abrir" class="text-end">Abrir</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for nota in notas %}
+            <tr>
+              <td data-rotulo="Nota">
+                <strong>NF-e {{ nota.numero_e_serie }}</strong>
+                <span class="d-block ls-subtext">{% if nota.emissao %}Emitida em {{ nota.emissao|date:"d/m/Y" }} · {% endif %}{{ nota.get_formato_display }}</span>
+              </td>
+              <td data-rotulo="Fornecedor">
+                {{ nota.fornecedor.nome|default:nota.fornecedor_nome|default:"—" }}
+                {% if nota.fornecedor_cnpj %}<span class="d-block ls-subtext">{{ nota.cnpj_formatado }}</span>{% endif %}
+              </td>
+              <td data-rotulo="Itens" class="text-end ls-number">{{ nota.total_itens }}</td>
+              <td data-rotulo="Total" class="text-end"><strong class="ls-money">R$ {{ nota.valor_total|moeda }}</strong></td>
+              <td data-rotulo="Entrada">
+                {{ nota.data_entrada|date:"d/m/Y" }}
+                {% if nota.lancada and nota.lancada_por %}<span class="d-block ls-subtext">por {{ nota.lancada_por.get_full_name|default:nota.lancada_por.get_username }}</span>{% endif %}
+              </td>
+              <td data-rotulo="Situação">
+                {% if nota.lancada %}
+                  <span class="ls-status success"><i class="bi bi-check2-circle me-1"></i>Lançada</span>
+                {% else %}
+                  <span class="ls-status warning"><i class="bi bi-hourglass-split me-1"></i>Em conferência</span>
+                {% endif %}
+              </td>
+              <td data-rotulo="Abrir" class="text-end">
+                <a class="btn btn-sm {% if nota.lancada %}btn-outline-secondary{% else %}btn-success{% endif %}" href="{% url 'nota_entrada' nota.pk %}">
+                  {% if nota.lancada %}<i class="bi bi-eye me-1"></i> Ver{% else %}<i class="bi bi-list-check me-1"></i> Conferir{% endif %}
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7"><div class="ls-empty"><i class="bi bi-receipt"></i>{% if busca %}Nenhuma nota com “{{ busca }}”.{% elif pode_lancar %}Nenhuma nota ainda. Suba o PDF ou o XML da primeira acima.{% else %}Nenhuma nota lançada ainda.{% endif %}</div></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if pagina.paginator.num_pages > 1 %}
+      <nav class="d-flex flex-wrap gap-3 align-items-center p-3" aria-label="Páginas de notas">
+        {% if pagina.has_previous %}<a class="btn btn-outline-secondary" href="?{{ filtros_url }}&amp;page={{ pagina.previous_page_number }}">Anterior</a>{% endif %}
+        <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+        {% if pagina.has_next %}<a class="btn btn-outline-secondary" href="?{{ filtros_url }}&amp;page={{ pagina.next_page_number }}">Próxima</a>{% endif %}
+      </nav>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% estatico 'interno/notas-entrada.js' %}"></script>
+{% endblock %}

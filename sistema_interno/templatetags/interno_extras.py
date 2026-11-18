@@ -84,6 +84,26 @@ def numero(valor):
     return number_format(int(convertido), force_grouping=True)
 
 
+@register.filter
+def da_nota(valor, minimo=0):
+    """Quantidade ou valor de nota fiscal, até 4 casas: 5.0000 -> 5; 1.9830 -> 1,983.
+
+    A nota imprime 4 casas, e parafuso a R$ 0,034 não pode virar "0,03" na
+    conferência (seção 115). `|da_nota:2` garante as 2 casas do dinheiro
+    (3.4 -> 3,40; 0.034 -> 0,034).
+    """
+    convertido = _para_decimal(valor)
+    if convertido is None:
+        return "0"
+    convertido = convertido.quantize(Decimal("0.0001")).normalize()
+    casas = max(-convertido.as_tuple().exponent, 0)
+    try:
+        casas = max(casas, int(minimo or 0))
+    except (TypeError, ValueError):
+        pass
+    return number_format(convertido, decimal_pos=casas, force_grouping=True)
+
+
 # ======================================================================
 # A VERSÃO DO ESTÁTICO SAI DO ARQUIVO, E NÃO DA MEMÓRIA DE QUEM EDITA
 # ======================================================================

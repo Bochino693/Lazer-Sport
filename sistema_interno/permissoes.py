@@ -195,6 +195,12 @@ def capacidades(user) -> dict[str, bool]:
         # Os dados do vendedor no contrato de compra e venda (o representante
         # da empresa): quem responde pela identidade jurídica no papel.
         "dados_contrato": gestao,
+        # ENTRADA DE NOTA FISCAL (seção 115): lança quem paga a compra -- o
+        # Financeiro, e a Gestão (o superusuário tem todas). A Engenharia de
+        # produção, dona do estoque, VÊ as notas lançadas (não as que ainda
+        # estão em conferência) e não lança.
+        "entrada_nota": acesso_financeiro,
+        "entrada_nota_ver": acesso_financeiro or producao,
         "site": criacao,
         # RECURSOS HUMANOS (app `rh`), com as MESMAS funções: não há grupo
         # "RH" à parte. Gestão (e o superusuário, que tem todas) vê e

@@ -137,6 +137,7 @@
               <td>
                 {% if m.documento %}<strong>{{ m.documento }}</strong>{% endif %}
                 {% if m.motivo %}<span class="d-block ls-subtext">{{ m.motivo }}</span>{% endif %}
+                {% if m.nota_entrada_id and permissoes_interno.entrada_nota_ver %}<a class="d-block ls-subtext" href="{% url 'nota_entrada' m.nota_entrada_id %}"><i class="bi bi-receipt me-1"></i>Ver a nota</a>{% endif %}
                 {% if not m.documento and not m.motivo %}—{% endif %}
               </td>
               <td>{{ m.responsavel.get_username|default:"—" }}</td>
