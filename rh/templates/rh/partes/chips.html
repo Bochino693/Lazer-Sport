@@ -1,0 +1,9 @@
+{# Escolha em chips (rádio ou caixinha dentro de <label>): nunca <select>. #}
+<div class="rh-campo{% if largura %} rh-campo--{{ largura }}{% else %} rh-campo--12{% endif %}{% if campo.errors %} tem-erro{% endif %}">
+  <span class="rh-rotulo" id="rotulo-{{ campo.html_name }}">{{ campo.label }}{% if campo.field.required %} <span aria-hidden="true">*</span>{% endif %}</span>
+  <div class="rh-chips" role="{% if multiplo %}group{% else %}radiogroup{% endif %}" aria-labelledby="rotulo-{{ campo.html_name }}"{% if dados %} {{ dados }}{% endif %}>
+    {% for opcao in campo %}<label class="rh-chip">{{ opcao.tag }}<span>{{ opcao.choice_label }}</span></label>{% endfor %}
+  </div>
+  {% if ajuda %}<small class="rh-ajuda">{{ ajuda }}</small>{% endif %}
+  {% for erro in campo.errors %}<small class="rh-erro" role="alert">{{ erro }}</small>{% endfor %}
+</div>

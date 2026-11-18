@@ -1,0 +1,40 @@
+{% extends "rh/base_rh.html" %}
+{% load interno_extras %}
+{% block titulo_rh %}Termo de exclusividade{% endblock %}
+
+{% block rh_conteudo %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Contrato · termo de exclusividade e confidencialidade</span>
+    <h1>Termo de exclusividade</h1>
+    <p>Enquanto durar o vínculo com a empresa, não trabalhar para o ramo dela de fora e guardar as informações da casa. Leia com calma e assine aqui mesmo.</p>
+  </div>
+</section>
+
+{% if sem_ficha %}
+  <section class="rh-painel"><p class="rh-nota">Sua conta não está ligada a uma ficha de colaborador. Fale com a Gestão.</p></section>
+{% elif bloqueado %}
+  <section class="rh-painel"><p class="rh-nota">{{ bloqueado }}</p></section>
+{% elif situacao == "assinado" %}
+  <section class="rh-destaque rh-destaque--ok">
+    <span class="rh-destaque-icone" aria-hidden="true"><i class="bi bi-shield-check"></i></span>
+    <div>
+      <h2>Termo assinado</h2>
+      <p>Em {{ termo.assinado_em|date:"d/m/Y \à\s H:i" }}. A cópia em PDF está na sua ficha, na pasta de documentos.</p>
+    </div>
+    <div class="rh-destaque-acoes">
+      {% if termo.documento_id %}<a class="btn btn-outline-secondary" href="{% url 'rh_documento_arquivo' termo.documento_id %}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF assinado</a>{% endif %}
+      <a class="btn btn-outline-secondary" href="{% url 'rh_termo_via' termo.pk %}" data-no-soft-nav="true"><i class="bi bi-eye me-1" aria-hidden="true"></i> Ver</a>
+    </div>
+  </section>
+  {% with doc=termo.conteudo %}{% include "rh/partes/termo_texto.html" %}{% endwith %}
+{% else %}
+  <p class="rh-modelo"><i class="bi bi-info-circle" aria-hidden="true"></i> {{ aviso_modelo }}</p>
+  {% with doc=termo.conteudo %}{% include "rh/partes/termo_texto.html" %}{% endwith %}
+  <section class="rh-painel" aria-label="Assinar">
+    {% include "rh/partes/termo_assinar.html" %}
+  </section>
+{% endif %}
+{% endblock %}
+
+{% block rh_scripts %}<script src="{% estatico 'rh/rh-assinar.js' %}"></script>{% endblock %}

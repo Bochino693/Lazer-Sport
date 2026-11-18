@@ -1,0 +1,182 @@
+{% extends "rh/base_rh.html" %}
+{% load rh_extras %}
+{% block titulo_rh %}RH · Painel{% endblock %}
+
+{% block rh_conteudo %}
+{% comment %}
+  O PAINEL DO RH, COMPACTO: o que precisa de alguém agora. Os números do
+  topo levam à lista certa; abaixo, quem está trabalhando, quem falta, os
+  ajustes para decidir, os documentos vencendo e as tarefas atrasadas.
+{% endcomment %}
+{% with h=painel.hoje %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Recursos humanos · hoje{% if h.feriado %} · {{ h.feriado }}{% endif %}</span>
+    <h1>Equipe</h1>
+    <p>{{ painel.total_ativos }} colaborador{{ painel.total_ativos|pluralize:"es" }} sob contrato. Quem está no turno, o que falta decidir e o que vence.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a class="btn btn-success" href="{% url 'rh_colaborador_novo' %}"><i class="bi bi-person-plus-fill me-1" aria-hidden="true"></i> Novo colaborador</a>
+  </div>
+</section>
+
+{% if painel.termo_pendentes %}
+<section class="rh-destaque" aria-labelledby="rhTermoTitulo">
+  <span class="rh-destaque-icone" aria-hidden="true"><i class="bi bi-shield-exclamation"></i></span>
+  <div>
+    <h2 id="rhTermoTitulo">{{ painel.termo_pendentes }} sem o termo de exclusividade assinado</h2>
+    <p>Quem não assinou não está comprometido a não trabalhar para o ramo de fora nem a guardar os projetos da casa. Envie para assinatura: no celular, em um minuto.</p>
+  </div>
+  <div class="rh-destaque-acoes">
+    <a class="btn btn-danger" href="{% url 'rh_colaboradores' %}?termo=pendente"><i class="bi bi-pen-fill me-1" aria-hidden="true"></i> Resolver</a>
+    <form method="post" action="{% url 'rh_termo_todos' %}" class="rh-inline"
+          data-ls-confirmar="O termo é congelado com os dados de cada ficha e passa a esperar a assinatura de cada um."
+          data-ls-confirmar-titulo="Enviar para todos" data-ls-confirmar-botao="Enviar para todos">
+      {% csrf_token %}
+      <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-send me-1" aria-hidden="true"></i> Enviar para todos</button>
+    </form>
+  </div>
+</section>
+{% elif painel.total_ativos %}
+<section class="rh-destaque rh-destaque--ok">
+  <span class="rh-destaque-icone" aria-hidden="true"><i class="bi bi-shield-check"></i></span>
+  <div>
+    <h2>Todos assinaram o termo de exclusividade</h2>
+    <p>Cada assinatura está guardada em PDF na pasta do colaborador, com data, IP e o código de integridade.</p>
+  </div>
+</section>
+{% endif %}
+
+<div class="rh-numeros">
+  <a class="rh-numero rh-numero--ok" href="{% url 'rh_ponto_equipe' %}">
+    <i class="bi bi-person-workspace" aria-hidden="true"></i>
+    <strong>{{ h.trabalhando|length }}</strong><span>trabalhando agora</span>
+  </a>
+  <a class="rh-numero {% if h.faltando %}rh-numero--perigo{% endif %}" href="{% url 'rh_ponto_equipe' %}">
+    <i class="bi bi-person-x" aria-hidden="true"></i>
+    <strong>{{ h.faltando|length }}</strong><span>sem entrada hoje</span>
+  </a>
+  <a class="rh-numero {% if painel.total_ajustes %}rh-numero--alerta{% endif %}" href="{% url 'rh_ponto_equipe' %}#ajustes">
+    <i class="bi bi-pencil-square" aria-hidden="true"></i>
+    <strong>{{ painel.total_ajustes }}</strong><span>ajuste{{ painel.total_ajustes|pluralize }} para decidir</span>
+  </a>
+  <a class="rh-numero {% if painel.total_vencendo %}rh-numero--alerta{% endif %}" href="{% url 'rh_documentos' %}">
+    <i class="bi bi-calendar2-x" aria-hidden="true"></i>
+    <strong>{{ painel.total_vencendo }}</strong><span>documento{{ painel.total_vencendo|pluralize }} vencendo (30 dias)</span>
+  </a>
+  <a class="rh-numero {% if painel.total_atrasadas %}rh-numero--perigo{% endif %}" href="{% url 'rh_tarefas' %}?filtro=atrasadas">
+    <i class="bi bi-alarm" aria-hidden="true"></i>
+    <strong>{{ painel.total_atrasadas }}</strong><span>tarefa{{ painel.total_atrasadas|pluralize }} atrasada{{ painel.total_atrasadas|pluralize }}</span>
+  </a>
+</div>
+
+<div class="rh-grade">
+  <section class="rh-painel" aria-labelledby="rhAgora">
+    <header><h2 id="rhAgora"><i class="bi bi-broadcast" aria-hidden="true"></i> No turno agora</h2></header>
+    <ul class="rh-linhas">
+      {% for c, m in h.trabalhando %}
+        <li>
+          <a class="rh-pessoa rh-linha-principal" href="{% url 'rh_espelho' c.pk %}">
+            <span class="rh-avatar" aria-hidden="true">{{ c.nome|iniciais }}</span>
+            <span><strong>{{ c.nome }}</strong><small>{{ c.cargo }}</small></span>
+          </a>
+          <span class="rh-selo rh-selo--ok"><i class="bi bi-circle-fill" aria-hidden="true"></i> desde {{ m.hora_local|time:"H:i" }}</span>
+        </li>
+      {% endfor %}
+      {% for c, m in h.intervalo %}
+        <li>
+          <a class="rh-pessoa rh-linha-principal" href="{% url 'rh_espelho' c.pk %}">
+            <span class="rh-avatar" aria-hidden="true">{{ c.nome|iniciais }}</span>
+            <span><strong>{{ c.nome }}</strong><small>{{ c.cargo }}</small></span>
+          </a>
+          <span class="rh-selo rh-selo--alerta"><i class="bi bi-cup-hot" aria-hidden="true"></i> intervalo desde {{ m.hora_local|time:"H:i" }}</span>
+        </li>
+      {% endfor %}
+      {% if not h.trabalhando and not h.intervalo %}
+        <li class="rh-vazio"><i class="bi bi-moon-stars" aria-hidden="true"></i> Ninguém com entrada aberta agora.</li>
+      {% endif %}
+    </ul>
+  </section>
+
+  <section class="rh-painel" aria-labelledby="rhFaltam">
+    <header><h2 id="rhFaltam"><i class="bi bi-person-exclamation" aria-hidden="true"></i> Sem entrada hoje</h2></header>
+    <ul class="rh-linhas">
+      {% for c in h.faltando %}
+        <li>
+          <a class="rh-pessoa rh-linha-principal" href="{% url 'rh_ficha' c.pk %}">
+            <span class="rh-avatar" aria-hidden="true">{{ c.nome|iniciais }}</span>
+            <span><strong>{{ c.nome }}</strong><small>Jornada desde {{ c.jornada_inicio|time:"H:i" }} · {{ c.telefone_formatado }}</small></span>
+          </a>
+          <span class="rh-selo rh-selo--perigo">sem registro</span>
+        </li>
+      {% empty %}
+        <li class="rh-vazio"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> {% if h.feriado %}Feriado: ninguém é esperado.{% else %}Todo mundo que já devia ter chegado registrou a entrada.{% endif %}</li>
+      {% endfor %}
+      {% if h.aguardando %}
+        <li><small class="rh-nota">Ainda no horário: {% for c in h.aguardando %}{{ c.primeiro_nome }} ({{ c.jornada_inicio|time:"H:i" }}){% if not forloop.last %}, {% endif %}{% endfor %}.</small></li>
+      {% endif %}
+    </ul>
+  </section>
+
+  <section class="rh-painel" aria-labelledby="rhAjustes">
+    <header>
+      <h2 id="rhAjustes"><i class="bi bi-pencil-square" aria-hidden="true"></i> Ajustes de ponto pendentes</h2>
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_ponto_equipe' %}#ajustes">Ver todos</a>
+    </header>
+    <ul class="rh-linhas">
+      {% for a in painel.ajustes_pendentes %}
+        <li>
+          <span class="rh-linha-principal">
+            <strong>{{ a.colaborador.nome }} · {{ a.data|date:"d/m" }}</strong>
+            <small>{{ a.resumo }} — “{{ a.justificativa|truncatechars:90 }}”</small>
+          </span>
+          {% include "rh/partes/decidir_ajuste.html" with a=a voltar=request.get_full_path %}
+        </li>
+      {% empty %}
+        <li class="rh-vazio"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Nada para decidir.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="rh-painel" aria-labelledby="rhVencendo">
+    <header>
+      <h2 id="rhVencendo"><i class="bi bi-calendar2-x" aria-hidden="true"></i> Documentos vencendo</h2>
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_documentos' %}">Ver todos</a>
+    </header>
+    <ul class="rh-linhas">
+      {% for d in painel.vencendo %}
+        <li>
+          <a class="rh-linha-principal rh-link-limpo" href="{% url 'rh_ficha' d.colaborador_id %}#documentos">
+            <strong>{{ d.colaborador.nome }}</strong><small>{{ d.rotulo }}</small>
+          </a>
+          {% if d.vencido %}<span class="rh-selo rh-selo--perigo">venceu {{ d.validade|date:"d/m/Y" }}</span>
+          {% else %}<span class="rh-selo rh-selo--alerta">vence {{ d.validade|date:"d/m/Y" }}</span>{% endif %}
+        </li>
+      {% empty %}
+        <li class="rh-vazio"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Nenhum documento vence nos próximos 30 dias.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="rh-painel rh-painel--largo" aria-labelledby="rhAtrasadas">
+    <header>
+      <h2 id="rhAtrasadas"><i class="bi bi-alarm" aria-hidden="true"></i> Tarefas atrasadas</h2>
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_tarefas' %}?filtro=atrasadas">Ver todas</a>
+    </header>
+    <ul class="rh-linhas">
+      {% for t in painel.atrasadas %}
+        <li>
+          <span class="rh-linha-principal">
+            <strong>{{ t.titulo }}</strong>
+            <small>{% if t.colaborador %}{{ t.colaborador.nome }}{% else %}Sem responsável{% endif %}{% if t.origem_rotulo %} · {{ t.origem_rotulo }}{% endif %}</small>
+          </span>
+          <span class="rh-selo rh-selo--perigo">prazo {{ t.prazo|date:"d/m" }}</span>
+        </li>
+      {% empty %}
+        <li class="rh-vazio"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Nenhuma tarefa atrasada.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endwith %}
+{% endblock %}

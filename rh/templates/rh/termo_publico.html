@@ -1,0 +1,48 @@
+{% load static interno_extras %}<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+{% comment %}
+  A PÁGINA DO LINK DO TERMO (sem login): abre no celular do colaborador
+  pelo QR que a Gestão mostra. Mostra SÓ este termo, pede o CPF da ficha e
+  o traço. O link vale 5 minutos (conferido ao abrir e de novo ao enviar).
+{% endcomment %}
+<title>Termo de exclusividade | Lazer &amp; Sport</title>
+{% include "partials/icones_da_aba.html" with sem_app=True %}
+<link rel="stylesheet" href="{% static 'interno/vendor/bootstrap-icons.min.css' %}">
+<link rel="stylesheet" href="{% estatico 'rh/rh-folha.css' %}">
+</head>
+<body>
+<main class="rh-pub">
+  {% if estado == "assinar" %}
+    <section class="rh-pub-cartao">
+      <h1>Termo de exclusividade e confidencialidade</h1>
+      <p>{{ doc.empresa.nome }} · leia com calma e assine aqui no celular.</p>
+      <span class="rh-relogio-link" data-rh-relogio-pub data-restante="{{ segundos_restantes }}"><i class="bi bi-stopwatch" aria-hidden="true"></i> <span>{{ validade_minutos }}:00</span></span>
+    </section>
+    <div class="rh-modelo"><i class="bi bi-info-circle" aria-hidden="true"></i> <span>{{ aviso_modelo }}</span></div>
+    <section class="rh-pub-cartao">{% include "rh/partes/termo_texto.html" %}</section>
+    <section class="rh-pub-cartao">
+      {% include "rh/partes/termo_assinar.html" with acao=request.path publico=True %}
+    </section>
+  {% elif estado == "assinado" %}
+    <section class="rh-pub-cartao estado ok">
+      <i class="bi bi-patch-check-fill" aria-hidden="true"></i>
+      <h1>Termo assinado</h1>
+      <p>{{ termo.assinante_nome }}, sua assinatura foi registrada em {{ termo.assinado_em|date:"d/m/Y \à\s H:i" }}. A cópia fica na sua ficha na empresa; peça ao RH se quiser uma via.</p>
+    </section>
+    <section class="rh-pub-cartao">{% include "rh/partes/termo_texto.html" %}</section>
+  {% else %}
+    <section class="rh-pub-cartao estado erro">
+      <i class="bi bi-hourglass-bottom" aria-hidden="true"></i>
+      <h1>{% if estado == "expirado" %}O link expirou{% elif estado == "substituido" %}Link de outra versão{% else %}Não foi possível{% endif %}</h1>
+      <p>{{ mensagem }}</p>
+    </section>
+  {% endif %}
+</main>
+<script src="{% estatico 'rh/rh-assinar.js' %}" defer></script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+{% extends "rh/folha_base.html" %}
+{% block titulo %}Termo de exclusividade · {{ termo.colaborador.nome }}{% endblock %}
+{% block barra %}{% if termo.assinado %}Termo assinado{% else %}Termo (sem assinatura){% endif %}{% endblock %}
+{% block barra_sub %}{{ termo.colaborador.nome }} · versão {{ termo.versao }}{% endblock %}
+
+{% block folha %}
+<header class="rh-folha-cabeca">
+  <div><h1>{{ doc.titulo }}</h1></div>
+  <div class="rh-empresa">{{ doc.empresa.nome }}<br>CNPJ {{ doc.empresa.cnpj }}</div>
+</header>
+{% if not termo.assinado %}<p class="aviso nao-imprime">Ainda sem assinatura{% if termo.situacao == "substituido" %} — esta versão foi substituída e não vale mais{% endif %}.</p>{% endif %}
+<div class="termo-texto">
+  <p>{{ doc.texto.abertura }}</p>
+  <ol>{% for item in doc.texto.itens %}<li>{{ item }}</li>{% endfor %}</ol>
+  <p>{{ doc.texto.local_data }}</p>
+</div>
+{% if termo.assinado %}
+  {% if assinatura_img %}<img class="assinatura-img" src="{{ assinatura_img }}" alt="Assinatura de {{ termo.assinante_nome }}">{% endif %}
+  <div class="assinaturas assinaturas--junto"><div>{{ termo.assinante_nome }}<br>CPF {{ termo.colaborador.cpf_formatado }} · Assinatura do colaborador</div><div></div></div>
+  <h2>Registro da assinatura eletrônica</h2>
+  <p class="hash">Assinado em {{ termo.assinado_em|date:"d/m/Y H:i:s" }} · {{ termo.get_canal_display }} · IP {{ termo.assinatura_ip|default:"—" }}<br>
+  Aparelho: {{ termo.assinatura_navegador|truncatechars:160 }}<br>
+  Texto gerado em {{ doc.emitido_em_texto }} · versão do modelo {{ termo.versao }}<br>
+  Integridade (SHA-256 do texto): {{ termo.hash_assinado }}</p>
+{% else %}
+  <div class="assinaturas"><div>{{ doc.colaborador.nome }}<br>Assinatura do colaborador</div><div></div></div>
+{% endif %}
+<p class="nota">{{ doc.aviso_modelo }}</p>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "rh/base_rh.html" %}
+{% block titulo_rh %}{% if colaborador %}Editar ficha{% else %}Novo colaborador{% endif %}{% endblock %}
+
+{% block rh_conteudo %}
+{% comment %}
+  A FICHA COMPLETA. Tudo é conferido de novo no servidor (rh/models.py,
+  `Colaborador.clean`); aqui a tela ajuda: máscara de CPF, CEP e telefone,
+  o CPF e o PIS conferidos pelos dígitos enquanto se digita (rh.js), a UF e
+  o banco com sugestões (campo de busca, nunca <select>), as escolhas em
+  chips. O salário e os dados de pagamento só existem nesta tela, que é
+  da Gestão.
+{% endcomment %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Recursos humanos · ficha completa</span>
+    <h1>{% if colaborador %}{{ colaborador.nome }}{% else %}Novo colaborador{% endif %}</h1>
+    <p>Os campos com * são obrigatórios. CPF e PIS são conferidos pelos dígitos; as datas, pela coerência (admissão até hoje, idade mínima pelo vínculo, desligamento depois da admissão).</p>
+  </div>
+</section>
+
+<form class="rh-form" method="post" novalidate id="rhFormColaborador" data-rh-form-colaborador>
+  {% csrf_token %}
+  {% if form.errors %}
+    <div class="rh-erros" role="alert">
+      <strong><i class="bi bi-exclamation-octagon" aria-hidden="true"></i> Confira os campos marcados.</strong>
+      {% for erro in form.non_field_errors %}<div>{{ erro }}</div>{% endfor %}
+    </div>
+  {% endif %}
+
+  <fieldset class="rh-secao">
+    <legend><i class="bi bi-person-vcard" aria-hidden="true"></i> Identificação</legend>
+    <div class="rh-campos">
+      {% include "rh/partes/campo.html" with campo=form.nome largura=8 %}
+      {% include "rh/partes/campo.html" with campo=form.data_nascimento %}
+      {% include "rh/partes/campo.html" with campo=form.cpf ajuda="11 números; conferido pelo dígito" %}
+      {% include "rh/partes/campo.html" with campo=form.rg %}
+      {% include "rh/partes/campo.html" with campo=form.rg_orgao %}
+      {% include "rh/partes/campo.html" with campo=form.pis ajuda="Obrigatório na CLT e no temporário" %}
+      {% include "rh/partes/campo.html" with campo=form.ctps_numero %}
+      {% include "rh/partes/campo.html" with campo=form.ctps_serie largura=2 %}
+      {% include "rh/partes/campo.html" with campo=form.ctps_uf largura=2 %}
+    </div>
+  </fieldset>
+
+  <fieldset class="rh-secao">
+    <legend><i class="bi bi-house-door" aria-hidden="true"></i> Endereço</legend>
+    <div class="rh-campos">
+      {% include "rh/partes/campo.html" with campo=form.cep largura=3 ajuda="8 números" %}
+      {% include "rh/partes/campo.html" with campo=form.logradouro largura=6 %}
+      {% include "rh/partes/campo.html" with campo=form.numero largura=3 %}
+      {% include "rh/partes/campo.html" with campo=form.complemento %}
+      {% include "rh/partes/campo.html" with campo=form.bairro %}
+      {% include "rh/partes/campo.html" with campo=form.cidade largura=3 %}
+      {% include "rh/partes/campo.html" with campo=form.uf largura=2 %}
+    </div>
+  </fieldset>
+
+  <fieldset class="rh-secao">
+    <legend><i class="bi bi-telephone" aria-hidden="true"></i> Contato</legend>
+    <div class="rh-campos">
+      {% include "rh/partes/campo.html" with campo=form.telefone %}
+      {% include "rh/partes/campo.html" with campo=form.email largura=8 %}
+      {% include "rh/partes/campo.html" with campo=form.emergencia_nome %}
+      {% include "rh/partes/campo.html" with campo=form.emergencia_telefone %}
+      {% include "rh/partes/campo.html" with campo=form.emergencia_parentesco %}
+    </div>
+  </fieldset>
+
+  <fieldset class="rh-secao">
+    <legend><i class="bi bi-briefcase" aria-hidden="true"></i> Trabalho</legend>
+    <div class="rh-campos">
+      {% include "rh/partes/campo.html" with campo=form.cargo largura=6 %}
+      {% include "rh/partes/campo.html" with campo=form.data_admissao largura=3 %}
+      {% include "rh/partes/campo.html" with campo=form.data_desligamento largura=3 ajuda="Só com a situação Desligado" %}
+      {% include "rh/partes/chips.html" with campo=form.setor ajuda="O setor é a função do painel: é por ele que a produção sugere quem faz cada etapa." %}
+      <div class="rh-painel--largo" data-rh-especialidades>
+        {% include "rh/partes/chips.html" with campo=form.especialidades multiplo=True ajuda="Dentro da Engenharia de produção: as etapas que a pessoa faz (a etapa sugere primeiro quem tem a especialidade)." %}
+      </div>
+      {% include "rh/partes/chips.html" with campo=form.vinculo largura=6 %}
+      {% include "rh/partes/chips.html" with campo=form.situacao largura=6 %}
+    </div>
+  </fieldset>
+
+  <fieldset class="rh-secao">
+    <legend><i class="bi bi-clock" aria-hidden="true"></i> Jornada (é por ela que o espelho conta atraso, falta e extra)</legend>
+    <div class="rh-campos">
+      {% include "rh/partes/campo.html" with campo=form.jornada_inicio largura=3 %}
+      {% include "rh/partes/campo.html" with campo=form.jornada_fim largura=3 %}
+      {% include "rh/partes/campo.html" with campo=form.jornada_intervalo_min largura=3 %}
+      {% include "rh/partes/chips.html" with campo=form.jornada_dias multiplo=True %}
+    </div>
+  </fieldset>
+
+  <fieldset class="rh-secao">
+    <legend><i class="bi bi-cash-coin" aria-hidden="true"></i> Pagamento (visível só para Gestão e Financeiro)</legend>
+    <div class="rh-campos">
+      {% include "rh/partes/campo.html" with campo=form.salario largura=3 %}
+      {% include "rh/partes/campo.html" with campo=form.banco largura=3 %}
+      {% include "rh/partes/campo.html" with campo=form.agencia largura=3 %}
+      {% include "rh/partes/campo.html" with campo=form.conta largura=3 %}
+      {% include "rh/partes/chips.html" with campo=form.tipo_conta largura=6 %}
+      {% include "rh/partes/chips.html" with campo=form.pix_tipo largura=6 %}
+      {% include "rh/partes/campo.html" with campo=form.pix_chave largura=12 ajuda="Conferida pelo tipo: CPF/CNPJ válido, telefone com DDD, e-mail ou chave aleatória." %}
+    </div>
+  </fieldset>
+
+  <fieldset class="rh-secao">
+    <legend><i class="bi bi-link-45deg" aria-hidden="true"></i> Conta do painel e observações</legend>
+    <div class="rh-campos">
+      {% include "rh/partes/campo.html" with campo=form.conta_painel largura=6 ajuda="Quem tem conta bate o ponto, vê as próprias tarefas e assina o termo pelo painel. A conta é criada em Equipe e acessos." %}
+      {% include "rh/partes/campo.html" with campo=form.observacoes largura=12 ajuda="Só a Gestão vê." %}
+    </div>
+  </fieldset>
+
+  <datalist id="rhUfs">{% for uf in ufs %}<option value="{{ uf }}"></option>{% endfor %}</datalist>
+  <datalist id="rhBancos">{% for banco in bancos %}<option value="{{ banco }}"></option>{% endfor %}</datalist>
+  <datalist id="rhContas">{% for conta in contas %}<option value="{{ conta.username }}">{{ conta.get_full_name|default:conta.username }}</option>{% endfor %}</datalist>
+
+  <div class="rh-acoes-form">
+    <a class="btn btn-outline-secondary" href="{% if colaborador %}{% url 'rh_ficha' colaborador.pk %}{% else %}{% url 'rh_colaboradores' %}{% endif %}">Cancelar</a>
+    <button class="btn btn-success" type="submit"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Salvar ficha</button>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,56 @@
+{% extends "rh/base_rh.html" %}
+{% load rh_extras %}
+{% block titulo_rh %}Documentos a vencer{% endblock %}
+
+{% block rh_conteudo %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Recursos humanos · pasta dos colaboradores</span>
+    <h1>Documentos a vencer</h1>
+    <p>O que venceu, o que vence nos próximos {{ janela }} dias (só o último enviado de cada tipo conta: o ASO renovado substitui o vencido) e as fichas com documento obrigatório faltando.</p>
+  </div>
+</section>
+
+<div class="rh-numeros">
+  <div class="rh-numero {% if vencidos %}rh-numero--perigo{% endif %}"><i class="bi bi-calendar2-x" aria-hidden="true"></i><strong>{{ vencidos|length }}</strong><span>vencido{{ vencidos|length|pluralize }}</span></div>
+  <div class="rh-numero {% if a_vencer %}rh-numero--alerta{% endif %}"><i class="bi bi-hourglass-split" aria-hidden="true"></i><strong>{{ a_vencer|length }}</strong><span>vencendo em {{ janela }} dias</span></div>
+  <div class="rh-numero {% if pendencias %}rh-numero--perigo{% endif %}"><i class="bi bi-folder-x" aria-hidden="true"></i><strong>{{ pendencias|length }}</strong><span>ficha{{ pendencias|length|pluralize }} com falta</span></div>
+</div>
+
+<div class="rh-grade">
+  <section class="rh-painel" aria-labelledby="rhDocsVencendo">
+    <header><h2 id="rhDocsVencendo"><i class="bi bi-calendar2-week" aria-hidden="true"></i> Vencidos e vencendo</h2></header>
+    <ul class="rh-linhas">
+      {% for d in vencendo %}
+        <li>
+          <a class="rh-pessoa rh-linha-principal" href="{% url 'rh_ficha' d.colaborador_id %}#documentos">
+            <span class="rh-avatar" aria-hidden="true">{{ d.colaborador.nome|iniciais }}</span>
+            <span><strong>{{ d.colaborador.nome }}</strong><small>{{ d.rotulo }}</small></span>
+          </a>
+          {% if d.vencido %}<span class="rh-selo rh-selo--perigo">venceu {{ d.validade|date:"d/m/Y" }}</span>
+          {% else %}<span class="rh-selo rh-selo--alerta">vence {{ d.validade|date:"d/m/Y" }} ({{ d.dias_para_vencer }} dia{{ d.dias_para_vencer|pluralize }})</span>{% endif %}
+        </li>
+      {% empty %}
+        <li class="rh-vazio"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Nada vencido nem vencendo nos próximos {{ janela }} dias.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="rh-painel" aria-labelledby="rhDocsFaltando">
+    <header><h2 id="rhDocsFaltando"><i class="bi bi-folder-x" aria-hidden="true"></i> Fichas com documento faltando</h2></header>
+    <ul class="rh-linhas">
+      {% for pessoa, falta in pendencias %}
+        <li>
+          <a class="rh-pessoa rh-linha-principal" href="{% url 'rh_ficha' pessoa.pk %}#documentos">
+            <span class="rh-avatar" aria-hidden="true">{{ pessoa.nome|iniciais }}</span>
+            <span><strong>{{ pessoa.nome }}</strong><small>{{ pessoa.get_vinculo_display }} · {% for f in falta %}{{ f.rotulo }}{% if f.estado == "vencido" %} (vencido){% endif %}{% if not forloop.last %}, {% endif %}{% endfor %}</small></span>
+          </a>
+          <span class="rh-selo rh-selo--perigo">{{ falta|length }} faltando</span>
+        </li>
+      {% empty %}
+        <li class="rh-vazio"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Todas as pastas completas.</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

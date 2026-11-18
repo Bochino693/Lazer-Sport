@@ -1,0 +1,24 @@
+{% extends "rh/folha_base.html" %}
+{% block titulo %}Comprovante de ponto {{ m.codigo }}{% endblock %}
+{% block barra %}Comprovante de marcação{% endblock %}
+{% block barra_sub %}{{ m.get_tipo_display }} · {{ m.hora_local|date:"d/m/Y H:i" }}{% endblock %}
+
+{% block folha %}
+<header class="rh-folha-cabeca">
+  <div><h1>Comprovante de marcação de ponto</h1><div>{{ m.get_tipo_display }}</div></div>
+  <div class="rh-empresa">{{ empresa.nome }}<br>CNPJ {{ empresa.cnpj }}</div>
+</header>
+<dl>
+  <div><dt>Colaborador</dt><dd>{{ c.nome }}</dd></div>
+  <div><dt>CPF</dt><dd>{{ c.cpf_mascarado }}</dd></div>
+  <div><dt>NSR</dt><dd>{{ m.nsr }}</dd></div>
+  <div><dt>Data e hora (servidor)</dt><dd>{{ m.hora_local|date:"d/m/Y H:i:s" }}</dd></div>
+  <div><dt>Tipo</dt><dd>{{ m.get_tipo_display }}</dd></div>
+  <div><dt>Endereço de internet</dt><dd>{{ m.ip|default:"—" }}</dd></div>
+  <div><dt>Localização</dt><dd>{% if m.tem_localizacao %}{{ m.latitude }}, {{ m.longitude }}{% if m.precisao_m %} (± {{ m.precisao_m }} m){% endif %}{% else %}Não enviada{% endif %}</dd></div>
+</dl>
+<h2>Código do comprovante</h2>
+<p class="codigo">{{ m.codigo }}</p>
+<p class="hash">SHA-256: {{ m.hash }}<br>Anterior: {{ m.hash_anterior|default:"(primeira marcação)" }}</p>
+<p class="nota">A marcação não se edita nem se apaga. Correção é um ajuste à parte, com justificativa, decidido pela Gestão — e a marcação original continua no espelho. Controle interno: não substitui um REP certificado quando a lei o exigir.</p>
+{% endblock %}

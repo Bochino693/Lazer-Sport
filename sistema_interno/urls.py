@@ -412,3 +412,11 @@ urlpatterns = [
     ),
     path('manutencoes/inner/', ManutencaoInnerView.as_view(), name='manutencao_inner'),
 ]
+
+# ---------------- recursos humanos (app `rh`) ----------------
+# Colaboradores, documentos, ponto, tarefas e o termo de exclusividade.
+# Entram na mesma lista (e não por `include`) para a varredura de
+# tests_urls.py abrir cada uma pelo nome. Ver rh/urls.py.
+from rh.urls import urlpatterns as rotas_do_rh  # noqa: E402
+
+urlpatterns += rotas_do_rh

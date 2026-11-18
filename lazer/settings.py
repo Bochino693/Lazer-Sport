@@ -143,6 +143,9 @@ INSTALLED_APPS = [
     "core",
     "sistema_interno",
     "cloud_jogos",
+    # Recursos humanos: colaboradores, documentos (armazenamento privado),
+    # ponto, tarefas e o termo de exclusividade. Ver rh/ e LEIA-ME-V10.
+    "rh",
 
     # Terceiros
     "rest_framework",

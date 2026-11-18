@@ -1,0 +1,39 @@
+{% comment %}
+  O formulário de assinar: nome completo, o CPF da ficha, "Li e concordo" e
+  o traço no quadro (rh-assinar.js). O mesmo no painel e na página do link.
+  O servidor confere tudo de novo (rh/termo.py, `conferir_campos` e
+  `png_da_assinatura`, este reaproveitado do termo de compra).
+{% endcomment %}
+<form class="rh-form rh-assinar" method="post" action="{{ acao }}" data-rh-assinar novalidate>
+  {% csrf_token %}
+  {% if termo and not publico %}<input type="hidden" name="termo" value="{{ termo.pk }}">{% endif %}
+  <input type="hidden" name="assinatura" data-rh-assinatura-png>
+  <div class="rh-erros" role="alert" data-rh-assinar-erro {% if not erro %}hidden{% endif %}>{{ erro }}</div>
+  <div class="rh-campos">
+    <div class="rh-campo rh-campo--6{% if erro_campo == 'nome' %} tem-erro{% endif %}">
+      <label for="rhAssNome">Nome completo</label>
+      <input class="form-control" id="rhAssNome" name="nome" autocomplete="name" maxlength="160" required value="{{ nome_tentado|default:'' }}">
+    </div>
+    <div class="rh-campo rh-campo--6{% if erro_campo == 'documento' %} tem-erro{% endif %}">
+      <label for="rhAssCpf">CPF</label>
+      <input class="form-control" id="rhAssCpf" name="cpf" inputmode="numeric" autocomplete="off" maxlength="14" required placeholder="{{ cpf_mascarado }}" data-mascara="documento">
+      <small class="rh-ajuda">O mesmo da ficha ({{ cpf_mascarado }}).</small>
+    </div>
+    <div class="rh-campo rh-campo--12{% if erro_campo == 'assinatura' %} tem-erro{% endif %}">
+      <span class="rh-rotulo">Assinatura</span>
+      <div class="rh-quadro" data-rh-quadro>
+        <canvas aria-label="Quadro de assinatura: assine com o dedo ou o mouse" role="img"></canvas>
+        <span class="rh-quadro-dica"><i class="bi bi-pen" aria-hidden="true"></i> Assine aqui com o dedo</span>
+      </div>
+      <div class="rh-quadro-acoes">
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-rh-desfazer><i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Desfazer</button>
+        <button class="btn btn-sm btn-outline-secondary" type="button" data-rh-limpar><i class="bi bi-eraser" aria-hidden="true"></i> Limpar</button>
+      </div>
+    </div>
+    <label class="rh-consentimento rh-campo--12{% if erro_campo == 'concordo' %} tem-erro{% endif %}">
+      <input type="checkbox" name="concordo" value="1" required>
+      <span><strong>Li e concordo</strong> com o termo acima. Sei que ficam registrados a data e a hora, o endereço de internet (IP), o aparelho e o código de integridade do texto.</span>
+    </label>
+  </div>
+  <div><button class="btn btn-success btn-lg" type="submit" data-rh-assinar-botao><i class="bi bi-pen-fill me-1" aria-hidden="true"></i> Assinar o termo</button></div>
+</form>

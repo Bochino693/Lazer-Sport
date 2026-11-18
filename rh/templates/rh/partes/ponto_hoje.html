@@ -1,0 +1,58 @@
+{% comment %}
+  O cartão de bater o ponto (devolvido de novo pelo servidor depois de cada
+  marcação, para a tela não precisar recarregar). A hora que vale é a do
+  SERVIDOR: o relógio aqui só mostra, corrigido pela diferença para o
+  relógio de lá (rh.js).
+{% endcomment %}
+<div class="rh-relogio" data-rh-relogio>
+  <span class="rh-estado rh-estado--{{ dia.estado.0 }}">{{ dia.estado.1 }}</span>
+  <div class="rh-relogio-hora" data-rh-hora aria-live="off">{% now "H:i:s" %}</div>
+  <div class="rh-relogio-data">{{ dia.hoje|date:"l, j \d\e F"|lower|capfirst }}{% if dia.feriado %} · {{ dia.feriado }}{% endif %}</div>
+  <small class="rh-relogio-nota"><i class="bi bi-hdd-network" aria-hidden="true"></i> Vale a hora do servidor, não a do aparelho.</small>
+  <small class="rh-relogio-nota"><i class="bi bi-clock" aria-hidden="true"></i> Jornada {{ dia.c.jornada_inicio|time:"H:i" }}–{{ dia.c.jornada_fim|time:"H:i" }}, intervalo {{ dia.c.jornada_intervalo_min }} min</small>
+
+  {% if dia.pode %}
+  <form class="rh-bater" method="post" action="{% url 'rh_ponto_marcar' %}" data-rh-bater>
+    {% csrf_token %}
+    {% with principal=dia.botoes.0 %}
+      <button class="rh-bater-principal" type="submit" name="tipo" value="{{ principal.tipo }}" data-rh-tipo="{{ principal.tipo }}">
+        <i class="bi {{ principal.icone }}" aria-hidden="true"></i><span>{{ principal.rotulo }}</span>
+      </button>
+    {% endwith %}
+    {% if dia.botoes|length > 1 %}
+      <div class="rh-bater-outros">
+        {% for b in dia.botoes|slice:"1:" %}
+          <button class="btn btn-outline-secondary" type="submit" name="tipo" value="{{ b.tipo }}" data-rh-tipo="{{ b.tipo }}"><i class="bi {{ b.icone }} me-1" aria-hidden="true"></i>{{ b.rotulo }}</button>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <label class="rh-consentimento">
+      <input type="checkbox" name="localizacao" value="1" data-rh-consentimento>
+      <span>Enviar a localização deste aparelho junto com a marcação (opcional). Fica gravada só na marcação, para conferência.</span>
+    </label>
+  </form>
+  {% else %}
+    <p class="rh-modelo"><i class="bi bi-pause-circle" aria-hidden="true"></i> Seu cadastro está como “{{ dia.c.get_situacao_display }}”: o ponto não é registrado. Fale com a Gestão se isso estiver errado.</p>
+  {% endif %}
+
+  <div class="rh-comprovante" data-rh-comprovante hidden>
+    <i class="bi bi-receipt-cutoff" aria-hidden="true"></i>
+    <span><strong data-rh-comprovante-texto></strong><br>Comprovante <code data-rh-comprovante-codigo></code></span>
+    <a class="btn btn-sm btn-outline-secondary" data-rh-comprovante-link href="#" data-no-soft-nav="true">Ver comprovante</a>
+  </div>
+</div>
+
+<section aria-labelledby="rhHojeTitulo">
+  <h3 id="rhHojeTitulo">Hoje</h3>
+  <ol class="rh-linha-tempo">
+    {% for m in dia.marcacoes %}
+      <li>
+        <time datetime="{{ m.momento|date:'c' }}">{{ m.hora_local|time:"H:i" }}</time>
+        <span>{{ m.get_tipo_display }}{% if m.tem_localizacao %} <i class="bi bi-geo-alt" title="com localização" aria-label="com localização"></i>{% endif %}<br><small>NSR {{ m.nsr }} · {{ m.codigo }}</small></span>
+        <a href="{% url 'rh_comprovante' m.pk %}" data-no-soft-nav="true">Comprovante</a>
+      </li>
+    {% empty %}
+      <li><span class="rh-nota">Nenhuma marcação hoje.</span></li>
+    {% endfor %}
+  </ol>
+</section>

@@ -1,0 +1,98 @@
+{% extends "rh/base_rh.html" %}
+{% block titulo_rh %}Meu ponto{% endblock %}
+
+{% block rh_conteudo %}
+{% if sem_ficha %}
+<section class="rh-painel">
+  <header><h2><i class="bi bi-fingerprint" aria-hidden="true"></i> Meu ponto</h2></header>
+  <p class="rh-nota">Sua conta ainda não está ligada a uma ficha de colaborador, então não há ponto para bater. A Gestão liga a conta na ficha (campo “Conta do painel”).</p>
+</section>
+{% else %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Controle de frequência</span>
+    <h1>Meu ponto</h1>
+    <p>Entrada, intervalo, volta e saída. Cada marcação gera um comprovante com código; nada se edita nem se apaga — se errar ou esquecer, peça um ajuste.</p>
+  </div>
+</section>
+
+<div class="rh-ponto">
+  <section class="rh-painel" id="rhPontoHoje" data-agora="{{ agora_servidor }}" aria-label="Bater o ponto">
+    {% include "rh/partes/ponto_hoje.html" %}
+  </section>
+
+  <div class="rh-tela">
+    <section class="rh-painel" aria-labelledby="rhMesTitulo">
+      <header>
+        <h2 id="rhMesTitulo"><i class="bi bi-calendar3" aria-hidden="true"></i> {{ mes_texto|capfirst }}</h2>
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_espelho' dia.c.pk %}">Espelho do mês</a>
+      </header>
+      <div class="rh-totais">
+        <div class="rh-total"><strong>{{ totais.trabalhado }}</strong><span>trabalhadas</span></div>
+        <div class="rh-total rh-total--extra"><strong>{{ totais.extra }}</strong><span>extras</span></div>
+        <div class="rh-total rh-total--debito"><strong>{{ totais.debito }}</strong><span>a compensar</span></div>
+        <div class="rh-total"><strong>{{ totais.atrasos }}</strong><span>atraso{{ totais.atrasos|pluralize }}</span></div>
+        <div class="rh-total"><strong>{{ totais.faltas }}</strong><span>falta{{ totais.faltas|pluralize }}</span></div>
+      </div>
+      {% if totais.incompletos %}<p class="rh-nota"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ totais.incompletos }} dia{{ totais.incompletos|pluralize }} com marcação faltando: peça o ajuste.</p>{% endif %}
+    </section>
+
+    <section class="rh-painel" aria-labelledby="rhAjusteTitulo">
+      <header><h2 id="rhAjusteTitulo"><i class="bi bi-pencil-square" aria-hidden="true"></i> Pedir ajuste</h2></header>
+      <form class="rh-form" method="post" action="{% url 'rh_ajuste_pedir' %}" data-rh-ajuste>
+        {% csrf_token %}
+        <input type="hidden" name="voltar" value="{% url 'rh_ponto' %}">
+        <div class="rh-chips" role="radiogroup" aria-label="Tipo de ajuste">
+          <label class="rh-chip"><input type="radio" name="tipo" value="incluir" checked><span>Esqueci de marcar</span></label>
+          <label class="rh-chip"><input type="radio" name="tipo" value="desconsiderar"><span>Marquei errado</span></label>
+          <label class="rh-chip"><input type="radio" name="tipo" value="abono"><span>Abonar o dia</span></label>
+        </div>
+        <div class="rh-campos">
+          <div class="rh-campo rh-campo--6"><label for="rhAjData">Dia</label><input class="form-control" type="date" id="rhAjData" name="data" value="{{ hoje|date:'Y-m-d' }}" max="{{ hoje|date:'Y-m-d' }}" required></div>
+          <div class="rh-campo rh-campo--6" data-rh-so="incluir"><label for="rhAjHora">Hora</label><input class="form-control" type="time" id="rhAjHora" name="hora"></div>
+          <div class="rh-campo rh-campo--12" data-rh-so="incluir">
+            <span class="rh-rotulo">Qual marcação faltou</span>
+            <div class="rh-chips" role="radiogroup" aria-label="Qual marcação faltou">
+              {% for valor, rotulo in tipos_marcacao %}<label class="rh-chip"><input type="radio" name="tipo_marcacao" value="{{ valor }}"{% if forloop.first %} checked{% endif %}><span>{{ rotulo }}</span></label>{% endfor %}
+            </div>
+          </div>
+          <div class="rh-campo rh-campo--12" data-rh-so="desconsiderar" hidden>
+            <span class="rh-rotulo">Qual marcação está errada</span>
+            <div class="rh-chips" role="radiogroup" aria-label="Marcação errada">
+              {% for m in recentes %}<label class="rh-chip"><input type="radio" name="marcacao" value="{{ m.pk }}"><span>{{ m.hora_local|date:"d/m H:i" }} · {{ m.get_tipo_display }}</span></label>{% empty %}<span class="rh-nota">Nenhuma marcação nos últimos 7 dias.</span>{% endfor %}
+            </div>
+          </div>
+          <div class="rh-campo rh-campo--12" data-rh-so="abono" hidden>
+            <span class="rh-rotulo">Motivo</span>
+            <div class="rh-chips" role="radiogroup" aria-label="Motivo do abono">
+              {% for valor, rotulo in motivos %}<label class="rh-chip"><input type="radio" name="motivo_abono" value="{{ valor }}"{% if forloop.first %} checked{% endif %}><span>{{ rotulo }}</span></label>{% endfor %}
+            </div>
+          </div>
+          <div class="rh-campo rh-campo--12"><label for="rhAjJust">Justificativa</label><textarea class="form-control" id="rhAjJust" name="justificativa" rows="2" minlength="10" maxlength="1000" required placeholder="O que aconteceu (a Gestão vai ler)"></textarea></div>
+        </div>
+        <div><button class="btn btn-success" type="submit"><i class="bi bi-send me-1" aria-hidden="true"></i> Enviar pedido</button></div>
+      </form>
+    </section>
+  </div>
+</div>
+
+<section class="rh-painel" aria-labelledby="rhMeusAjustes">
+  <header><h2 id="rhMeusAjustes"><i class="bi bi-list-check" aria-hidden="true"></i> Meus pedidos de ajuste</h2></header>
+  <ul class="rh-linhas">
+    {% for a in ajustes %}
+      <li>
+        <span class="rh-linha-principal">
+          <strong>{{ a.data|date:"d/m/Y" }} · {{ a.resumo }}</strong>
+          <small>“{{ a.justificativa }}”{% if a.resposta %} — resposta: {{ a.resposta }}{% endif %}</small>
+        </span>
+        {% if a.situacao == "aprovado" %}<span class="rh-selo rh-selo--ok">Aprovado{% if a.decidido_por %} por {{ a.decidido_por.get_full_name|default:a.decidido_por.username }}{% endif %}</span>
+        {% elif a.situacao == "recusado" %}<span class="rh-selo rh-selo--perigo">Recusado</span>
+        {% else %}<span class="rh-selo rh-selo--alerta">Esperando a Gestão</span>{% endif %}
+      </li>
+    {% empty %}
+      <li class="rh-vazio"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Nenhum pedido.</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

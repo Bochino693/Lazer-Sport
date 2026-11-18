@@ -1,0 +1,93 @@
+{% extends "rh/base_rh.html" %}
+{% load rh_extras %}
+{% block titulo_rh %}Ponto da equipe{% endblock %}
+
+{% block rh_conteudo %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Controle de frequência · controle interno</span>
+    <h1>Ponto da equipe</h1>
+    <p>O mês de cada um pela jornada da ficha: horas, extras, atrasos e faltas. {% if gere %}Os ajustes pedidos esperam a sua decisão aqui.{% else %}Só leitura: os ajustes são decididos pela Gestão.{% endif %}</p>
+  </div>
+</section>
+
+{% if pendentes %}
+<section class="rh-painel" id="ajustes" aria-labelledby="rhPendentes">
+  <header><h2 id="rhPendentes"><i class="bi bi-pencil-square" aria-hidden="true"></i> {{ pendentes|length }} ajuste{{ pendentes|length|pluralize }} esperando decisão</h2></header>
+  <ul class="rh-linhas">
+    {% for a in pendentes %}
+      <li>
+        <span class="rh-linha-principal">
+          <strong>{{ a.colaborador.nome }} · {{ a.data|date:"d/m/Y" }} · {{ a.resumo }}</strong>
+          <small>“{{ a.justificativa }}” · pedido em {{ a.solicitado_em|date:"d/m H:i" }}{% if a.solicitado_por %} por {{ a.solicitado_por.get_full_name|default:a.solicitado_por.username }}{% endif %}</small>
+        </span>
+        {% if gere %}{% include "rh/partes/decidir_ajuste.html" with a=a voltar=request.get_full_path %}{% else %}<span class="rh-selo rh-selo--alerta">com a Gestão</span>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="rh-painel" aria-labelledby="rhMesEquipe">
+  <header>
+    <h2 id="rhMesEquipe"><i class="bi bi-calendar3" aria-hidden="true"></i> Mês</h2>
+    <nav class="rh-mes" aria-label="Mês">
+      <a class="btn btn-sm btn-outline-secondary" href="?mes={{ anterior }}" aria-label="Mês anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
+      <strong>{{ mes_texto|capfirst }}</strong>
+      <a class="btn btn-sm btn-outline-secondary" href="?mes={{ seguinte }}" aria-label="Mês seguinte"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
+    </nav>
+  </header>
+  <ul class="rh-linhas">
+    {% for l in linhas %}
+      <li>
+        <a class="rh-pessoa rh-linha-principal" href="{% url 'rh_espelho' l.c.pk %}?mes={{ mes }}">
+          <span class="rh-avatar" aria-hidden="true">{{ l.c.nome|iniciais }}</span>
+          <span><strong>{{ l.c.nome }}</strong><small>{{ l.c.cargo }} · {{ l.c.jornada_inicio|time:"H:i" }}–{{ l.c.jornada_fim|time:"H:i" }}</small></span>
+        </a>
+        <span class="rh-selo">{{ l.t.trabalhado }} trabalhadas</span>
+        {% if l.t.extra != "0h00" %}<span class="rh-selo rh-selo--ok">+{{ l.t.extra }} extras</span>{% endif %}
+        {% if l.t.extra_100 != "0h00" %}<span class="rh-selo rh-selo--ok">+{{ l.t.extra_100 }} dom./feriado</span>{% endif %}
+        {% if l.t.debito != "0h00" %}<span class="rh-selo rh-selo--perigo">−{{ l.t.debito }}</span>{% endif %}
+        {% if l.t.atrasos %}<span class="rh-selo rh-selo--alerta">{{ l.t.atrasos }} atraso{{ l.t.atrasos|pluralize }}</span>{% endif %}
+        {% if l.t.faltas %}<span class="rh-selo rh-selo--perigo">{{ l.t.faltas }} falta{{ l.t.faltas|pluralize }}</span>{% endif %}
+        {% if l.t.incompletos %}<span class="rh-selo rh-selo--alerta">{{ l.t.incompletos }} incompleto{{ l.t.incompletos|pluralize }}</span>{% endif %}
+        <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_espelho' l.c.pk %}?mes={{ mes }}">Espelho</a>
+      </li>
+    {% empty %}
+      <li class="rh-vazio"><i class="bi bi-people" aria-hidden="true"></i> Nenhum colaborador sob contrato.</li>
+    {% endfor %}
+  </ul>
+</section>
+
+{% if gere and pessoas %}
+<section class="rh-painel" aria-labelledby="rhLancar">
+  <header><h2 id="rhLancar"><i class="bi bi-calendar-plus" aria-hidden="true"></i> Lançar abono (férias, atestado, feriado local)</h2></header>
+  <p class="rh-nota">Lançado aqui pela Gestão, já entra aprovado e fica no espelho como ajuste, com a justificativa. Os feriados nacionais já são contados sozinhos.</p>
+  <form class="rh-form" method="post" action="{% url 'rh_ajuste_pedir' %}">
+    {% csrf_token %}
+    <input type="hidden" name="tipo" value="abono">
+    <input type="hidden" name="aprovar" value="1">
+    <input type="hidden" name="voltar" value="{{ request.get_full_path }}">
+    <div class="rh-campos">
+      <div class="rh-campo rh-campo--12">
+        <span class="rh-rotulo">Quem</span>
+        <div class="rh-chips" role="radiogroup" aria-label="Colaborador">
+          {% for p in pessoas %}<label class="rh-chip"><input type="radio" name="colaborador" value="{{ p.pk }}" required><span>{{ p.nome }}</span></label>{% endfor %}
+        </div>
+      </div>
+      <div class="rh-campo rh-campo--3"><label for="rhAbData">Dia</label><input class="form-control" type="date" id="rhAbData" name="data" required></div>
+      <div class="rh-campo rh-campo--8">
+        <span class="rh-rotulo">Motivo</span>
+        <div class="rh-chips" role="radiogroup" aria-label="Motivo">
+          {% for valor, rotulo in motivos %}<label class="rh-chip"><input type="radio" name="motivo_abono" value="{{ valor }}"{% if forloop.first %} checked{% endif %}><span>{{ rotulo }}</span></label>{% endfor %}
+        </div>
+      </div>
+      <div class="rh-campo rh-campo--12"><label for="rhAbJust">Justificativa</label><input class="form-control" id="rhAbJust" name="justificativa" minlength="10" maxlength="1000" required placeholder="Ex.: atestado de 1 dia entregue no RH"></div>
+    </div>
+    <div><button class="btn btn-success" type="submit"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Lançar abono</button></div>
+  </form>
+</section>
+{% endif %}
+
+<p class="rh-modelo"><i class="bi bi-info-circle" aria-hidden="true"></i> Controle interno de frequência. Não substitui um REP certificado (Portaria MTP 671/2021) quando a lei o exigir para o porte da empresa.</p>
+{% endblock %}
