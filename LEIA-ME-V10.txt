@@ -6582,3 +6582,105 @@ Dependência nova: rjsmin (requirements.txt).
    /brinquedos/ e o painel Brinquedos com um kit aberto (lua e sol) e a
    escolha da peça avulsa; sem rolagem horizontal, sem erro de JavaScript e
    sem elemento por cima de outro nos cards e no editor.
+
+108) OS E-MAILS EM MASSA DAS CAMPANHAS SAEM DE VERDADE (A CAUSA E O ENVIO NOVO)
+   O PEDIDO: "os emails em massa das campanhas não vão" -- depois da seção
+   101, que pôs a fila para andar dentro do site.
+   A CAUSA (conferida num PostgreSQL 16 de verdade, o mesmo motor do
+   Supabase): a fila andava, mas cada rodada morria no PRIMEIRO e-mail. A
+   reserva do e-mail era
+       EntregaCampanha.objects.select_for_update()
+           .select_related("campanha", "campanha__responsavel")
+   e `responsavel` aceita vazio: o Django junta auth_user com LEFT OUTER
+   JOIN, e o PostgreSQL recusa a consulta inteira -- "FOR UPDATE cannot be
+   applied to the nullable side of an outer join" (NotSupportedError). O
+   erro estourava antes de qualquer envio; `fila_de_emails.esvaziar` (e o
+   `observar_pendencias`) o engoliam num log.exception, o e-mail continuava
+   "pendente" sem motivo nenhum na tela, e o "Enviar agora" não fazia nada.
+   Os testes rodam em SQLite, onde select_for_update é ignorado: por isso
+   passavam. Os e-mails de pedido (core/notificacoes.py) chegam porque não
+   passam por fila nenhuma -- mesmo backend e mesmo remetente; o defeito
+   era só da campanha. Conferido também: não era thread morta (gthread não
+   mata thread por timeout; o lote cabe folgado), nem transação não
+   confirmada (o disparo é on_commit), nem backend ou remetente diferente.
+   O ENVIO NOVO (sistema_interno/campanhas.py e fila_de_emails.py):
+     * a reserva é um UPDATE condicional (pendente -> processando só se
+       ainda estiver pendente): o mesmo SQL no SQLite e no PostgreSQL, sem
+       trava de linha; dois processos nunca pegam o mesmo e-mail;
+     * fila por destinatário (EntregaCampanha): pendente, processando,
+       enviado, falhou, ignorado -- com o motivo e as tentativas;
+     * lotes pequenos (CAMPANHA_EMAIL_LOTE, 10), UMA conexão SMTP por lote
+       (um login só; aberta no lote, fechada no fim dele, trocada por uma
+       nova depois de qualquer erro), pausa entre um e-mail e outro
+       (CAMPANHA_EMAIL_PAUSA, 2 s) e entre os lotes (CAMPANHA_EMAIL_PAUSA_LOTE,
+       20 s): ~15 por minuto, sem rajada para o provedor recusar;
+     * cada falha é classificada e vira um motivo legível:
+         - o provedor recusou o ENDEREÇO (550 user unknown): falhou na hora;
+         - erro só deste e-mail (4xx do endereço, erro ao montar): nova
+           tentativa em 2, 10, 30, 90 e 240 min, até
+           CAMPANHA_EMAIL_TENTATIVAS (5); depois, falhou;
+         - o PROVEDOR (timeout, conexão caída, login recusado, remetente
+           recusado, "421 try again later", cota do Gmail 5.4.5): a fila
+           INTEIRA pausa (1, 2, 4... até 60 min) e a tentativa não conta para
+           ninguém -- não se queima a lista numa recusa que não é do cliente.
+           O motivo diz a variável a conferir (EMAIL_HOST_PASSWORD,
+           DEFAULT_FROM_EMAIL, EMAIL_PORT/EMAIL_USE_TLS);
+     * teto diário (CAMPANHA_EMAILS_POR_DIA): com o Gmail o padrão é 400 (o
+       Gmail bloqueia a conta por até 24 h passando de ~500 por dia, e aí nem
+       a confirmação de pedido sai); com outro provedor, sem teto. Chegou
+       no teto, o resto sai amanhã a partir de 00:05;
+     * retomada: o e-mail que um reinício/deploy largou "processando" volta
+       para a fila depois de 5 min e sai de novo;
+     * a ronda nunca morre por exceção; cada rodada grava a hora em que
+       rodou e o último erro da fila (EstadoFilaEmails) -- o painel mostra;
+     * mesmo backend (settings.EMAIL_BACKEND, o decorador com o logo) e mesmo
+       remetente (core.email_utils.remetente) dos e-mails de pedido;
+     * a oferta desligada ou vencida no meio do caminho não sai (ignorado,
+       com o motivo); campanha cancelada também não.
+   DESCADASTRO: todo e-mail de campanha tem no rodapé "Não quero mais
+   receber estas ofertas" e os cabeçalhos List-Unsubscribe e
+   List-Unsubscribe-Post (o "Cancelar inscrição" de um clique do Gmail e do
+   Yahoo). O link (/divulgacao/sair/<token da entrega>/) só pergunta; o
+   botão descadastra (o link sozinho não, porque antivírus abre links). O
+   endereço (DescadastroEmail, pela mesma chave sha256) não entra em
+   campanha nova, nem de conta do site, e o que estava na fila para ele não
+   sai. O texto puro do e-mail saía com "Lazer &amp; Sport": corrigido.
+   NO PAINEL (campanha_detalhe_inner.html): enviadas, na fila, falhas e "não
+   enviados de propósito" (descadastro, oferta encerrada, cancelada), a
+   barra em três cores, "Por que não saíram" (os motivos agrupados), cada
+   e-mail com a situação, as tentativas e a observação ("Nova tentativa às
+   14:32", o motivo do provedor). A tela se atualiza sozinha a cada 5 s
+   enquanto houver e-mail na fila (?formato=json). Avisos: e-mail não
+   configurado; envio pausado pelo provedor até HH:MM com o motivo e
+   "Tentar agora"; a fila não rodou nos últimos minutos; o último erro da
+   fila; remetente de outro domínio que a conta do Gmail. Botão "Reenviar
+   falhas (N)" (com a folha do LSAviso): as falhas voltam com as
+   tentativas zeradas, a pausa sai e o envio começa na hora (quem se
+   descadastrou não volta). A lista de campanhas mostra as falhas e a pausa.
+   A FILA ANTIGA: ao subir, a 0069 RETÉM o que estava pendente em campanha
+   criada há mais de 3 dias (vira "falhou" com o motivo "Retido: ficou
+   parado na fila antiga..."), para não disparar de surpresa campanha de
+   semanas atrás; se a oferta ainda vale, "Reenviar falhas" manda. O mais
+   novo sai sozinho.
+   NO RENDER (só os nomes; os valores ficam lá): EMAIL_HOST, EMAIL_PORT,
+   EMAIL_USE_TLS / EMAIL_USE_SSL, EMAIL_HOST_USER, EMAIL_HOST_PASSWORD (no
+   Gmail, "senha de app"), DEFAULT_FROM_EMAIL (a própria conta do SMTP ou um
+   endereço do domínio verificado no provedor -- SPF/DKIM), EMAIL_RESPOSTA;
+   FILA_DE_EMAILS_NO_SITE não pode estar "false". Opcionais:
+   CAMPANHA_EMAIL_LOTE, CAMPANHA_EMAIL_PAUSA, CAMPANHA_EMAIL_PAUSA_LOTE,
+   CAMPANHA_EMAIL_TENTATIVAS, CAMPANHA_EMAILS_POR_DIA (Google Workspace
+   aguenta ~2000/dia: pode subir). Plano gratuito do Render dorme sem
+   visita: a fila para junto e volta na próxima visita (o painel avisa).
+   Banco: sistema_interno/0068_fila_emails_campanhas_esquema (só esquema:
+   EstadoFilaEmails, DescadastroEmail, CampanhaDivulgacao.total_ignorados) e
+   0069_fila_emails_campanhas_dados (só dados: a fila antiga retida, os
+   "processando" de volta, os contadores refeitos). Rodar de novo não muda
+   nada.
+       python manage.py migrate sistema_interno
+   Testes: sistema_interno/tests_fila_de_emails.py (a causa, o ritmo, uma
+   conexão por lote, o teto, timeout/421/cota/login/remetente/endereço
+   recusado simulados no transporte e no backend SMTP de verdade do Django,
+   a espera crescente, a retomada, a ronda que não morre, o mesmo backend e
+   remetente dos pedidos, o descadastro com e sem um clique, a oferta
+   encerrada, o painel, o reenvio e a migração). Os mesmos testes passam num
+   PostgreSQL 16 local (o antigo falhava nele com o erro acima).

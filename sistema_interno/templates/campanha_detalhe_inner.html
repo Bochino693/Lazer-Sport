@@ -3,31 +3,139 @@
 {% block top_title %}Acompanhamento da campanha{% endblock %}
 {% block content %}
 <style>
-.cd-page{width:min(100%,1320px);margin:auto}.cd-head{padding:22px;display:grid;grid-template-columns:1fr auto;gap:18px;border:1px solid var(--line);border-radius:21px;background:linear-gradient(135deg,rgba(var(--panel-rgb),.58),rgba(var(--bg-rgb),.96))}.cd-head h1{margin:5px 0;color:var(--text)}.cd-head p{margin:0;color:var(--muted)}.cd-state{align-self:center;padding:8px 12px;border-radius:999px;color:var(--acento-texto);background:rgba(var(--acento-rgb),.13);font-size:.7rem;font-weight:900}.cd-actions{margin:12px 0;display:flex;align-items:center;gap:9px;flex-wrap:wrap}.cd-actions a,.cd-actions button{min-height:40px;padding:0 13px;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:10px;color:var(--text-2);background:var(--panel);font:inherit;font-size:.69rem;font-weight:800;text-decoration:none;cursor:pointer}.cd-actions form{margin:0}.cd-actions .danger{color:var(--red-texto);border-color:rgba(var(--red-rgb),.25)}.cd-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}.cd-metrics article{padding:15px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}.cd-metrics strong{display:block;color:var(--text);font-size:1.3rem}.cd-metrics span{color:var(--muted-2);font-size:.65rem}.cd-panel{margin-top:14px;overflow:hidden;border:1px solid var(--line);border-radius:17px;background:var(--panel)}.cd-panel header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line-soft)}.cd-panel header h2{margin:0;color:var(--text);font-size:.9rem}.cd-table-wrap{overflow-x:auto}.cd-panel table{width:100%;min-width:700px;border-collapse:collapse}.cd-panel th,.cd-panel td{padding:10px 14px;border-bottom:1px solid var(--line-soft);font-size:.72rem}.cd-panel th{color:var(--muted);text-align:left;font-size:.61rem;text-transform:uppercase}.cd-panel td:last-child,.cd-panel th:last-child{text-align:right}.cd-send{min-height:34px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;border-radius:9px;color:var(--green-tinta)!important;background:var(--green);text-decoration:none;font-size:.65rem;font-weight:900}.cd-error{max-width:360px;color:var(--red-texto);white-space:normal}.cd-link{min-width:0;flex:1;max-width:530px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted-2);font-size:.68rem}.cd-progress{height:8px;overflow:hidden;border-radius:999px;background:rgba(var(--verniz-rgb),.08)}.cd-progress i{height:100%;display:block;background:linear-gradient(90deg,var(--acento),var(--green))}@media(max-width:700px){.cd-head{grid-template-columns:1fr}.cd-state{justify-self:start}.cd-metrics{grid-template-columns:1fr 1fr}.cd-actions{align-items:stretch}.cd-link{order:5;flex-basis:100%;max-width:100%}}@media(max-width:410px){.cd-metrics{grid-template-columns:1fr}}
+.cd-page{width:min(100%,1320px);margin:auto}.cd-head{padding:22px;display:grid;grid-template-columns:1fr auto;gap:18px;border:1px solid var(--line);border-radius:21px;background:linear-gradient(135deg,rgba(var(--panel-rgb),.58),rgba(var(--bg-rgb),.96))}.cd-head h1{margin:5px 0;color:var(--text)}.cd-head p{margin:0;color:var(--muted)}.cd-state{align-self:center;padding:8px 12px;border-radius:999px;color:var(--acento-texto);background:rgba(var(--acento-rgb),.13);font-size:.7rem;font-weight:900}.cd-actions{margin:12px 0;display:flex;align-items:center;gap:9px;flex-wrap:wrap}.cd-actions a,.cd-actions button{min-height:40px;padding:0 13px;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:10px;color:var(--text-2);background:var(--panel);font:inherit;font-size:.69rem;font-weight:800;text-decoration:none;cursor:pointer}.cd-actions form{margin:0}.cd-actions .danger{color:var(--red-texto);border-color:rgba(var(--red-rgb),.25)}.cd-actions .cd-reenviar{color:var(--acento-tinta);border-color:transparent;background:linear-gradient(135deg,var(--acento),var(--acento-2))}.cd-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:11px}.cd-metrics article{padding:15px;border:1px solid var(--line);border-radius:15px;background:var(--panel)}.cd-metrics strong{display:block;color:var(--text);font-size:1.3rem}.cd-metrics strong b,.cd-actions button b{font:inherit}.cd-metrics span{color:var(--muted-2);font-size:.65rem}.cd-metrics .cd-m-ok strong{color:var(--green-texto)}.cd-metrics .cd-m-erro strong{color:var(--red-texto)}.cd-panel{margin-top:14px;overflow:hidden;border:1px solid var(--line);border-radius:17px;background:var(--panel)}.cd-panel header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line-soft)}.cd-panel header h2{margin:0;color:var(--text);font-size:.9rem}.cd-panel header small{color:var(--muted-2)}.cd-table-wrap{overflow-x:auto}.cd-panel table{width:100%;min-width:700px;border-collapse:collapse}.cd-panel th,.cd-panel td{padding:10px 14px;border-bottom:1px solid var(--line-soft);font-size:.72rem;color:var(--text-2)}.cd-panel th{color:var(--muted);text-align:left;font-size:.61rem;text-transform:uppercase}.cd-panel td:last-child,.cd-panel th:last-child{text-align:right}.cd-send{min-height:34px;padding:0 10px;display:inline-flex;align-items:center;gap:6px;border-radius:9px;color:var(--green-tinta)!important;background:var(--green);text-decoration:none;font-size:.65rem;font-weight:900}.cd-error{max-width:380px;white-space:normal}.cd-link{min-width:0;flex:1;max-width:530px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted-2);font-size:.68rem}.cd-progress{height:9px;display:flex;overflow:hidden;border-radius:999px;background:rgba(var(--verniz-rgb),.08)}.cd-progress i{height:100%;display:block;transition:width .4s ease}.cd-progress .cd-p-ok{background:var(--green)}.cd-progress .cd-p-erro{background:var(--red)}.cd-progress .cd-p-fora{background:rgba(var(--muted-rgb),.45)}@media(max-width:1000px){.cd-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.cd-head{grid-template-columns:1fr}.cd-state{justify-self:start}.cd-metrics{grid-template-columns:1fr 1fr}.cd-actions{align-items:stretch}.cd-link{order:5;flex-basis:100%;max-width:100%}}@media(max-width:300px){.cd-metrics{grid-template-columns:1fr}}
 .cd-send-form{margin:0}.cd-send{border:0;font:inherit;cursor:pointer}
-.cd-alerta{margin:0 0 12px;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid rgba(var(--acento-rgb),.4);border-radius:15px;background:rgba(var(--acento-rgb),.12)}.cd-alerta>i{font-size:1.3rem;color:var(--acento)}.cd-alerta>div{flex:1;min-width:220px;display:grid;gap:2px}.cd-alerta strong{color:var(--text);font-size:.82rem}.cd-alerta span{color:var(--text-2);font-size:.72rem}.cd-alerta form{margin:0}.cd-alerta button{min-height:40px;padding:0 14px;display:inline-flex;align-items:center;gap:7px;border:0;border-radius:10px;color:var(--acento-tinta);background:linear-gradient(135deg,var(--acento),var(--acento-2));font:inherit;font-size:.72rem;font-weight:900;cursor:pointer}.cd-alerta--erro{border-color:rgba(var(--red-rgb),.45);background:rgba(var(--red-rgb),.12)}.cd-alerta--erro>i{color:var(--red-texto)}
+.cd-alerta{margin:0 0 12px;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid rgba(var(--acento-rgb),.4);border-radius:15px;background:rgba(var(--acento-rgb),.12)}.cd-alerta[hidden]{display:none}.cd-alerta>i{font-size:1.3rem;color:var(--acento)}.cd-alerta>div{flex:1;min-width:220px;display:grid;gap:2px}.cd-alerta strong{color:var(--text);font-size:.82rem}.cd-alerta span{color:var(--text-2);font-size:.72rem}.cd-alerta form{margin:0}.cd-alerta button{min-height:40px;padding:0 14px;display:inline-flex;align-items:center;gap:7px;border:0;border-radius:10px;color:var(--acento-tinta);background:linear-gradient(135deg,var(--acento),var(--acento-2));font:inherit;font-size:.72rem;font-weight:900;cursor:pointer}.cd-alerta--erro{border-color:rgba(var(--red-rgb),.45);background:rgba(var(--red-rgb),.12)}.cd-alerta--erro>i{color:var(--red-texto)}.cd-alerta--nota{border-color:rgba(var(--yellow-rgb),.4);background:rgba(var(--yellow-rgb),.1)}.cd-alerta--nota>i{color:var(--yellow-texto)}
+.cd-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;font-size:.64rem;font-weight:850;white-space:nowrap;color:var(--acento-texto);background:rgba(var(--acento-rgb),.12)}.cd-chip--enviado{color:var(--green-texto);background:rgba(var(--green-rgb),.13)}.cd-chip--falhou{color:var(--red-texto);background:rgba(var(--red-rgb),.13)}.cd-chip--processando{color:var(--info-texto);background:rgba(var(--info-rgb),.13)}.cd-chip--ignorado{color:var(--muted);background:rgba(var(--muted-rgb),.13)}
+.cd-motivos{margin:0;padding:6px 0;list-style:none}.cd-motivos li{padding:9px 16px;display:flex;align-items:baseline;gap:10px;border-bottom:1px solid var(--line-soft);color:var(--text-2);font-size:.72rem}.cd-motivos li:last-child{border-bottom:0}.cd-motivos b{min-width:34px;color:var(--text);font-size:.85rem}.cd-motivos em{color:var(--muted-2);font-style:normal;font-size:.64rem;white-space:nowrap}.cd-motivos span{flex:1}
 </style>
-<main class="cd-page">
-  <header class="cd-head"><div><span class="ls-eyebrow">{{ campanha.get_tipo_display|upper }} · {{ campanha.get_segmento_display|upper }}</span><h1>{{ campanha.titulo }}</h1><p>{{ campanha.mensagem }}</p></div><span class="cd-state">{{ campanha.get_status_display }}</span></header>
+<main class="cd-page" data-campanha-vivo data-cd-url="{% url 'campanha_detalhe' campanha.token %}" data-cd-abertos="{{ emails_pendentes }}">
+  <header class="cd-head"><div><span class="ls-eyebrow">{{ campanha.get_tipo_display|upper }} · {{ campanha.get_segmento_display|upper }}</span><h1>{{ campanha.titulo }}</h1><p>{{ campanha.mensagem }}</p></div><span class="cd-state" data-cd-estado>{{ campanha.get_status_display }}</span></header>
   <div class="cd-actions">
     <a href="{% url 'campanhas_inner' %}"><i class="bi bi-arrow-left"></i> Campanhas</a>
     <a href="{{ url_publica }}" target="_blank" rel="noopener"><i class="bi bi-eye"></i> Ver página pública</a>
     <span class="cd-link" title="{{ url_publica }}">{{ url_publica }}</span>
-    {% if campanha.total_falhas %}<form method="post">{% csrf_token %}<input type="hidden" name="acao" value="repetir_falhas"><button><i class="bi bi-arrow-repeat"></i> Repetir e-mails com falha</button></form>{% endif %}
-    {% if campanha.status != 'cancelada' and campanha.status != 'concluida' %}<form method="post">{% csrf_token %}<input type="hidden" name="acao" value="cancelar"><button class="danger"><i class="bi bi-x-octagon"></i> Cancelar pendentes</button></form>{% endif %}
+    {% if campanha.status != 'cancelada' %}<form method="post" data-cd-reenviar {% if not numeros.falhas %}hidden{% endif %} data-ls-confirmar="Os e-mails que falharam voltam para a fila com as tentativas zeradas e começam a sair agora, no ritmo normal." data-ls-confirmar-titulo="Reenviar as falhas?" data-ls-confirmar-botao="Reenviar">{% csrf_token %}<input type="hidden" name="acao" value="reenviar_falhas"><button class="cd-reenviar"><i class="bi bi-arrow-repeat"></i> <span>Reenviar falhas (<b data-cd-n="falhas">{{ numeros.falhas }}</b>)</span></button></form>{% endif %}
+    {% if campanha.status != 'cancelada' and campanha.status != 'concluida' %}<form method="post" data-ls-confirmar="Os e-mails que ainda não saíram não saem mais, e o WhatsApp pendente some da lista. O que já foi enviado continua enviado." data-ls-confirmar-titulo="Cancelar os envios pendentes?" data-ls-confirmar-botao="Cancelar pendentes" data-ls-confirmar-cancelar="Voltar" data-ls-perigo>{% csrf_token %}<input type="hidden" name="acao" value="cancelar"><button class="danger"><i class="bi bi-x-octagon"></i> Cancelar pendentes</button></form>{% endif %}
   </div>
   {% if emails %}
   {% if not smtp_ok %}
   <div class="cd-alerta cd-alerta--erro" role="alert"><i class="bi bi-envelope-x"></i><div><strong>O e-mail do site não está configurado no servidor.</strong><span>Nenhum e-mail sai enquanto faltarem EMAIL_HOST_USER e EMAIL_HOST_PASSWORD nas variáveis do Render (no Gmail, a senha é uma "senha de app"). Os e-mails desta campanha ficam guardados na fila e saem sozinhos assim que configurar.</span></div></div>
-  {% elif emails_pendentes %}
-  <div class="cd-alerta" role="status"><i class="bi bi-send"></i><div><strong>{{ emails_pendentes }} e-mail{{ emails_pendentes|pluralize }} na fila.</strong><span>Eles saem sozinhos em instantes, em lotes de 20 por minuto.</span></div><form method="post">{% csrf_token %}<input type="hidden" name="acao" value="enviar_agora"><button><i class="bi bi-lightning-charge"></i> Enviar agora</button></form></div>
+  {% else %}
+  <div class="cd-alerta{% if fila.pausada %} cd-alerta--erro{% endif %}" role="status" data-cd-fila {% if not fila.pausada and not emails_pendentes %}hidden{% endif %}><i class="bi {% if fila.pausada %}bi-pause-circle{% else %}bi-send{% endif %}" data-cd-fila-icone></i><div><strong data-cd-fila-titulo>{% if fila.pausada %}Envio pausado até {{ fila.pausada_ate|date:"H:i" }}: o provedor de e-mail recusou.{% else %}{{ emails_pendentes }} e-mail{{ emails_pendentes|pluralize }} na fila.{% endif %}</strong><span data-cd-fila-texto>{% if fila.pausada %}{{ fila.motivo_pausa }} A fila tenta de novo sozinha, com espera maior a cada recusa seguida.{% else %}Saem sozinhos em lotes de {{ fila.lote }}, com pausa entre um e-mail e outro.{% if proxima_tentativa %} Próxima nova tentativa às {{ proxima_tentativa }}.{% endif %}{% endif %}</span></div><form method="post">{% csrf_token %}<input type="hidden" name="acao" value="enviar_agora"><button><i class="bi bi-lightning-charge"></i> {% if fila.pausada %}Tentar agora{% else %}Enviar agora{% endif %}</button></form></div>
+  {% if fila.parada and emails_pendentes and not fila.pausada %}
+  <div class="cd-alerta cd-alerta--nota" role="alert"><i class="bi bi-hourglass-split"></i><div><strong>A fila de e-mails não rodou nos últimos minutos{% if fila.ultima_rodada_em %} (última vez: {{ fila.ultima_rodada_em|date:"d/m H:i" }}){% endif %}.</strong><span>{% if fila.ligada_no_site %}No ar ela roda sozinha a cada minuto. Use "Enviar agora"; se continuar parada, o site pode ter reiniciado ou dormido — a fila volta com a próxima visita.{% else %}FILA_DE_EMAILS_NO_SITE está desligada no Render e não há outro processo mandando: ligue a variável (ou apague-a).{% endif %}</span></div></div>
+  {% endif %}
+  {% endif %}
+  {% if fila.ultimo_erro %}
+  <div class="cd-alerta cd-alerta--nota" role="status"><i class="bi bi-bug"></i><div><strong>Último erro da fila ({{ fila.ultimo_erro_em|date:"d/m H:i" }}).</strong><span>{{ fila.ultimo_erro }}</span></div></div>
+  {% endif %}
+  {% if fila.aviso_remetente %}
+  <div class="cd-alerta cd-alerta--nota" role="status"><i class="bi bi-at"></i><div><strong>Remetente diferente da conta do e-mail.</strong><span>{{ fila.aviso_remetente }}</span></div></div>
   {% endif %}
   {% endif %}
   <section class="cd-metrics">
-    <article><strong>{{ campanha.total_destinatarios }}</strong><span>entregas preparadas</span></article><article><strong>{{ campanha.total_enviados }}</strong><span>enviadas / acionadas</span></article><article><strong>{{ campanha.total_falhas }}</strong><span>falhas definitivas</span></article><article><strong>{{ campanha.progresso_percentual }}%</strong><span>concluído</span></article>
+    <article><strong data-cd-n="total">{{ campanha.total_destinatarios }}</strong><span>entregas preparadas</span></article>
+    <article class="cd-m-ok"><strong data-cd-n="enviados">{{ campanha.total_enviados }}</strong><span>enviadas / acionadas</span></article>
+    <article><strong data-cd-n="na_fila">{{ emails_pendentes }}</strong><span>e-mails na fila</span></article>
+    <article class="cd-m-erro"><strong data-cd-n="falhas">{{ campanha.total_falhas }}</strong><span>falhas</span></article>
+    <article><strong data-cd-n="ignorados">{{ campanha.total_ignorados }}</strong><span>não enviados de propósito</span></article>
+    <article><strong><b data-cd-n="percentual">{{ campanha.progresso_percentual }}</b>%</strong><span>concluído</span></article>
   </section>
-  <div class="cd-progress mt-3"><i style="width:{{ campanha.progresso_percentual }}%"></i></div>
+  <div class="cd-progress mt-3" role="presentation"><i class="cd-p-ok" data-cd-barra="enviados" style="width:{% widthratio campanha.total_enviados campanha.total_destinatarios|default:1 100 %}%"></i><i class="cd-p-erro" data-cd-barra="falhas" style="width:{% widthratio campanha.total_falhas campanha.total_destinatarios|default:1 100 %}%"></i><i class="cd-p-fora" data-cd-barra="ignorados" style="width:{% widthratio campanha.total_ignorados campanha.total_destinatarios|default:1 100 %}%"></i></div>
+  <section class="cd-panel" data-cd-motivos-caixa {% if not numeros.motivos %}hidden{% endif %}><header><h2><i class="bi bi-clipboard-x"></i> Por que não saíram</h2><small>Os motivos que o provedor deu, agrupados.</small></header><ul class="cd-motivos" data-cd-motivos>{% for linha in numeros.motivos %}<li><b>{{ linha.quantidade }}</b><span>{{ linha.motivo }}</span><em>{{ linha.situacao }}</em></li>{% endfor %}</ul></section>
   {% if whatsapps %}<section class="cd-panel"><header><h2><i class="bi bi-whatsapp"></i> WhatsApp assistido</h2><small>Abra uma conversa por vez; o sistema registra o acionamento.</small></header><div class="cd-table-wrap"><table><thead><tr><th>Cliente</th><th>Número confirmado</th><th>Situação</th><th>Ação</th></tr></thead><tbody>{% for entrega in whatsapps %}<tr><td>{{ entrega.nome_destinatario }}</td><td>{{ entrega.destino }}</td><td>{{ entrega.get_status_display }}</td><td>{% if entrega.status == 'aguardando' %}<form class="cd-send-form" method="post" target="_blank" action="{% url 'campanha_whatsapp' campanha.token entrega.token %}">{% csrf_token %}<button class="cd-send" type="submit"><i class="bi bi-whatsapp"></i> Abrir conversa</button></form>{% else %}{{ entrega.enviado_em|date:"d/m H:i"|default:"—" }}{% endif %}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
-  {% if emails %}<section class="cd-panel"><header><h2><i class="bi bi-envelope"></i> Fila de e-mails</h2><small>Até quatro tentativas com intervalo crescente.</small></header><div class="cd-table-wrap"><table><thead><tr><th>Cliente</th><th>E-mail</th><th>Situação</th><th>Tentativas</th><th>Observação</th></tr></thead><tbody>{% for entrega in emails %}<tr><td>{{ entrega.nome_destinatario }}</td><td>{{ entrega.destino }}</td><td>{{ entrega.get_status_display }}</td><td>{{ entrega.tentativas }}</td><td class="cd-error">{{ entrega.erro|default:"—" }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
+  {% if emails %}<section class="cd-panel"><header><h2><i class="bi bi-envelope"></i> Fila de e-mails</h2><small>Um por destinatário. Erro só do e-mail: até {{ tentativas_max }} tentativas com espera crescente. Recusa do provedor: a fila inteira espera e ninguém perde tentativa.</small></header><div class="cd-table-wrap"><table><thead><tr><th>Cliente</th><th>E-mail</th><th>Situação</th><th>Tentativas</th><th>Observação</th></tr></thead><tbody>{% for entrega in emails %}<tr data-entrega="{{ entrega.token }}"><td>{{ entrega.nome_destinatario }}</td><td>{{ entrega.destino }}</td><td><span class="cd-chip cd-chip--{{ entrega.status }}" data-cd-situacao>{{ entrega.get_status_display }}</span></td><td data-cd-tentativas>{{ entrega.tentativas }}</td><td class="cd-error" data-cd-observacao>{{ entrega.observacao }}</td></tr>{% endfor %}</tbody></table></div></section>{% endif %}
 </main>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* A campanha se acompanha sozinha (LEIA-ME seção 108): enquanto houver e-mail na fila,
+   pede os números (?formato=json) a cada 5 s e troca só o que mudou. Para quando a fila
+   acaba, quando a pessoa sai desta tela e não pede nada com a aba escondida. */
+(function () {
+  "use strict";
+  var raiz = document.querySelector("[data-campanha-vivo]");
+  if (!raiz) return;
+  clearInterval(window.__lsCampanhaRelogio);
+  if (!(Number(raiz.dataset.cdAbertos) > 0)) return;
+
+  function numero(nome, valor) {
+    raiz.querySelectorAll('[data-cd-n="' + nome + '"]').forEach(function (el) { el.textContent = String(valor); });
+  }
+  function largura(nome, valor, total) {
+    var barra = raiz.querySelector('[data-cd-barra="' + nome + '"]');
+    if (barra) barra.style.width = (total ? Math.round(100 * valor / total) : 0) + "%";
+  }
+  function fila(d) {
+    var caixa = raiz.querySelector("[data-cd-fila]");
+    if (!caixa) return;
+    var abertos = d.emails.pendentes + d.emails.processando;
+    caixa.hidden = !(d.fila.pausada || abertos);
+    caixa.classList.toggle("cd-alerta--erro", d.fila.pausada);
+    var titulo = caixa.querySelector("[data-cd-fila-titulo]");
+    var texto = caixa.querySelector("[data-cd-fila-texto]");
+    var icone = caixa.querySelector("[data-cd-fila-icone]");
+    if (d.fila.pausada) {
+      titulo.textContent = "Envio pausado até " + d.fila.pausada_ate.split(" ").pop() + ": o provedor de e-mail recusou.";
+      texto.textContent = d.fila.motivo_pausa + " A fila tenta de novo sozinha, com espera maior a cada recusa seguida.";
+      icone.className = "bi bi-pause-circle";
+    } else {
+      titulo.textContent = abertos + (abertos === 1 ? " e-mail na fila." : " e-mails na fila.");
+      texto.textContent = d.emails.processando ? "Saindo agora, um de cada vez." :
+        (d.proxima_tentativa ? "Próxima nova tentativa às " + d.proxima_tentativa.split(" ").pop() + "." : "Saem sozinhos em instantes.");
+      icone.className = "bi bi-send";
+    }
+  }
+  function motivos(lista) {
+    var caixa = raiz.querySelector("[data-cd-motivos-caixa]");
+    var ul = raiz.querySelector("[data-cd-motivos]");
+    if (!caixa || !ul) return;
+    caixa.hidden = !lista.length;
+    ul.replaceChildren.apply(ul, lista.map(function (m) {
+      var li = document.createElement("li");
+      var b = document.createElement("b"); b.textContent = String(m.quantidade);
+      var span = document.createElement("span"); span.textContent = m.motivo;
+      var em = document.createElement("em"); em.textContent = m.situacao;
+      li.append(b, span, em);
+      return li;
+    }));
+  }
+  function desenhar(d) {
+    var c = d.campanha;
+    numero("total", c.total); numero("enviados", c.enviados); numero("falhas", c.falhas);
+    numero("ignorados", c.ignorados); numero("percentual", c.percentual);
+    numero("na_fila", d.emails.pendentes + d.emails.processando);
+    largura("enviados", c.enviados, c.total); largura("falhas", c.falhas, c.total); largura("ignorados", c.ignorados, c.total);
+    var estado = raiz.querySelector("[data-cd-estado]");
+    if (estado) estado.textContent = d.status_rotulo;
+    var reenviar = raiz.querySelector("[data-cd-reenviar]");
+    if (reenviar) reenviar.hidden = !d.emails.falhas;
+    fila(d);
+    motivos(d.motivos);
+    d.entregas.forEach(function (e) {
+      var linha = raiz.querySelector('[data-entrega="' + e.token + '"]');
+      if (!linha) return;
+      var chip = linha.querySelector("[data-cd-situacao]");
+      chip.textContent = e.rotulo;
+      chip.className = "cd-chip cd-chip--" + e.status;
+      linha.querySelector("[data-cd-tentativas]").textContent = String(e.tentativas);
+      linha.querySelector("[data-cd-observacao]").textContent = e.observacao;
+    });
+    return d.emails.pendentes + d.emails.processando;
+  }
+  window.__lsCampanhaRelogio = setInterval(function () {
+    if (!document.body.contains(raiz)) { clearInterval(window.__lsCampanhaRelogio); return; }
+    if (document.hidden) return;
+    fetch(raiz.dataset.cdUrl + "?formato=json", { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.campanha) return;
+        if (!desenhar(d) && !d.fila.pausada) clearInterval(window.__lsCampanhaRelogio);
+      })
+      .catch(function () { /* a próxima volta tenta de novo */ });
+  }, 5000);
+})();
+</script>
 {% endblock %}

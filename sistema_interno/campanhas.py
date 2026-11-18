@@ -8,26 +8,41 @@ combo e cupom usam exatamente as mesmas garantias.
 from __future__ import annotations
 
 import hashlib
+import logging
+import random
+import smtplib
+import ssl
+import time
+from collections import namedtuple
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
+from email.utils import parseaddr
 from urllib.parse import urljoin
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.core.mail import EmailMultiAlternatives
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.core.validators import validate_email
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, F, Min, Q
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 
-from core.email_utils import remetente, responder_para, smtp_configurado
+from core.email_utils import diagnostico_smtp, remetente, responder_para, smtp_configurado
 from core.models import ClientePerfil, Combos, Cupom, Promocoes
 
-from .models import CampanhaDivulgacao, Cliente, EntregaCampanha
+from .models import (
+    CampanhaDivulgacao,
+    Cliente,
+    DescadastroEmail,
+    EntregaCampanha,
+    EstadoFilaEmails,
+)
 from .validacoes import somente_digitos, telefone_valido
+
+log = logging.getLogger(__name__)
 
 
 class ErroCampanha(ValueError):
@@ -201,11 +216,13 @@ def destinatarios(segmento, *, email, whatsapp, cliente_id=None):
         )
     else:
         clientes = list(_clientes_do_segmento(segmento))
+    # quem pediu para sair da lista (link do rodapé) não entra de novo
+    fora = descadastrados() if email else set()
     for cliente in clientes:
         canais = []
         if email:
             endereco = _email_valido(cliente.email)
-            if endereco:
+            if endereco and DescadastroEmail.chave(endereco) not in fora:
                 canais.append((EntregaCampanha.Canal.EMAIL, endereco))
         if whatsapp:
             numero = _whatsapp_valido(cliente)
@@ -347,9 +364,12 @@ def criar_campanha_para_conta(
     )
 
     canais = []
+    saiu_da_lista = False
     if email:
         endereco = _email_valido(conta.email)
-        if endereco:
+        if endereco and descadastrados([DescadastroEmail.chave(endereco)]):
+            saiu_da_lista = True
+        elif endereco:
             canais.append((EntregaCampanha.Canal.EMAIL, endereco))
     if whatsapp:
         numero = _whatsapp_da_conta(perfil)
@@ -357,6 +377,8 @@ def criar_campanha_para_conta(
             canais.append((EntregaCampanha.Canal.WHATSAPP, numero))
     if not canais:
         raise ErroCampanha(
+            "Este e-mail pediu para não receber divulgações (link de descadastro)."
+            if saiu_da_lista else
             "Esta conta não possui e-mail ou telefone válido nos canais escolhidos."
         )
 
@@ -427,97 +449,577 @@ def mensagem_whatsapp(entrega):
     return f"{saudacao}{campanha.mensagem}\n\nVeja os detalhes: {url_publica(campanha)}"
 
 
-def _recolocar_processamentos_abandonados():
-    limite = timezone.now() - timedelta(minutes=15)
-    EntregaCampanha.objects.filter(
+# ======================================================================
+# O ENVIO DOS E-MAILS (LEIA-ME seção 108)
+# ======================================================================
+#
+# POR QUE NADA SAÍA. A versão anterior reservava cada e-mail com
+#
+#     EntregaCampanha.objects.select_for_update()
+#         .select_related("campanha", "campanha__responsavel")
+#
+# `responsavel` é chave estrangeira que aceita vazio: o Django junta
+# auth_user com LEFT OUTER JOIN, e o PostgreSQL (o Supabase do site)
+# recusa a consulta inteira -- "FOR UPDATE cannot be applied to the
+# nullable side of an outer join". O erro estourava no PRIMEIRO e-mail de
+# toda rodada, antes de qualquer envio; a ronda o engolia num
+# `log.exception` e o e-mail continuava "pendente" para sempre, sem motivo
+# na tela. Os testes rodam em SQLite, onde `select_for_update` não faz
+# nada -- por isso passavam.
+#
+# AGORA a reserva é um UPDATE condicional (status pendente -> processando,
+# só se ainda estiver pendente): o mesmo SQL no SQLite e no PostgreSQL, sem
+# trava de linha, sem JOIN. Dois processos nunca pegam o mesmo e-mail.
+#
+# O RESTO DO ENVIO, na ordem em que acontece:
+#   * lote pequeno (CAMPANHA_EMAIL_LOTE), UMA conexão SMTP por lote (um login
+#     só, aberta no lote e fechada no fim dele -- nunca guardada até cair),
+#     pausa entre um e-mail e outro (CAMPANHA_EMAIL_PAUSA);
+#   * cada falha vira um motivo legível no painel e é classificada:
+#       - DEFINITIVA: o provedor recusou o ENDEREÇO (550 user unknown...):
+#         falhou, sem nova tentativa;
+#       - TEMPORARIA: problema só deste e-mail: nova tentativa com espera
+#         crescente (2, 10, 30, 90, 240 min) até CAMPANHA_EMAIL_TENTATIVAS;
+#       - PROVEDOR: conexão, timeout, login, remetente recusado, "421 try
+#         again later", cota: o problema não é do cliente. A fila INTEIRA
+#         pausa (1, 2, 4... até 60 min) e a tentativa não conta para ninguém;
+#   * descadastrado ou oferta encerrada no meio do caminho: não sai (ignorado,
+#     com o motivo);
+#   * processo derrubado no meio (deploy, reinício): o e-mail preso em
+#     "processando" volta para a fila depois de PRAZO_PROCESSANDO;
+#   * mesmo backend (settings.EMAIL_BACKEND, o decorador com o logo) e mesmo
+#     remetente (core.email_utils.remetente) dos e-mails de pedido, que chegam.
+
+PRAZO_PROCESSANDO = timedelta(minutes=5)
+ESPERAS_MINUTOS = (2, 10, 30, 90, 240)
+PAUSA_PROVEDOR_INICIAL = timedelta(minutes=1)
+PAUSA_PROVEDOR_MAXIMA = timedelta(minutes=60)
+
+DEFINITIVA = "definitiva"
+TEMPORARIA = "temporaria"
+PROVEDOR = "provedor"
+
+Falha = namedtuple("Falha", "tipo motivo")
+
+# 5xx que não são do endereço: cota, política, autenticação do domínio.
+_SINAIS_DE_PROVEDOR = (
+    "quota", "limit", "too many", "try again", "5.4.5", "5.7.0",
+    "spam", "policy", "unauthenticated", "dmarc", "spf", "dkim",
+    "not authorized", "relay", "sender",
+)
+
+
+def _texto(valor, limite=180):
+    if isinstance(valor, bytes):
+        valor = valor.decode("utf-8", "replace")
+    return " ".join(str(valor or "").split())[:limite]
+
+
+def classificar_falha(erro):
+    """Diz de quem é a culpa da falha e escreve o motivo para o painel."""
+    if isinstance(erro, smtplib.SMTPRecipientsRefused):
+        codigo, resposta = next(iter(erro.recipients.values()), (0, b""))
+        detalhe = f"{codigo} {_texto(resposta)}".strip()
+        if 500 <= int(codigo or 0) < 600:
+            return Falha(DEFINITIVA, f"O provedor recusou este endereço ({detalhe}).")
+        return Falha(TEMPORARIA, f"O provedor adiou a entrega para este endereço ({detalhe}).")
+    if isinstance(erro, smtplib.SMTPAuthenticationError):
+        return Falha(PROVEDOR, (
+            f"O servidor de e-mail recusou o login ({erro.smtp_code} {_texto(erro.smtp_error, 120)}). "
+            "Confira EMAIL_HOST_USER e EMAIL_HOST_PASSWORD no Render (no Gmail, senha de app)."
+        ))
+    if isinstance(erro, smtplib.SMTPSenderRefused):
+        return Falha(PROVEDOR, (
+            f"O servidor de e-mail recusou o remetente ({erro.smtp_code} {_texto(erro.smtp_error, 120)}). "
+            "O DEFAULT_FROM_EMAIL precisa ser a conta do SMTP ou um endereço do domínio verificado no provedor."
+        ))
+    if isinstance(erro, smtplib.SMTPConnectError):
+        return Falha(PROVEDOR, f"O servidor de e-mail recusou a conexão ({erro.smtp_code} {_texto(erro.smtp_error)}).")
+    if isinstance(erro, smtplib.SMTPServerDisconnected):
+        return Falha(PROVEDOR, f"O servidor de e-mail encerrou a conexão ({_texto(erro) or 'sem resposta'}).")
+    if isinstance(erro, smtplib.SMTPNotSupportedError):
+        return Falha(PROVEDOR, f"O servidor de e-mail não aceita a configuração usada ({_texto(erro)}). Confira EMAIL_PORT, EMAIL_USE_TLS e EMAIL_USE_SSL.")
+    if isinstance(erro, smtplib.SMTPResponseException):
+        codigo = int(erro.smtp_code or 0)
+        detalhe = f"{codigo} {_texto(erro.smtp_error)}".strip()
+        if codigo in (421, 451, 452, 454):
+            return Falha(PROVEDOR, f"O provedor pediu para esperar ({detalhe}).")
+        if 400 <= codigo < 500:
+            return Falha(TEMPORARIA, f"O provedor adiou este e-mail ({detalhe}).")
+        if any(sinal in detalhe.casefold() for sinal in _SINAIS_DE_PROVEDOR):
+            return Falha(PROVEDOR, f"O provedor recusou o envio ({detalhe}).")
+        return Falha(DEFINITIVA, f"O provedor recusou este e-mail ({detalhe}).")
+    if isinstance(erro, TimeoutError):
+        return Falha(PROVEDOR, (
+            f"O servidor de e-mail não respondeu em {getattr(settings, 'EMAIL_TIMEOUT', 10)} s (timeout)."
+        ))
+    if isinstance(erro, ssl.SSLError):
+        return Falha(PROVEDOR, f"Falha na conexão segura com o servidor de e-mail ({_texto(erro)}). Confira EMAIL_PORT, EMAIL_USE_TLS e EMAIL_USE_SSL.")
+    if isinstance(erro, OSError):  # ConnectionError, DNS, rede
+        return Falha(PROVEDOR, f"Sem conexão com o servidor de e-mail ({erro.__class__.__name__}: {_texto(erro, 120)}).")
+    return Falha(TEMPORARIA, f"Erro ao enviar ({erro.__class__.__name__}: {_texto(erro, 200)}).")
+
+
+# ----------------------------------------------------------------------
+# Descadastro
+# ----------------------------------------------------------------------
+def url_descadastro(entrega):
+    return _site_url(reverse(
+        "campanha_descadastro", args=[entrega.token], urlconf=settings.ROOT_URLCONF,
+    ))
+
+
+def descadastrados(chaves=None):
+    consulta = DescadastroEmail.objects.all()
+    if chaves is not None:
+        consulta = consulta.filter(email_chave__in=list(chaves))
+    return set(consulta.values_list("email_chave", flat=True))
+
+
+def descadastrar(entrega, origem=DescadastroEmail.Origem.LINK):
+    """Marca o endereço desta entrega como 'não quero mais'. Idempotente."""
+    if entrega.canal != EntregaCampanha.Canal.EMAIL:
+        return None
+    registro, _criado = DescadastroEmail.objects.get_or_create(
+        email_chave=entrega.destino_chave,
+        defaults={"email": entrega.destino, "origem": origem, "entrega": entrega},
+    )
+    # O que ainda estava na fila para este endereço não sai mais, em campanha nenhuma.
+    pendentes = EntregaCampanha.objects.filter(
         canal=EntregaCampanha.Canal.EMAIL,
-        status=EntregaCampanha.Status.PROCESSANDO,
-        processando_desde__lt=limite,
-    ).update(
+        destino_chave=entrega.destino_chave,
         status=EntregaCampanha.Status.PENDENTE,
-        processando_desde=None,
-        erro="Tentativa anterior interrompida; recolocada na fila.",
+    )
+    campanhas = set(pendentes.values_list("campanha_id", flat=True))
+    pendentes.update(
+        status=EntregaCampanha.Status.IGNORADO,
+        erro="Pediu para não receber divulgações por e-mail.",
+        proxima_tentativa_em=None,
+        atualizado=timezone.now(),
+    )
+    for campanha in CampanhaDivulgacao.objects.filter(pk__in=campanhas):
+        campanha.recalcular()
+    return registro
+
+
+# ----------------------------------------------------------------------
+# A mensagem
+# ----------------------------------------------------------------------
+def montar_email(entrega):
+    """O e-mail da campanha, com o remetente e o backend dos e-mails de pedido."""
+    campanha = entrega.campanha
+    sair = url_descadastro(entrega)
+    contexto = {
+        "campanha": campanha,
+        "entrega": entrega,
+        "url_publica": url_publica(campanha),
+        "url_descadastro": sair,
+    }
+    texto = render_to_string("emails/campanha_divulgacao.txt", contexto)
+    html = render_to_string("emails/campanha_divulgacao.html", contexto)
+    # Descadastro de um clique (RFC 8058): Gmail e Yahoo mostram "Cancelar
+    # inscrição" ao lado do remetente e pedem isso de quem manda em massa.
+    lista = [f"<{sair}>"]
+    resposta = (getattr(settings, "EMAIL_RESPOSTA", "") or "").strip()
+    if "@" in resposta and " " not in resposta:
+        lista.append(f"<mailto:{resposta}?subject=Descadastrar>")
+    email = EmailMultiAlternatives(
+        subject=campanha.titulo,
+        body=texto,
+        from_email=remetente(),
+        to=[entrega.destino],
+        reply_to=responder_para(campanha.responsavel),
+        headers={
+            "List-Unsubscribe": ", ".join(lista),
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+    )
+    email.attach_alternative(html, "text/html")
+    return email
+
+
+class _Conexao:
+    """Uma conexão do backend padrão (o mesmo dos e-mails de pedido) por lote.
+
+    Abre no primeiro e-mail do lote e fecha no fim dele. Depois de qualquer
+    erro, é descartada: a seguinte abre limpa, sem herdar uma sessão SMTP
+    quebrada. Nunca atravessa a pausa entre lotes, então não "cai parada".
+    """
+
+    def __init__(self):
+        self.backend = None
+
+    def enviar(self, mensagem):
+        if self.backend is None:
+            self.backend = get_connection(fail_silently=False)
+            self.backend.open()
+        if self.backend.send_messages([mensagem]) != 1:
+            raise RuntimeError("O provedor não confirmou a entrega.")
+
+    def descartar(self):
+        backend, self.backend = self.backend, None
+        if backend is None:
+            return
+        try:
+            backend.close()
+        except Exception:  # fechar uma conexão já quebrada não é erro de ninguém
+            pass
+
+
+# ----------------------------------------------------------------------
+# A fila
+# ----------------------------------------------------------------------
+def _estado():
+    return EstadoFilaEmails.atual()
+
+
+def _atualizar_estado(**campos):
+    linha = EstadoFilaEmails.objects.filter(chave=EstadoFilaEmails.CHAVE)
+    if not linha.update(**campos):
+        EstadoFilaEmails.atual()  # a primeira vez: a linha nasce aqui
+        linha.update(**campos)
+
+
+def fila_pausada(agora=None):
+    estado = EstadoFilaEmails.objects.filter(chave=EstadoFilaEmails.CHAVE).first()
+    agora = agora or timezone.now()
+    return bool(estado and estado.pausada_ate and estado.pausada_ate > agora)
+
+
+def _pausar_fila(motivo):
+    estado = _estado()
+    falhas = estado.falhas_seguidas + 1
+    espera = min(PAUSA_PROVEDOR_MAXIMA, PAUSA_PROVEDOR_INICIAL * (2 ** (falhas - 1)))
+    espera = espera * random.uniform(0.9, 1.1)
+    _atualizar_estado(
+        falhas_seguidas=min(falhas, 30),
+        pausada_ate=timezone.now() + espera,
+        motivo_pausa=_texto(motivo, 300),
     )
 
 
-def processar_emails_pendentes(limite=20):
-    """Processa um lote curto; seguro para múltiplos ciclos do observador."""
+def _pausar_ate_amanha(teto):
+    amanha = timezone.localdate() + timedelta(days=1)
+    reabre = timezone.make_aware(datetime.combine(amanha, datetime.min.time())) + timedelta(minutes=5)
+    _atualizar_estado(
+        pausada_ate=reabre,
+        motivo_pausa=(
+            f"Limite de {teto} e-mails de campanha por dia atingido (CAMPANHA_EMAILS_POR_DIA). "
+            "O resto sai amanhã, a partir de 00:05."
+        ),
+    )
+
+
+def retomar_fila():
+    """Tira a pausa (o botão "Enviar agora" / "Reenviar falhas"). Se o provedor
+    recusar de novo, a pausa volta maior, porque `falhas_seguidas` continua."""
+    _atualizar_estado(pausada_ate=None, motivo_pausa="")
+
+
+def registrar_erro_da_fila(erro):
+    try:
+        _atualizar_estado(
+            ultimo_erro=_texto(f"{erro.__class__.__name__}: {erro}", 300),
+            ultimo_erro_em=timezone.now(),
+        )
+    except Exception:  # o banco pode ser justamente o problema
+        pass
+
+
+def _espera(tentativas):
+    minutos = ESPERAS_MINUTOS[min(max(tentativas, 1), len(ESPERAS_MINUTOS)) - 1]
+    return timedelta(minutes=minutos * random.uniform(0.85, 1.15))
+
+
+def _oferta_encerrada(campanha):
+    if campanha.tipo == CampanhaDivulgacao.Tipo.PROMOCAO:
+        oferta = campanha.promocao
+        return oferta is None or not oferta.vigente
+    if campanha.tipo == CampanhaDivulgacao.Tipo.COMBO:
+        return campanha.combo is None or not campanha.combo.ativo
+    if campanha.tipo == CampanhaDivulgacao.Tipo.CUPOM:
+        return campanha.cupom is None or not campanha.cupom.ativo
+    return False
+
+
+def _devidos(agora):
+    return Q(proxima_tentativa_em__isnull=True) | Q(proxima_tentativa_em__lte=agora)
+
+
+def _recolocar_processamentos_abandonados(agora=None):
+    """O processo caiu no meio (deploy, reinício): o e-mail preso volta para a fila."""
+    agora = agora or timezone.now()
+    presos = EntregaCampanha.objects.filter(
+        canal=EntregaCampanha.Canal.EMAIL,
+        status=EntregaCampanha.Status.PROCESSANDO,
+    ).filter(Q(processando_desde__lt=agora - PRAZO_PROCESSANDO) | Q(processando_desde__isnull=True))
+    campanhas = set(presos.values_list("campanha_id", flat=True))
+    if not campanhas:
+        return 0
+    maximo = settings.CAMPANHA_EMAIL_TENTATIVAS
+    presos.filter(tentativas__gte=maximo).update(
+        status=EntregaCampanha.Status.FALHOU,
+        processando_desde=None,
+        proxima_tentativa_em=None,
+        erro=f"O envio foi interrompido {maximo} vezes no meio (o servidor reiniciou).",
+        atualizado=agora,
+    )
+    voltaram = presos.update(
+        status=EntregaCampanha.Status.PENDENTE,
+        processando_desde=None,
+        proxima_tentativa_em=None,
+        erro="O envio foi interrompido no meio (o servidor reiniciou); voltou para a fila.",
+        atualizado=agora,
+    )
+    for campanha in CampanhaDivulgacao.objects.filter(pk__in=campanhas):
+        campanha.recalcular()
+    return voltaram
+
+
+def _reservar(entrega_id, agora):
+    """Pendente -> processando, só se ninguém pegou antes (UPDATE condicional)."""
+    return EntregaCampanha.objects.filter(
+        pk=entrega_id,
+        canal=EntregaCampanha.Canal.EMAIL,
+        status=EntregaCampanha.Status.PENDENTE,
+    ).filter(_devidos(agora)).update(
+        status=EntregaCampanha.Status.PROCESSANDO,
+        processando_desde=agora,
+        tentativas=F("tentativas") + 1,
+        atualizado=agora,
+    ) == 1
+
+
+def _gravar(entrega, **campos):
+    campos.setdefault("processando_desde", None)
+    campos["atualizado"] = timezone.now()
+    EntregaCampanha.objects.filter(pk=entrega.pk).update(**campos)
+
+
+def _registrar_falha(entrega, falha):
+    if falha.tipo == PROVEDOR:
+        # não é do cliente: a tentativa não conta, a fila inteira espera
+        _gravar(
+            entrega,
+            status=EntregaCampanha.Status.PENDENTE,
+            tentativas=F("tentativas") - 1,
+            proxima_tentativa_em=None,
+            erro=_texto(f"Aguardando o provedor: {falha.motivo}", 300),
+        )
+        return
+    maximo = settings.CAMPANHA_EMAIL_TENTATIVAS
+    if falha.tipo == DEFINITIVA or entrega.tentativas >= maximo:
+        motivo = falha.motivo
+        if falha.tipo == TEMPORARIA:
+            motivo = f"{motivo} Desistiu depois de {entrega.tentativas} tentativas."
+        _gravar(
+            entrega,
+            status=EntregaCampanha.Status.FALHOU,
+            proxima_tentativa_em=None,
+            erro=_texto(motivo, 300),
+        )
+        return
+    _gravar(
+        entrega,
+        status=EntregaCampanha.Status.PENDENTE,
+        proxima_tentativa_em=timezone.now() + _espera(entrega.tentativas),
+        erro=_texto(falha.motivo, 300),
+    )
+
+
+def _registrar_envio(entrega):
+    agora = timezone.now()
+    _gravar(
+        entrega,
+        status=EntregaCampanha.Status.ENVIADO,
+        enviado_em=agora,
+        proxima_tentativa_em=None,
+        erro="",
+    )
+    hoje = timezone.localdate()
+    contou = EstadoFilaEmails.objects.filter(chave=EstadoFilaEmails.CHAVE, dia=hoje).update(
+        enviados_no_dia=F("enviados_no_dia") + 1, ultimo_envio_em=agora,
+    )
+    if not contou:
+        _atualizar_estado(dia=hoje, enviados_no_dia=1, ultimo_envio_em=agora)
+
+
+def _ignorar(entrega, motivo):
+    _gravar(
+        entrega,
+        status=EntregaCampanha.Status.IGNORADO,
+        tentativas=F("tentativas") - 1,
+        proxima_tentativa_em=None,
+        erro=_texto(motivo, 300),
+    )
+
+
+def processar_emails_pendentes(limite=None):
+    """Manda UM lote da fila. Devolve quantos e-mails foram resolvidos nele.
+
+    Pode rodar em vários processos ao mesmo tempo (a ronda do site, o
+    "Enviar agora", um worker): cada e-mail é reservado antes de sair.
+    """
+    agora = timezone.now()
+    estado = _estado()
+    _atualizar_estado(ultima_rodada_em=agora)
     if not smtp_configurado():
         return 0
-    _recolocar_processamentos_abandonados()
-    agora = timezone.now()
+    _recolocar_processamentos_abandonados(agora)
+    if estado.pausada_ate and estado.pausada_ate > agora:
+        return 0
+
+    tamanho = max(1, int(limite or settings.CAMPANHA_EMAIL_LOTE))
     ids = list(
         EntregaCampanha.objects.filter(
             canal=EntregaCampanha.Canal.EMAIL,
             status=EntregaCampanha.Status.PENDENTE,
-        ).filter(
-            Q(proxima_tentativa_em__isnull=True) | Q(proxima_tentativa_em__lte=agora)
-        ).order_by("criacao", "id").values_list("id", flat=True)[:max(1, int(limite))]
+        ).exclude(
+            campanha__status=CampanhaDivulgacao.Status.CANCELADA,
+        ).filter(_devidos(agora)).order_by("criacao", "id").values_list("id", flat=True)[:tamanho]
     )
+    if not ids:
+        return 0
+
+    teto = int(getattr(settings, "CAMPANHA_EMAILS_POR_DIA", 0) or 0)
+    enviados_hoje = estado.enviados_no_dia if estado.dia == timezone.localdate() else 0
+    pausa = float(getattr(settings, "CAMPANHA_EMAIL_PAUSA", 0) or 0)
+    sem_recado = not (estado.falhas_seguidas or estado.motivo_pausa)
+    conexao = _Conexao()
     processados = 0
     campanhas = set()
-    for entrega_id in ids:
-        with transaction.atomic():
-            entrega = (
-                EntregaCampanha.objects.select_for_update()
-                .select_related("campanha", "campanha__responsavel")
-                .filter(pk=entrega_id, status=EntregaCampanha.Status.PENDENTE)
-                .first()
-            )
-            if not entrega:
+    try:
+        for entrega_id in ids:
+            if teto and enviados_hoje >= teto:
+                _pausar_ate_amanha(teto)
+                break
+            if processados and pausa:
+                time.sleep(pausa)
+            if not _reservar(entrega_id, timezone.now()):
+                continue  # outro processo pegou
+            entrega = EntregaCampanha.objects.select_related(
+                "campanha", "campanha__responsavel", "campanha__promocao",
+                "campanha__combo", "campanha__cupom",
+            ).get(pk=entrega_id)
+            campanhas.add(entrega.campanha_id)
+            processados += 1
+
+            if descadastrados([entrega.destino_chave]):
+                _ignorar(entrega, "Pediu para não receber divulgações por e-mail.")
                 continue
-            entrega.status = EntregaCampanha.Status.PROCESSANDO
-            entrega.processando_desde = timezone.now()
-            entrega.tentativas += 1
-            entrega.save(update_fields=("status", "processando_desde", "tentativas", "atualizado"))
-
-        campanha = entrega.campanha
-        campanhas.add(campanha.pk)
-        contexto = {
-            "campanha": campanha,
-            "entrega": entrega,
-            "url_publica": url_publica(campanha),
-        }
-        texto = render_to_string("emails/campanha_divulgacao.txt", contexto)
-        html = render_to_string("emails/campanha_divulgacao.html", contexto)
-        email = EmailMultiAlternatives(
-            subject=campanha.titulo,
-            body=texto,
-            from_email=remetente(),
-            to=[entrega.destino],
-            reply_to=responder_para(campanha.responsavel),
-        )
-        email.attach_alternative(html, "text/html")
-        try:
-            quantidade = email.send(fail_silently=False)
-            if quantidade != 1:
-                raise RuntimeError("O provedor não confirmou a entrega.")
-        except Exception as erro:  # erro fica no painel; o worker continua.
-            entrega.erro = str(erro).strip()[:300] or erro.__class__.__name__
-            entrega.processando_desde = None
-            if entrega.tentativas >= 4:
-                entrega.status = EntregaCampanha.Status.FALHOU
-                entrega.proxima_tentativa_em = None
-            else:
-                entrega.status = EntregaCampanha.Status.PENDENTE
-                entrega.proxima_tentativa_em = timezone.now() + timedelta(
-                    minutes=2 ** entrega.tentativas
+            if _oferta_encerrada(entrega.campanha):
+                motivo = "A oferta foi desativada ou venceu antes do envio; este e-mail não saiu."
+                _ignorar(entrega, motivo)
+                EntregaCampanha.objects.filter(
+                    campanha_id=entrega.campanha_id,
+                    canal=EntregaCampanha.Canal.EMAIL,
+                    status=EntregaCampanha.Status.PENDENTE,
+                ).update(
+                    status=EntregaCampanha.Status.IGNORADO, erro=motivo,
+                    proxima_tentativa_em=None, atualizado=timezone.now(),
                 )
-            entrega.save(update_fields=(
-                "status", "erro", "processando_desde", "proxima_tentativa_em", "atualizado",
-            ))
-        else:
-            entrega.status = EntregaCampanha.Status.ENVIADO
-            entrega.enviado_em = timezone.now()
-            entrega.erro = ""
-            entrega.processando_desde = None
-            entrega.proxima_tentativa_em = None
-            entrega.save(update_fields=(
-                "status", "enviado_em", "erro", "processando_desde",
-                "proxima_tentativa_em", "atualizado",
-            ))
-        processados += 1
+                continue
 
-    for campanha in CampanhaDivulgacao.objects.filter(pk__in=campanhas):
-        campanha.recalcular()
+            try:
+                mensagem = montar_email(entrega)
+            except Exception as erro:
+                log.exception("Campanha %s: e-mail %s não foi montado.", entrega.campanha_id, entrega.pk)
+                _registrar_falha(entrega, Falha(TEMPORARIA, f"Erro ao montar o e-mail ({erro.__class__.__name__}: {_texto(erro, 160)})."))
+                continue
+
+            try:
+                conexao.enviar(mensagem)
+            except Exception as erro:
+                conexao.descartar()
+                falha = classificar_falha(erro)
+                log.warning(
+                    "Campanha %s: e-mail %s não saiu (%s): %s",
+                    entrega.campanha_id, entrega.pk, falha.tipo, falha.motivo,
+                )
+                _registrar_falha(entrega, falha)
+                if falha.tipo == PROVEDOR:
+                    _pausar_fila(falha.motivo)
+                    break
+            else:
+                _registrar_envio(entrega)
+                enviados_hoje += 1
+                if not sem_recado:
+                    _atualizar_estado(falhas_seguidas=0, pausada_ate=None, motivo_pausa="")
+                    sem_recado = True
+    finally:
+        conexao.descartar()
+        for campanha in CampanhaDivulgacao.objects.filter(pk__in=campanhas):
+            campanha.recalcular()
     return processados
+
+
+# ----------------------------------------------------------------------
+# O que o painel mostra
+# ----------------------------------------------------------------------
+def aviso_de_remetente():
+    """No Gmail, remetente de outro domínio é trocado pela conta do login."""
+    host = (getattr(settings, "EMAIL_HOST", "") or "").lower()
+    usuario = (getattr(settings, "EMAIL_HOST_USER", "") or "").strip().lower()
+    _nome, de = parseaddr(remetente())
+    if "gmail" not in host or "@" not in usuario or "@" not in de:
+        return ""
+    if de.lower().rsplit("@", 1)[1] == usuario.rsplit("@", 1)[1]:
+        return ""
+    return (
+        "O remetente (DEFAULT_FROM_EMAIL) é de outro domínio que a conta do Gmail "
+        "(EMAIL_HOST_USER): o Gmail troca o remetente pela conta, e o e-mail pode "
+        "cair no spam. Use o mesmo endereço nas duas, ou um alias verificado no Gmail."
+    )
+
+
+def estado_da_fila(agora=None):
+    agora = agora or timezone.now()
+    estado = EstadoFilaEmails.objects.filter(chave=EstadoFilaEmails.CHAVE).first()
+    pausada = bool(estado and estado.pausada_ate and estado.pausada_ate > agora)
+    ultima = estado.ultima_rodada_em if estado else None
+    intervalo = max(30, int(getattr(settings, "FILA_DE_EMAILS_INTERVALO", 60)))
+    teto = int(getattr(settings, "CAMPANHA_EMAILS_POR_DIA", 0) or 0)
+    return {
+        "smtp_ok": smtp_configurado(),
+        "diagnostico_smtp": diagnostico_smtp(),
+        "pausada": pausada,
+        "pausada_ate": estado.pausada_ate if pausada else None,
+        "motivo_pausa": estado.motivo_pausa if pausada else "",
+        "ultima_rodada_em": ultima,
+        # parada = a ronda não bate há mais de 3 intervalos (thread morta,
+        # FILA_DE_EMAILS_NO_SITE=false sem worker, site dormindo)
+        "parada": bool(ultima is None or agora - ultima > timedelta(seconds=intervalo * 3)),
+        "ligada_no_site": bool(getattr(settings, "FILA_DE_EMAILS_NO_SITE", True)),
+        "ultimo_erro": (estado.ultimo_erro if estado else ""),
+        "ultimo_erro_em": (estado.ultimo_erro_em if estado else None),
+        "enviados_hoje": (estado.enviados_no_dia if estado and estado.dia == timezone.localdate() else 0),
+        "teto_diario": teto,
+        "lote": settings.CAMPANHA_EMAIL_LOTE,
+        "aviso_remetente": aviso_de_remetente(),
+    }
+
+
+def progresso(campanha, agora=None):
+    """Os números reais da campanha, por situação, e os motivos das falhas."""
+    agora = agora or timezone.now()
+    S = EntregaCampanha.Status
+    emails = campanha.entregas.filter(canal=EntregaCampanha.Canal.EMAIL)
+    por_status = dict(emails.values_list("status").annotate(n=Count("id")).order_by())
+    motivos = [
+        {"situacao": dict(S.choices).get(linha["status"], linha["status"]), "motivo": linha["erro"], "quantidade": linha["n"]}
+        for linha in emails.filter(status__in=(S.FALHOU, S.IGNORADO)).exclude(erro="")
+        .values("status", "erro").annotate(n=Count("id")).order_by("-n", "erro")[:8]
+    ]
+    proxima = emails.filter(status=S.PENDENTE, proxima_tentativa_em__gt=agora).aggregate(
+        quando=Min("proxima_tentativa_em"),
+    )["quando"]
+    return {
+        "total": sum(por_status.values()),
+        "enviados": por_status.get(S.ENVIADO, 0),
+        "pendentes": por_status.get(S.PENDENTE, 0),
+        "processando": por_status.get(S.PROCESSANDO, 0),
+        "falhas": por_status.get(S.FALHOU, 0),
+        "ignorados": por_status.get(S.IGNORADO, 0),
+        "proxima_tentativa_em": proxima,
+        "motivos": motivos,
+    }
