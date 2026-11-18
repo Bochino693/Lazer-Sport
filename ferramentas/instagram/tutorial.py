@@ -19,6 +19,8 @@ duracao de cada foto e a posicao dos toques). O roteiro escolhe a abertura
     "gancho": {"tipo": "preco" | "pergunta" | "vitrine", ...},
     "ofertas": {"duracao": 3.0, "prazo": "ATE 21/11", "itens": [{"arte", "nome", "detalhe", "de", "por", "selo"}]},
     "ponte": {"linhas": ["CADASTRO", "COM 1 CLIQUE"], "texto": "...", "selo": "1"},
+    "takes": {"chip": "...", "itens": [{"quadros": "pasta_de_jpg", "inicio": 0, "duracao": 2.4, "nome", "detalhe"}]},
+    (num passo, "chip": "TEXTO" troca o "PASSO n DE N" por um titulo livre)
     "passos": [{"trecho": "1_vitrine", "passo": 1,
                 "legenda": ["Abra o site pelo link da bio", "e toque na oferta *Black Friday*"]}],
     "final": {"arte": "a10.jpg", "etiqueta": "...", "titulo": [...], "texto": [...], "botao": "..."}
@@ -403,6 +405,50 @@ def ponte(pt, c1, c2):
         yield fr
 
 
+def secao_takes(sec, c1, c2, caminho, logo_im):
+    """Takes de jogo em tela cheia (pastas de quadros), com o nome do jogo num card embaixo."""
+    branco = Image.new("RGB", (W, H), WHITE)
+    cont = 0
+    for i, it in enumerate(sec["itens"]):
+        fotos = sorted(glob.glob(os.path.join(caminho(it["quadros"]), "*.jpg")))
+        ini = int(it.get("inicio", 0))
+        n = int(it.get("duracao", 2.4) * FPS)
+        fotos = fotos[ini:ini + n]
+        ov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        d = ImageDraw.Draw(ov)
+        x0, y0, x1, y1 = 60, 1380, W - 60, 1612
+        r.painel(ov, (x0, y0, x1, y1), c1, c2, raio=46)
+        fn = r.ajustar(d, [it["nome"]], r.XB, 92, x1 - x0 - 100)
+        r.texto_degrade(ov, (x0 + 50, y0 + 44), it["nome"], fn, c2, c1)
+        if it.get("detalhe"):
+            fd = r.ajustar(d, [it["detalhe"]], r.SB, 46, x1 - x0 - 100)
+            w, h, b = r.medir(d, it["detalhe"], fd)
+            d.text((x0 + 50 - b[0], y1 - 44 - h - b[1]), it["detalhe"], font=fd, fill=WHITE + (255,))
+        if sec.get("chip"):
+            w = r.medir(d, sec["chip"], r.font(r.XB, 38))[0] + 56
+            r.etiqueta(ov, ((W - w) // 2, 150), sec["chip"], c2, tam=38)
+        for k, f in enumerate(fotos):
+            t = k / FPS
+            im = Image.open(f).convert("RGB")
+            sc = max(W / im.width, H / im.height)
+            im = im.resize((int(im.width * sc) + 1, int(im.height * sc) + 1), Image.BICUBIC)
+            l, tp = (im.width - W) // 2, (im.height - H) // 2
+            fr = im.crop((l, tp, l + W, tp + H))
+            fr = ImageEnhance.Color(fr).enhance(1.12)
+            a = r.suave((t - 0.1) / 0.3)
+            if a > 0:
+                o = ov if a >= 0.999 else ov.copy()
+                if a < 0.999:
+                    o.putalpha(ov.getchannel("A").point(lambda v: int(v * a)))
+                fr.paste(o, (0, int((1 - a) * 60)), o)
+            if logo_im:
+                fr.paste(logo_im, (52, 128), logo_im)
+            if k < 4:
+                fr = Image.blend(fr, branco, 0.55 * (1 - k / 4))
+            cont += 1
+            yield fr
+
+
 GANCHOS = {"preco": gancho_preco, "pergunta": gancho_pergunta, "vitrine": gancho_vitrine}
 
 
@@ -433,7 +479,7 @@ def main():
     bezel, masc_tela = aparelho()
     bg = fundo(c1, c2)
     branco = Image.new("RGB", (W, H), WHITE)
-    total = max(p["passo"] for p in spec["passos"])
+    total = max(p.get("passo", 0) for p in spec["passos"])
 
     out = sys.argv[2]
     mudo = out + ".mudo.mp4"
@@ -455,6 +501,9 @@ def main():
         for fr in GANCHOS[g["tipo"]](g, c1, c2, caminho):
             emitir(fr)
 
+    if spec.get("takes"):
+        for fr in secao_takes(spec["takes"], c1, c2, caminho, logo_im):
+            emitir(fr)
     if spec.get("ofertas"):
         for fr in secao_ofertas(spec["ofertas"], c1, c2, caminho):
             emitir(fr)
@@ -480,9 +529,16 @@ def main():
                 desenhar_toque(fr, toques, j, c2)
             if logo_im:
                 fr.paste(logo_im, (52, 128), logo_im)
-            chip_passo(fr, ps["passo"], total, c2)
-            legenda(fr, ps["legenda"], t, c1, c2, ps["passo"], total)
-            if spec.get("numeros") and t < 0.6 and not ps.get("sem_numero"):
+            if ps.get("chip"):
+                cov = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+                cw = r.medir(ImageDraw.Draw(cov), ps["chip"], r.font(r.XB, 40))[0] + 56
+                r.etiqueta(cov, ((W - cw) // 2, 150), ps["chip"], c2, tam=40)
+                fr.paste(cov, (0, 0), cov)
+                legenda(fr, ps["legenda"], t, c1, c2, 0, 0)
+            else:
+                chip_passo(fr, ps["passo"], total, c2)
+                legenda(fr, ps["legenda"], t, c1, c2, ps["passo"], total)
+            if spec.get("numeros") and t < 0.6 and not ps.get("sem_numero") and ps.get("passo"):
                 a = 1 - r.suave((t - 0.3) / 0.3)
                 titulo_central(fr, [(str(ps["passo"]), True)], 520, 620, c2, c1, escala=max(0.05, r.mola(t / 0.3)),
                                contorno=20, alpha=a)
