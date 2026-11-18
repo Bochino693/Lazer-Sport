@@ -1,0 +1,18 @@
+Olá, {{ primeiro_nome }}!
+
+O boleto do seu pedido #{{ pedido.id }} está pronto.
+
+Valor: R$ {{ total }}
+Vencimento: {{ vencimento }}
+{% if pedido.boleto_linha %}Linha digitável: {{ pedido.boleto_linha }}
+{% endif %}
+Abrir o boleto:
+{{ pedido.boleto_url }}
+
+O pedido fica reservado até o vencimento. Assim que o banco confirmar o
+pagamento (de 1 a 3 dias úteis), avisamos por e-mail.
+
+Acompanhe em: {{ url_pedidos }}
+WhatsApp: {{ whatsapp }}
+
+Lazer & Sport Brinquedos

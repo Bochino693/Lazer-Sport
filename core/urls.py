@@ -72,6 +72,7 @@ from .views import (
     cancelar_manutencao,
     alterar_quantidade_item,
     gerar_pix,
+    gerar_boleto,
     atualizar_tipo_envio,
     PaymentView,
     MeusPedidosView,
@@ -350,6 +351,7 @@ urlpatterns = [
         name="pagamento",
     ),
     path("api/gerar-pix/", gerar_pix, name="gerar_pix"),
+    path("api/gerar-boleto/", gerar_boleto, name="gerar_boleto"),
     path(
         "verificar-pagamento/",
         verificar_pagamento,

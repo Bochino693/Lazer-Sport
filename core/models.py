@@ -2113,7 +2113,7 @@ class Pedido(Prime):
 
     #: As formas do checkout traduzidas para as da venda (que não separa
     #: crédito de débito: as duas são "cartão").
-    FORMA_DA_VENDA = {"pix": "pix", "credito": "cartao", "debito": "cartao"}
+    FORMA_DA_VENDA = {"pix": "pix", "credito": "cartao", "debito": "cartao", "boleto": "boleto"}
 
     # ---------------- o tempo de produção ----------------
     # "O tempo de produção a gente deve poder informar em cada pedido ou
@@ -2285,6 +2285,7 @@ class Pedido(Prime):
         ('pix', 'PIX'),
         ('credito', 'Cartão de Crédito'),
         ('debito', 'Cartão de Débito'),
+        ('boleto', 'Boleto'),
     )
 
     cliente = models.ForeignKey(
@@ -2365,8 +2366,20 @@ class Pedido(Prime):
         "Valor cobrado", max_digits=10, decimal_places=2, null=True, blank=True,
     )
 
+    # O boleto aberto do pedido (LEIA-ME seção 100): o PDF, a linha digitável e
+    # o vencimento, para a página de pagamento, Meus pedidos e o e-mail. Ficam
+    # depois de pago (é o comprovante); `boleto_aberto` só vale enquanto o pedido espera.
+    boleto_url = models.URLField("Boleto (PDF)", max_length=500, blank=True, default="")
+    boleto_linha = models.CharField("Linha digitável do boleto", max_length=80, blank=True, default="")
+    boleto_vencimento = models.DateTimeField("Vencimento do boleto", null=True, blank=True)
+
     cupom_codigo = models.CharField(max_length=20, blank=True, null=True)
     cupom_percentual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    @property
+    def boleto_aberto(self):
+        """O boleto ainda pode ser pago: o pedido espera e o boleto existe."""
+        return self.status == "aguardando_pagamento" and bool(self.boleto_url)
 
     @property
     def pago_sem_juros(self):
@@ -2577,6 +2590,7 @@ class Venda(Prime):
                                        choices=(
                                            ('pix', 'PIX'),
                                            ('cartao', 'Cartão'),
+                                           ('boleto', 'Boleto'),
                                            ('dinheiro', 'Dinheiro'),
                                            ('whatsapp', 'WhatsApp'),
                                        ),

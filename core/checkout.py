@@ -487,6 +487,8 @@ def forma_pagamento_mp(payment):
         return "credito"
     if tipo == "debit_card":
         return "debito"
+    if tipo == "ticket":
+        return "boleto"
     return "pix"
 
 

@@ -178,7 +178,7 @@ class VendaDoPagamentoTests(BaseVenda):
     def test_a_forma_da_venda_so_sai_quando_o_texto_fala_de_uma(self):
         for texto, esperado in (
             ("Pix", "pix"), ("PIX à vista", "pix"), ("Cartão de crédito em 3x", "cartao"),
-            ("Dinheiro na entrega", "dinheiro"), ("Boleto", None), ("", None),
+            ("Dinheiro na entrega", "dinheiro"), ("Boleto", "boleto"), ("", None),
             ("50% Pix e 50% no cartão", None),
         ):
             with self.subTest(texto=texto):

@@ -80,8 +80,8 @@
             </div>
 
             <div class="method-tabs ck-segmento" role="tablist" aria-label="Forma de pagamento">
-                <button type="button" class="method-tab ck-segmento-opcao active" data-method="pix"
-                        role="tab" aria-selected="true" aria-controls="pix-panel">
+                <button type="button" class="method-tab ck-segmento-opcao{% if not boleto_aberto %} active{% endif %}" data-method="pix"
+                        role="tab" aria-selected="{% if boleto_aberto %}false{% else %}true{% endif %}" aria-controls="pix-panel">
                     <i class="fa-brands fa-pix" aria-hidden="true"></i> Pix
                 </button>
                 <button type="button" class="method-tab ck-segmento-opcao" data-method="card"
@@ -92,11 +92,15 @@
                     <span class="ck-rotulo-largo">Cartão de crédito</span>
                     <span class="ck-rotulo-curto">Crédito</span>
                 </button>
+                <button type="button" class="method-tab ck-segmento-opcao{% if boleto_aberto %} active{% endif %}" data-method="boleto"
+                        role="tab" aria-selected="{% if boleto_aberto %}true{% else %}false{% endif %}" aria-controls="boleto-panel">
+                    <i class="fa-solid fa-barcode" aria-hidden="true"></i> Boleto
+                </button>
             </div>
 
             <div id="payment-error" class="payment-error" role="alert"></div>
 
-            <section id="pix-panel" class="payment-panel active" role="tabpanel" aria-label="Pix">
+            <section id="pix-panel" class="payment-panel{% if not boleto_aberto %} active{% endif %}" role="tabpanel" aria-label="Pix">
                 <div class="panel-head">
                     <h2 class="panel-title">Pague com Pix</h2>
                     <p class="panel-subtitle">
@@ -252,6 +256,93 @@
                     <i class="fa-solid fa-lock" aria-hidden="true"></i>
                     Processado pelo Mercado Pago. A Lazer &amp; Sport não vê o número do cartão.
                 </p>
+            </section>
+
+            {% comment %}
+              O boleto (LEIA-ME seção 100, core/boleto.py): pelo preço do Pix, à
+              vista, vencendo em 3 dias; o pedido fica reservado até lá. O banco
+              exige nome, CPF/CNPJ e endereço. Com um boleto aberto, a tela abre
+              nele e não gera Pix sozinha (o Pix cancelaria o boleto).
+            {% endcomment %}
+            <section id="boleto-panel" class="payment-panel{% if boleto_aberto %} active{% endif %}" role="tabpanel" aria-label="Boleto">
+                <div class="panel-head">
+                    <h2 class="panel-title">Boleto bancário</h2>
+                    <p class="panel-subtitle">
+                        Pelo preço do Pix, à vista. Vence em 3 dias e o pedido fica reservado até lá.
+                    </p>
+                </div>
+
+                <ul class="ck-selos boleto-selos" aria-label="Condições do boleto">
+                    <li><i class="fa-solid fa-barcode" aria-hidden="true"></i> R$ {{ total_final|moeda }} no boleto</li>
+                    <li><i class="fa-solid fa-calendar-check" aria-hidden="true"></i> Vence em 3 dias</li>
+                    <li><i class="fa-solid fa-clock" aria-hidden="true"></i> Confirma em 1 a 3 dias úteis</li>
+                </ul>
+
+                <form id="boleto-form" class="boleto-form"{% if boleto_aberto %} hidden{% endif %} novalidate>
+                    <div class="boleto-grade">
+                        <label class="ck-campo bf-nome">
+                            <span class="ck-rotulo">Nome completo <small>(no CNPJ, a razão social)</small></span>
+                            <span class="ck-entrada ck-entrada--sem-icone"><input name="nome" autocomplete="name" value="{{ boleto_prefill.nome }}" required></span>
+                        </label>
+                        <label class="ck-campo bf-doc">
+                            <span class="ck-rotulo">CPF ou CNPJ</span>
+                            <span class="ck-entrada ck-entrada--sem-icone"><input name="documento" inputmode="numeric" autocomplete="off" value="{{ boleto_prefill.documento }}" required></span>
+                        </label>
+                        <label class="ck-campo bf-cep">
+                            <span class="ck-rotulo">CEP</span>
+                            <span class="ck-entrada ck-entrada--sem-icone"><input name="cep" inputmode="numeric" autocomplete="postal-code" maxlength="9" value="{{ boleto_prefill.cep }}" required data-boleto-cep></span>
+                        </label>
+                        <label class="ck-campo bf-rua">
+                            <span class="ck-rotulo">Rua</span>
+                            <span class="ck-entrada ck-entrada--sem-icone"><input name="rua" autocomplete="address-line1" value="{{ boleto_prefill.rua }}" required></span>
+                        </label>
+                        <label class="ck-campo bf-num">
+                            <span class="ck-rotulo">Número</span>
+                            <span class="ck-entrada ck-entrada--sem-icone"><input name="numero" value="{{ boleto_prefill.numero }}" required></span>
+                        </label>
+                        <label class="ck-campo bf-bai">
+                            <span class="ck-rotulo">Bairro</span>
+                            <span class="ck-entrada ck-entrada--sem-icone"><input name="bairro" value="{{ boleto_prefill.bairro }}" required></span>
+                        </label>
+                        <label class="ck-campo bf-cid">
+                            <span class="ck-rotulo">Cidade</span>
+                            <span class="ck-entrada ck-entrada--sem-icone"><input name="cidade" autocomplete="address-level2" value="{{ boleto_prefill.cidade }}" required></span>
+                        </label>
+                        <label class="ck-campo bf-uf">
+                            <span class="ck-rotulo">UF</span>
+                            <span class="ck-entrada ck-entrada--sem-icone"><input name="uf" maxlength="2" autocomplete="address-level1" value="{{ boleto_prefill.uf }}" required></span>
+                        </label>
+                    </div>
+                    <button type="submit" class="ck-botao ck-botao--primario boleto-gerar" id="boleto-gerar">
+                        <i class="fa-solid fa-barcode" aria-hidden="true"></i> Gerar boleto de R$ {{ total_final|moeda }}
+                    </button>
+                </form>
+
+                <div id="boleto-pronto" class="boleto-pronto"{% if not boleto_aberto %} hidden{% endif %}>
+                    <div class="boleto-pronto-topo">
+                        <span class="boleto-pronto-icone" aria-hidden="true"><i class="fa-solid fa-check"></i></span>
+                        <div>
+                            <strong>Boleto gerado</strong>
+                            <small>Vence em <span id="boleto-vence">{{ boleto_aberto.vencimento }}</span> · o pedido fica reservado até lá</small>
+                        </div>
+                    </div>
+                    <label class="ck-rotulo" for="boleto-linha">Linha digitável</label>
+                    <div class="pix-copy">
+                        <div class="ck-entrada ck-entrada--sem-icone">
+                            <input id="boleto-linha" type="text" readonly value="{{ boleto_aberto.linha }}" aria-label="Linha digitável do boleto">
+                        </div>
+                        <button type="button" id="boleto-copiar" class="ck-botao ck-botao--secundario">
+                            <i class="fa-regular fa-copy" aria-hidden="true"></i> Copiar
+                        </button>
+                    </div>
+                    <a id="boleto-abrir" class="ck-botao ck-botao--primario boleto-abrir" href="{{ boleto_aberto.url|default:'#' }}" target="_blank" rel="noopener">
+                        <i class="fa-solid fa-download" aria-hidden="true"></i> Abrir o boleto (PDF)
+                    </a>
+                    <p class="boleto-nota">
+                        Mandamos o boleto também para o seu e-mail. Pago, o banco confirma em
+                        1 a 3 dias úteis e o pedido aparece como pago em <a href="{% url 'meus_pedidos' %}#pedidos">Meus pedidos</a>.
+                    </p>
+                </div>
             </section>
         </section>
 
@@ -1019,15 +1110,46 @@ document.addEventListener("DOMContentLoaded", () => {
         container.scrollIntoView({behavior: "smooth", block: "center"});
     }
 
+    // O boleto aberto (seção 100): a tela abre nele, e trocar de forma cancela
+    // o boleto (o servidor encerra a cobrança antes de abrir a outra).
+    let boletoAberto = {% if boleto_aberto %}true{% else %}false{% endif %};
+    let abaAtual = boletoAberto ? "boleto" : "pix";
+
+    function mostrarAba(metodo) {
+        abaAtual = metodo;
+        document.querySelectorAll(".method-tab").forEach(tab => {
+            const ativa = tab.dataset.method === metodo;
+            tab.classList.toggle("active", ativa);
+            tab.setAttribute("aria-selected", ativa ? "true" : "false");
+        });
+        document.getElementById("pix-panel").classList.toggle("active", metodo === "pix");
+        document.getElementById("card-panel").classList.toggle("active", metodo === "card");
+        document.getElementById("boleto-panel").classList.toggle("active", metodo === "boleto");
+    }
+
     document.querySelectorAll(".method-tab").forEach(button => {
         button.addEventListener("click", async () => {
-            document.querySelectorAll(".method-tab").forEach(tab => {
-                tab.classList.toggle("active", tab === button);
-                tab.setAttribute("aria-selected", tab === button ? "true" : "false");
-            });
-            const cardSelected = button.dataset.method === "card";
-            document.getElementById("pix-panel").classList.toggle("active", !cardSelected);
-            document.getElementById("card-panel").classList.toggle("active", cardSelected);
+            const metodo = button.dataset.method;
+            if (metodo === abaAtual) return;
+            if (boletoAberto && metodo !== "boleto") {
+                const pergunta = {
+                    titulo: "Trocar de forma de pagamento?",
+                    texto: "O boleto gerado será cancelado. Se você já pagou o boleto, não troque: a confirmação chega em até 3 dias úteis.",
+                    confirmar: metodo === "pix" ? "Pagar com Pix" : "Pagar com cartão",
+                    cancelar: "Manter o boleto"
+                };
+                // a folha do app (ls-aviso.js), nunca a caixa do navegador
+                const sim = window.LSAviso && window.LSAviso.confirmar
+                    ? await window.LSAviso.confirmar(pergunta)
+                    : false;
+                if (!sim) return;
+                boletoAberto = false;
+                pixPrecisaRecarregar = true;
+                document.getElementById("boleto-pronto").hidden = true;
+                document.getElementById("boleto-form").hidden = false;
+            }
+            mostrarAba(metodo);
+            const cardSelected = metodo === "card";
             // O erro do cartão é do cartão: sai da frente no Pix e volta
             // com a aba do cartão, enquanto o formulário não abrir.
             if (!cardSelected && errorBox.dataset.origem === "cartao") clearError();
@@ -1036,7 +1158,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             if (cardSelected) {
                 await createCardBrick();
-            } else if (pixPrecisaRecarregar && !leavingCheckout) {
+            } else if (metodo === "pix" && pixPrecisaRecarregar && !leavingCheckout) {
                 pixPrecisaRecarregar = false;
                 pixContent.style.display = "none";
                 pixLoading.style.display = "";
@@ -1094,11 +1216,99 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    // ---------------------------------------------------------- o boleto
+    const boletoForm = document.getElementById("boleto-form");
+    const boletoBotao = document.getElementById("boleto-gerar");
+    const boletoTextoBotao = boletoBotao ? boletoBotao.innerHTML : "";
+
+    function mostrarBoleto(dados) {
+        document.getElementById("boleto-linha").value = dados.linha || "";
+        document.getElementById("boleto-vence").textContent = dados.vencimento || "";
+        document.getElementById("boleto-abrir").href = dados.url || "#";
+        boletoForm.hidden = true;
+        document.getElementById("boleto-pronto").hidden = false;
+        boletoAberto = true;
+        pixPrecisaRecarregar = true;
+    }
+
+    // o CEP preenche a rua, o bairro, a cidade e a UF
+    const campoCep = boletoForm ? boletoForm.querySelector("[data-boleto-cep]") : null;
+    if (campoCep) {
+        campoCep.addEventListener("blur", () => {
+            const cep = campoCep.value.replace(/\D/g, "");
+            if (cep.length !== 8) return;
+            fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                .then(r => r.json())
+                .then(d => {
+                    if (!d || d.erro) return;
+                    const por = (nome, valor) => {
+                        const campo = boletoForm.querySelector(`[name="${nome}"]`);
+                        if (campo && valor && !campo.value.trim()) campo.value = valor;
+                    };
+                    por("rua", d.logradouro); por("bairro", d.bairro);
+                    por("cidade", d.localidade); por("uf", d.uf);
+                })
+                .catch(() => {});
+        });
+    }
+
+    if (boletoForm) {
+        boletoForm.addEventListener("submit", async evento => {
+            evento.preventDefault();
+            clearError();
+            const dados = Object.fromEntries(new FormData(boletoForm).entries());
+            boletoBotao.disabled = true;
+            boletoBotao.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i> Gerando o boleto...';
+            try {
+                const resposta = await fetch("{% url 'gerar_boleto' %}", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRFToken": csrfToken,
+                        "X-Requested-With": "XMLHttpRequest"
+                    },
+                    body: JSON.stringify({...dados, carrinho_id: carrinhoId})
+                });
+                const corpo = await resposta.json().catch(() => ({}));
+                if (corpo.pago) {
+                    window.location.href = corpo.redirect_url || "{% url 'meus_pedidos' %}#pedidos";
+                    return;
+                }
+                if (!resposta.ok || !corpo.boleto) {
+                    showError(corpo.detalhe ? `${corpo.erro} ${corpo.detalhe}` : (corpo.erro || "Não foi possível gerar o boleto."));
+                    return;
+                }
+                rememberPedido(corpo.pedido_id);
+                mostrarBoleto(corpo);
+            } catch (erro) {
+                showError("Sem conexão com o servidor. Tente de novo.");
+            } finally {
+                boletoBotao.disabled = false;
+                boletoBotao.innerHTML = boletoTextoBotao;
+            }
+        });
+    }
+
+    const boletoCopiar = document.getElementById("boleto-copiar");
+    if (boletoCopiar) {
+        boletoCopiar.addEventListener("click", async () => {
+            const campo = document.getElementById("boleto-linha");
+            try { await navigator.clipboard.writeText(campo.value); }
+            catch { campo.select(); document.execCommand("copy"); }
+            boletoCopiar.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i> Copiado';
+        });
+    }
+
     (async () => {
         const alreadyPaid = await checkPaymentStatus({silent: true});
-        if (!alreadyPaid && !leavingCheckout) {
-            await loadPix();
+        if (alreadyPaid || leavingCheckout) return;
+        if (boletoAberto) {
+            // o boleto aberto manda: nada de Pix novo por cima dele
+            pixPrecisaRecarregar = true;
+            mostrarAba("boleto");
+            return;
         }
+        await loadPix();
     })();
 });
 </script>

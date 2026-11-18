@@ -5665,6 +5665,7 @@ class RelatorioVendasView(LoginRequiredMixin, TemplateView):
         context['formas_pagamento'] = [
             ('pix', 'PIX'),
             ('cartao', 'Cartão'),
+            ('boleto', 'Boleto'),
             ('dinheiro', 'Dinheiro'),
             ('whatsapp', 'WhatsApp'),
         ]
@@ -6685,6 +6686,20 @@ class PaymentView(LoginRequiredMixin, View):
             "com_juros": bool(opcoes) and not opcoes[-1]["sem_juros"],
             "juros_ao_mes_pct": (checkout._parcelas.juros_ao_mes() * 100).quantize(Decimal("0.01")),
         })
+        # o boleto (seção 100): o aberto da reserva, ou o formulário preenchido
+        # com o que já se sabe do cliente
+        from . import boleto as regras_boleto
+
+        if reserva and reserva.boleto_aberto:
+            context["boleto_aberto"] = {
+                "url": reserva.boleto_url,
+                "linha": reserva.boleto_linha,
+                "vencimento": (
+                    timezone.localtime(reserva.boleto_vencimento).strftime("%d/%m/%Y")
+                    if reserva.boleto_vencimento else ""
+                ),
+            }
+        context["boleto_prefill"] = regras_boleto.preencher(request, carrinho)
 
         return render(request, "payment.html", context)
 
@@ -6968,6 +6983,16 @@ def gerar_pix(request):
         if resposta is not None:
             return resposta
 
+    # A cobrança aberta não era um Pix (um boleto, seção 100): o cliente
+    # trocou de forma de pagamento. Ela é cancelada antes -- duas cobranças
+    # vivas para o mesmo pedido, uma delas acabaria paga e recusada.
+    anterior = ""
+    if reserva and reserva.mp_payment_id:
+        anterior = str(reserva.mp_payment_id)
+        resposta = _encerrar_cobranca_anterior(sdk, reserva)
+        if resposta is not None:
+            return resposta
+
     # ------------------------------------------------------------------
     # 2. Reserva o pedido a partir do carrinho.
     # ------------------------------------------------------------------
@@ -7005,7 +7030,8 @@ def gerar_pix(request):
     # uma cobrança nova, e recarregar a página não gera duas.
     idempotency_key = uuid.uuid5(
         uuid.NAMESPACE_URL,
-        f"lazersport:pix:pedido:{pedido.id}:{pedido.mp_fingerprint}",
+        f"lazersport:pix:pedido:{pedido.id}:{pedido.mp_fingerprint}"
+        + (f":depois:{anterior}" if anterior else ""),
     )
 
     try:
@@ -7098,6 +7124,182 @@ def gerar_pix(request):
         "status": payment.get("status"),
         "valor": f"{total_final:.2f}",
     })
+
+
+def _encerrar_cobranca_anterior(sdk, reserva):
+    """Cancela a cobrança pendente da reserva antes de abrir outra forma.
+
+    Devolve None quando o caminho está livre, ou a resposta para o cliente:
+    a cobrança já foi paga (confirma e manda para Meus pedidos) ou não pôde
+    ser cancelada com segurança.
+    """
+    try:
+        status_anterior, payment_anterior = _cancelar_pagamento_pendente_mp(sdk, reserva.mp_payment_id)
+    except Exception:
+        payment_logger.exception("Falha ao encerrar a cobrança anterior do pedido %s", reserva.id)
+        return JsonResponse(
+            {"erro": "Não foi possível encerrar o pagamento anterior. Tente de novo em instantes."},
+            status=502,
+        )
+
+    if status_anterior == "approved":
+        try:
+            confirmado, _ = checkout.confirmar_pagamento(reserva, payment_anterior)
+        except checkout.PagamentoDivergente as exc:
+            return JsonResponse({"erro": "Pagamento aprovado com divergência.", "detalhe": str(exc)}, status=409)
+        return JsonResponse({"pago": True, "pedido_id": confirmado.id, "redirect_url": _url_meus_pedidos()})
+
+    if status_anterior not in checkout.STATUS_MORTOS:
+        return JsonResponse(
+            {"erro": "Já existe um pagamento em andamento. Não foi possível cancelá-lo com segurança."},
+            status=409,
+        )
+
+    reserva.mp_payment_id = None
+    reserva.save(update_fields=["mp_payment_id", "atualizado"])
+    return None
+
+
+def _resposta_do_boleto(pedido):
+    return {
+        "boleto": True,
+        "url": pedido.boleto_url,
+        "linha": pedido.boleto_linha,
+        "vencimento": (
+            timezone.localtime(pedido.boleto_vencimento).strftime("%d/%m/%Y")
+            if pedido.boleto_vencimento else ""
+        ),
+        "pedido_id": pedido.id,
+        "valor": f"{_valor_monetario(pedido.total_final):.2f}",
+    }
+
+
+@require_POST
+def gerar_boleto(request):
+    """Reserva o pedido e devolve o boleto dele (LEIA-ME seção 100).
+
+    O boleto sai pelo preço do Pix (o total do pedido), à vista, vencendo em
+    3 dias. Como no Pix: a reserva vem antes da cobrança e é desfeita se o
+    Mercado Pago recusar; a cobrança aberta de outra forma é cancelada antes;
+    abrir de novo devolve o MESMO boleto enquanto ele vale.
+    """
+    from . import boleto as regras_boleto
+
+    if not request.user.is_authenticated:
+        return JsonResponse({"erro": "Entre na sua conta para gerar o boleto."}, status=401)
+
+    try:
+        dados = json.loads(request.body.decode("utf-8") or "{}")
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({"erro": "Dados inválidos."}, status=400)
+
+    carrinho = _carrinho_pagamento_do_usuario(request, dados.get("carrinho_id"))
+    if not carrinho:
+        return JsonResponse({"erro": "Carrinho inválido ou sem permissão."}, status=404)
+
+    if not settings.MP_ACCESS_TOKEN:
+        payment_logger.error("MP_ACCESS_TOKEN não configurado")
+        return JsonResponse({"erro": "Pagamento indisponível. Credencial não configurada."}, status=503)
+
+    payer_email = (request.user.email or "").strip()
+    if not payer_email:
+        return JsonResponse({"erro": "Cadastre um e-mail válido no seu perfil para gerar o boleto."}, status=400)
+
+    try:
+        limpos = regras_boleto.validar(dados)
+    except regras_boleto.DadosInvalidos as exc:
+        return JsonResponse({"erro": str(exc), "campo": True}, status=400)
+
+    sdk = mercadopago.SDK(settings.MP_ACCESS_TOKEN)
+    reserva = checkout.pedido_reservado_do_carrinho(carrinho)
+
+    # o mesmo boleto, enquanto ele vale
+    if reserva and reserva.boleto_aberto and reserva.mp_payment_id and not carrinho.itens.exists():
+        return JsonResponse(_resposta_do_boleto(reserva))
+
+    anterior = ""
+    if reserva and reserva.mp_payment_id:
+        anterior = str(reserva.mp_payment_id)
+        resposta = _encerrar_cobranca_anterior(sdk, reserva)
+        if resposta is not None:
+            return resposta
+
+    try:
+        pedido, _ = checkout.reservar_pedido(carrinho, usuario=request.user)
+    except checkout.ReservaInvalida as exc:
+        return JsonResponse({"erro": str(exc)}, status=400)
+    except Exception:
+        payment_logger.exception("Falha ao reservar pedido do carrinho %s (boleto)", carrinho.id)
+        return JsonResponse({"erro": "Não foi possível iniciar o pagamento."}, status=500)
+
+    total_final = _valor_monetario(pedido.total_final)
+    vence = regras_boleto.vencimento()
+    payment_data = {
+        "transaction_amount": float(total_final),
+        "description": f"Lazer & Sport - Pedido #{pedido.id}",
+        "payment_method_id": regras_boleto.METODO,
+        "date_of_expiration": regras_boleto.vencimento_mp(vence),
+        "external_reference": checkout.referencia_do_pedido(pedido),
+        "notification_url": request.build_absolute_uri(reverse("webhook_mp")),
+        "payer": regras_boleto.pagador(payer_email, limpos),
+        "metadata": {
+            "cart_fingerprint": pedido.mp_fingerprint,
+            "cart_total": f"{total_final:.2f}",
+            "pedido_id": pedido.id,
+        },
+    }
+    idempotency_key = uuid.uuid5(
+        uuid.NAMESPACE_URL,
+        f"lazersport:boleto:pedido:{pedido.id}:{pedido.mp_fingerprint}:{limpos['documento']}"
+        + (f":depois:{anterior}" if anterior else ""),
+    )
+
+    try:
+        response = sdk.payment().create(payment_data, _mp_request_options(idempotency_key))
+    except Exception:
+        payment_logger.exception("Erro de comunicação ao criar o boleto do pedido %s", pedido.id)
+        checkout.expirar_reserva(pedido, "falha de comunicação com o provedor (boleto)")
+        return JsonResponse({"erro": "Não foi possível comunicar com o Mercado Pago."}, status=502)
+
+    payment = response.get("response") or {}
+    status_code = int(response.get("status") or 500)
+    info = regras_boleto.dados_da_resposta(payment)
+
+    if status_code not in {200, 201} or not payment.get("id") or not info["url"]:
+        payment_logger.error(
+            "Mercado Pago recusou o boleto pedido=%s http=%s resposta=%r", pedido.id, status_code, payment,
+        )
+        checkout.expirar_reserva(pedido, "boleto recusado pelo provedor")
+        if _mp_auth_error(status_code, payment):
+            return JsonResponse({"erro": "Pagamento temporariamente indisponível."}, status=503)
+        return JsonResponse(
+            {"erro": "Não foi possível gerar o boleto.", "detalhe": _mp_error_message(payment)},
+            status=400 if status_code < 500 else 502,
+        )
+
+    valor_retornado = _valor_monetario(payment.get("transaction_amount"))
+    if valor_retornado != total_final:
+        payment_logger.critical(
+            "Boleto com divergência de valor: pedido=%s esperado=%s retornado=%s",
+            pedido.id, total_final, valor_retornado,
+        )
+        checkout.expirar_reserva(pedido, "divergência de valor no boleto")
+        return JsonResponse({"erro": "Cobrança bloqueada por divergência de valor."}, status=409)
+
+    pedido.mp_payment_id = str(payment["id"])
+    pedido.mp_status = payment.get("status") or "pending"
+    pedido.boleto_url = info["url"][:500]
+    pedido.boleto_linha = info["linha"][:80]
+    pedido.boleto_vencimento = info["vencimento"] or vence
+    pedido.save(update_fields=[
+        "mp_payment_id", "mp_status", "boleto_url", "boleto_linha", "boleto_vencimento", "atualizado",
+    ])
+    Carrinho.objects.filter(pk=carrinho.pk).update(mp_payment_id=pedido.mp_payment_id, cpf_cnpj=limpos["documento"])
+
+    from .notificacoes import enviar_boleto
+
+    transaction.on_commit(lambda: enviar_boleto(pedido))
+    return JsonResponse(_resposta_do_boleto(pedido))
 
 
 def _reaproveitar_cobranca(sdk, pedido):

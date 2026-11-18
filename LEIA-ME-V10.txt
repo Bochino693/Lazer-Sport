@@ -5865,3 +5865,50 @@ Dependência nova: rjsmin (requirements.txt).
    Testes: core/tests_promocoes_6x.py (a regra por objeto, o campo do painel, o
    bloco de preço), core/tests_conferencia_pagamento.py (juros acima das vezes,
    o pedido misto) e core/tests.py (brinquedo 10x com juros, promoção 10x sem).
+
+100) BOLETO NO CHECKOUT (PREÇO DO PIX, VENCE EM 3 DIAS) E A PUBLICAÇÃO NA LOJA
+   O PEDIDO: "seria bom pôr opção de pagamento por boleto também?" -> "pode
+   colocar e reveja o resto que falei sobre publicar novas promoções, pôr
+   novos itens na loja etc.". O boleto é a forma mais barata da conta do
+   Mercado Pago (R$ 3,49 fixos, contra 0,99% do Pix) e a que muita empresa
+   (shopping, buffet) usa. Na conta do Mercado Pago não há nada a ligar: o
+   boleto já vem liberado no Checkout.
+   A REGRA (core/boleto.py):
+     * pelo PREÇO DO PIX (o total_final do pedido), à vista, sem os 12%;
+     * vence em 3 dias, às 23:59:59 de Brasília (VENCIMENTO_DIAS);
+     * o banco exige o pagador: nome (no CNPJ, a razão social), CPF ou CNPJ
+       válidos (sistema_interno/validacoes.py), CEP, rua, número, bairro,
+       cidade e UF -- validar() devolve a frase para o cliente;
+     * payment_method_id "bolbradesco" (payment_type_id "ticket").
+   O FLUXO (core/views.py: gerar_boleto, POST /api/gerar-boleto/):
+     * como o Pix: reserva o pedido ANTES de cobrar; recusado, os itens voltam
+       ao carrinho; abrir de novo devolve o MESMO boleto enquanto ele vale;
+     * uma cobrança viva por pedido: gerar o boleto cancela o Pix pendente, e
+       gerar o Pix cancela o boleto pendente (_encerrar_cobranca_anterior; o
+       cartão já fazia isso). A chave de idempotência leva a cobrança anterior,
+       para o Mercado Pago não devolver a cobrança velha cancelada;
+     * Pedido.boleto_url / boleto_linha / boleto_vencimento (core/0203,
+       esquema; a 0203 também põe "boleto" nas formas do Pedido e da Venda);
+       Pedido.boleto_aberto = esperando o pagamento e com boleto;
+     * pago (1 a 3 dias úteis), o webhook e a consulta do checkout confirmam
+       como qualquer pagamento: forma "boleto", valor_cobrado, a venda com a
+       forma "boleto" (Pedido.FORMA_DA_VENDA). O Mercado Pago cancela o boleto
+       vencido e o webhook devolve os itens ao carrinho;
+     * o e-mail com o boleto (core/notificacoes.enviar_boleto,
+       templates/emails/boleto_gerado.*), numa thread, depois do commit.
+   NA TELA: a terceira aba "Boleto" no pagamento (Pix, Crédito, Boleto): o
+   formulário já preenchido com o que se sabe do cliente (boleto.preencher; o
+   CEP completa o endereço pelo ViaCEP) e, gerado, o "Boleto gerado" com a
+   linha digitável (Copiar), o PDF e o vencimento. Com um boleto aberto a tela
+   abre nele e NÃO gera Pix sozinha; trocar de aba pergunta antes ("O boleto
+   gerado será cancelado..."). Meus pedidos mostra "Boleto gerado, vence em
+   ..." e "Abrir o boleto"; pago, "Pago com Boleto".
+   A PUBLICAÇÃO NA LOJA (revisada): promoção, brinquedo, peça e combo
+   cadastrados ou editados pelo painel aparecem na hora (o cache do catálogo
+   se apaga ao salvar: core/signals.py) com o Pix, o cartão + 12% e as vezes
+   sem juros do item (seção 99): vazio = o padrão; 1x a 10x = a exceção; 11 é
+   recusado. core/tests_publicar_na_loja.py faz isso pelo POST do painel e
+   confere o card da loja.
+   Testes: core/tests_boleto.py (as regras, gerar, reaproveitar, recusado,
+   trocar para o Pix cancela o boleto, pago diz "boleto", as telas) e
+   core/tests_publicar_na_loja.py.

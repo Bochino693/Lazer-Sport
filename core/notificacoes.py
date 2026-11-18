@@ -211,3 +211,70 @@ def enviar_confirmacao_de_compra(pedido, bloqueante=False):
     )
     thread.start()
     return True
+
+
+# ----------------------------------------------------------------------
+# O boleto gerado (LEIA-ME seção 100)
+# ----------------------------------------------------------------------
+def montar_email_boleto(pedido):
+    """O e-mail com o boleto: o valor, a linha digitável, o vencimento e o link."""
+    from django.utils import timezone
+
+    destinatario = _email_do_pedido(pedido)
+    if not destinatario or not pedido.boleto_url:
+        return None
+    contexto = {
+        "pedido": pedido,
+        "total": _moeda(pedido.total_final),
+        "vencimento": (
+            timezone.localtime(pedido.boleto_vencimento).strftime("%d/%m/%Y")
+            if pedido.boleto_vencimento else ""
+        ),
+        "primeiro_nome": _nome_do_pedido(pedido),
+        "url_pedidos": _url_absoluta(reverse("meus_pedidos") + "#pedidos"),
+        "whatsapp": "https://wa.me/5511960563135",
+    }
+    corpo_html = render_to_string("emails/boleto_gerado.html", contexto)
+    corpo_texto = render_to_string("emails/boleto_gerado.txt", contexto)
+    mensagem = EmailMultiAlternatives(
+        subject=f"Boleto do pedido #{pedido.id} — Lazer & Sport",
+        body=corpo_texto or strip_tags(corpo_html),
+        from_email=remetente(),
+        to=[destinatario],
+        reply_to=responder_para(),
+    )
+    mensagem.attach_alternative(corpo_html, "text/html")
+    return mensagem
+
+
+def _enviar_boleto_agora(pedido_id):
+    from .models import Pedido
+
+    try:
+        pedido = Pedido.objects.select_related("cliente__user").filter(pk=pedido_id).first()
+        if not pedido or not settings.EMAIL_HOST_USER:
+            return False
+        mensagem = montar_email_boleto(pedido)
+        if mensagem is None:
+            return False
+        mensagem.send(fail_silently=False)
+        logger.info("E-mail do boleto do pedido %s enviado.", pedido_id)
+        return True
+    except Exception:
+        # O boleto existe e está na tela: um SMTP fora do ar não o desfaz.
+        logger.exception("Falha ao enviar o e-mail do boleto do pedido %s.", pedido_id)
+        return False
+    finally:
+        close_old_connections()
+
+
+def enviar_boleto(pedido, bloqueante=False):
+    """Manda o boleto por e-mail (numa thread: quem chama é o checkout)."""
+    if pedido is None or not pedido.boleto_url:
+        return False
+    if bloqueante:
+        return _enviar_boleto_agora(pedido.pk)
+    threading.Thread(
+        target=_enviar_boleto_agora, args=(pedido.pk,), name=f"email-boleto-{pedido.pk}", daemon=True,
+    ).start()
+    return True

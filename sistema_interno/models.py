@@ -1653,6 +1653,7 @@ _FORMAS_DA_VENDA = (
     ("pix", ("pix",)),
     ("cartao", ("cartão", "cartao", "crédito", "credito", "débito", "debito")),
     ("dinheiro", ("dinheiro", "espécie", "especie")),
+    ("boleto", ("boleto",)),
 )
 
 

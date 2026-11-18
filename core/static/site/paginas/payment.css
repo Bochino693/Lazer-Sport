@@ -817,3 +817,65 @@
 @media (max-width: 520px) {
     .ck-parcelas-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* Pix, cartão e boleto (LEIA-ME seção 100): três abas lado a lado */
+.method-tabs.ck-segmento { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 440px) {
+    .method-tabs .ck-segmento-opcao { gap: 5px; padding: 8px 4px; font-size: .82rem; }
+}
+
+/* O boleto: o formulário do pagador e o boleto pronto */
+.boleto-selos { margin-bottom: 14px; }
+.boleto-form { display: grid; gap: 16px; }
+.boleto-grade {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-areas:
+        "nome nome nome nome nome nome"
+        "doc  doc  doc  cep  cep  cep"
+        "rua  rua  rua  rua  num  num"
+        "bai  bai  cid  cid  cid  uf";
+    gap: 12px;
+}
+.bf-nome { grid-area: nome; } .bf-doc { grid-area: doc; } .bf-cep { grid-area: cep; }
+.bf-rua { grid-area: rua; } .bf-num { grid-area: num; } .bf-bai { grid-area: bai; }
+.bf-cid { grid-area: cid; } .bf-uf { grid-area: uf; }
+.boleto-gerar { width: 100%; min-height: 52px; font-size: 1rem; }
+.boleto-pronto {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 18px;
+    background: linear-gradient(140deg, #13265a 0%, #0e1d47 55%, #1b1250 100%);
+    border: 1px solid #2b4472;
+}
+.boleto-pronto[hidden], .boleto-form[hidden] { display: none; }
+.boleto-pronto-topo { display: flex; align-items: center; gap: 12px; }
+.boleto-pronto-topo strong { display: block; color: #eef4ff; font-size: 1.05rem; font-weight: 900; }
+.boleto-pronto-topo small { color: #a9bcd9; font-size: .8rem; font-weight: 700; }
+.boleto-pronto-icone {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #12b886, #34e08a);
+    color: #04291a;
+    font-size: 1.1rem;
+}
+.boleto-pronto #boleto-linha { font-family: Consolas, "SFMono-Regular", monospace; font-size: .92rem; }
+.boleto-abrir { width: 100%; min-height: 50px; justify-content: center; }
+.boleto-nota { margin: 0; color: #a9bcd9; font-size: .82rem; line-height: 1.45; }
+.boleto-nota a { color: #6fb6ff; font-weight: 800; }
+@media (max-width: 520px) {
+    /* no celular: CEP com número e cidade com UF, lado a lado */
+    .boleto-grade {
+        grid-template-areas:
+            "nome nome nome nome nome nome"
+            "doc  doc  doc  doc  doc  doc"
+            "cep  cep  cep  num  num  num"
+            "rua  rua  rua  rua  rua  rua"
+            "bai  bai  bai  bai  bai  bai"
+            "cid  cid  cid  cid  uf   uf";
+    }
+}
