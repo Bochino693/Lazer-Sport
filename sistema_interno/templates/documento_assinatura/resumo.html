@@ -27,6 +27,10 @@
         <div><dt>Recebido até a emissão</dt><dd>{{ conteudo.valores.pago|reais }}</dd></div>
       {% endif %}
       {% if conteudo.condicoes.forma_envio %}<div><dt>Envio</dt><dd>{{ conteudo.condicoes.forma_envio }}</dd></div>{% endif %}
+      {% if conteudo.tipo == "contrato" %}
+        <div><dt>Entrega (Cláusula 3ª)</dt><dd>{{ conteudo.prazo.numero }} {{ conteudo.prazo.unidade }}</dd></div>
+        <div><dt>Vendedor</dt><dd>{{ conteudo.vendedor.representante_nome }}</dd></div>
+      {% endif %}
     </dl>
   {% else %}
     <p class="ls-doc-resumo-nota"><i class="bi bi-info-circle" aria-hidden="true"></i> Ao gerar, isto fica congelado no documento.</p>
@@ -46,6 +50,7 @@
         <div><dt>Já recebido</dt><dd>{{ orcamento.valor_pago|reais }}</dd></div>
       {% endif %}
       {% if orcamento.forma_envio %}<div><dt>Envio</dt><dd>{{ orcamento.forma_envio }}</dd></div>{% endif %}
+      <div><dt>Entrega (Cláusula 3ª)</dt><dd>{{ prazo_entrega }} dia{{ prazo_entrega|pluralize }} út{{ prazo_entrega|pluralize:"il,eis" }}{% if orcamento.prazo_producao_dias is None %} <small>(padrão)</small>{% endif %}</dd></div>
     </dl>
   {% endif %}
 </aside>

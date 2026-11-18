@@ -66,6 +66,10 @@ ASSINAR = "/meus-pedidos/orcamento/assinar/"
 class Base(TestCase):
     def setUp(self):
         cache.clear()
+        # O contrato não sai sem os dados do vendedor (LEIA-ME-V10, seção 109).
+        from sistema_interno.tests_documento_assinatura import preencher_dados_do_contrato
+
+        preencher_dados_do_contrato()
         self.cliente = self.conta("cliente-codigo")
         self.outro = self.conta("outra-conta")
         self.equipe = User.objects.create_user("equipe-codigo", password="x", is_staff=True)

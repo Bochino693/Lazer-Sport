@@ -2721,6 +2721,100 @@ class DocumentoAssinatura(Prime):
         ordering = ("-criacao", "-id")
 
 
+class DadosContrato(Prime):
+    """Os dados do VENDEDOR no contrato de compra e venda (LEIA-ME-V10, 107).
+
+    O contrato que o cliente assina no celular diz quem vende e quem
+    representa a empresa: "neste ato representada por {nome}, portador da
+    cédula de identidade RG {rg}, residente e domiciliado na {endereço}".
+
+    DOIS TIPOS DE DADO, DOIS TRATAMENTOS. Os da EMPRESA (nome fantasia,
+    razão social, CNPJ e sede) são públicos -- estão no site, na proposta,
+    no cartão do CNPJ -- e nascem preenchidos (os padrões abaixo). Os do
+    REPRESENTANTE (nome, RG, endereço residencial) são PESSOAIS: não moram
+    no código nem em migração. Ficam vazios até o dono preencher na tela
+    "Dados do contrato" do painel, e enquanto faltarem o contrato não sai
+    para assinatura (`documento_assinatura.gerar` recusa, dizendo o quê).
+
+    Uma linha só (`atual`). O contrato gerado COPIA estes dados para o
+    retrato dele: trocar aqui depois não muda um contrato já gerado.
+    """
+
+    nome_fantasia = models.CharField(
+        "Nome fantasia", max_length=120, default="Brinquedos Lazer & Sport",
+    )
+    razao_social = models.CharField(
+        "Razão social", max_length=160,
+        default="Fábrica de Brinquedos Lazer & Sport Oficial – LTDA",
+    )
+    cnpj = models.CharField("CNPJ", max_length=18, default="54.486.908/0001-86")
+    endereco_sede = models.CharField(
+        "Endereço da sede", max_length=240,
+        default="Rua São Roque de Minas, n. 104, Jardim Peri, São Paulo, Capital",
+        help_text="Como sai no contrato: “com sede na …”.",
+    )
+    cidade = models.CharField(
+        "Cidade do contrato", max_length=80, default="São Paulo",
+        help_text="A cidade do fecho: “São Paulo, 18 de novembro de 2026”.",
+    )
+    representante_nome = models.CharField(
+        "Nome do representante", max_length=160, blank=True,
+        help_text="Quem assina pela empresa (o proprietário).",
+    )
+    representante_rg = models.CharField("RG do representante", max_length=30, blank=True)
+    representante_endereco = models.CharField(
+        "Endereço residencial do representante", max_length=240, blank=True,
+        help_text="Como sai no contrato: “residente e domiciliado na …”.",
+    )
+    atualizado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="+",
+        null=True,
+        blank=True,
+        editable=False,
+    )
+
+    #: O que o contrato não sai sem, com o nome que a tela e o aviso usam.
+    OBRIGATORIOS = (
+        ("nome_fantasia", "nome fantasia"),
+        ("razao_social", "razão social"),
+        ("cnpj", "CNPJ"),
+        ("endereco_sede", "endereço da sede"),
+        ("cidade", "cidade do contrato"),
+        ("representante_nome", "nome do representante"),
+        ("representante_rg", "RG do representante"),
+        ("representante_endereco", "endereço do representante"),
+    )
+
+    @classmethod
+    def atual(cls):
+        """A linha que vale (cria a dos padrões da empresa se não houver)."""
+        dados = cls.objects.order_by("id").first()
+        if dados is None:
+            dados = cls.objects.create()
+        return dados
+
+    @property
+    def faltando(self):
+        """Os rótulos do que ainda está vazio, na ordem do formulário."""
+        return [
+            rotulo for campo, rotulo in self.OBRIGATORIOS
+            if not (getattr(self, campo, "") or "").strip()
+        ]
+
+    @property
+    def completo(self):
+        return not self.faltando
+
+    def __str__(self):
+        return f"Dados do contrato ({self.nome_fantasia})"
+
+    class Meta:
+        verbose_name = "Dados do contrato"
+        verbose_name_plural = "Dados do contrato"
+
+
 class AvaliacaoBlocoOrcamento(Prime):
     """Decisão do superadministrador sobre cada responsabilidade da proposta."""
 

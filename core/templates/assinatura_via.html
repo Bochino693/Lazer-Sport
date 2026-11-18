@@ -15,11 +15,12 @@
   janela em que se escolhe "Salvar como PDF". É o caminho que a proposta
   já usa ("Imprimir ou salvar em PDF").
 {% endcomment %}
-<title>{{ doc.titulo }} nº {{ doc.orcamento.numero }}{% if documento.assinado %} · assinado{% endif %} | Lazer &amp; Sport</title>
+<title>{{ doc.titulo_curto|default:doc.titulo }} nº {{ doc.orcamento.numero }}{% if documento.assinado %} · assinado{% endif %} | Lazer &amp; Sport</title>
 {% include "partials/icones_da_aba.html" with sem_app=True %}
 <link rel="stylesheet" href="{% estatico 'vendor/fontes.css' %}">
 <link rel="stylesheet" href="{% static 'interno/vendor/bootstrap-icons.min.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/paginas/assinatura.css' %}">
+{% include "documento_assinatura/impressao.html" %}
 </head>
 <body class="estado-via">
 
@@ -28,7 +29,7 @@
     <a class="app-barra-voltar" href="{{ voltar_url }}"><i class="bi bi-chevron-left" aria-hidden="true"></i> Voltar</a>
   {% endif %}
   <span class="app-barra-marca">
-    <span><strong>{% if documento.assinado %}Documento assinado{% else %}Prévia do documento{% endif %}</strong><small>Orçamento nº {{ doc.orcamento.numero }}</small></span>
+    <span><strong>{% if documento.assinado %}Documento assinado{% else %}Prévia do documento{% endif %}</strong><small>{% if e_contrato %}Contrato{% else %}Orçamento{% endif %} nº {{ doc.orcamento.numero }}</small></span>
   </span>
   <button type="button" class="botao-barra" id="baixarPdf" data-imprimir-ao-abrir="{% if imprimir_ao_abrir %}1{% endif %}">
     <i class="bi bi-file-earmark-arrow-down" aria-hidden="true"></i> Salvar em PDF
@@ -39,7 +40,7 @@
   {% if not documento.assinado %}
     <div class="faixa-aviso nao-imprime">
       <i class="bi bi-hourglass-split" aria-hidden="true"></i>
-      {% if documento.situacao == "substituido" %}Esta versão foi substituída por um documento novo e não vale mais para assinar.{% else %}Ainda sem assinatura: é assim que o cliente vê o termo pelo link.{% endif %}
+      {% if documento.situacao == "substituido" %}Esta versão foi substituída por um documento novo e não vale mais para assinar.{% else %}Ainda sem assinatura: é assim que o cliente vê o {% if e_contrato %}contrato{% else %}termo{% endif %} pelo link.{% endif %}
     </div>
   {% endif %}
   <section class="folha-moldura" aria-label="Documento">

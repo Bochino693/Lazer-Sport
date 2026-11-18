@@ -21,18 +21,19 @@
   avisos do link ("expirado", "substituido", "suspenso", "invalido"), o
   freio ("limite") e "assinado" (o comprovante, com a cópia em PDF).
 {% endcomment %}
-<title>{% if estado == "assinado" %}Documento assinado{% elif estado == "assinar" %}Assinar o termo de compra{% else %}Link de assinatura{% endif %} | Lazer &amp; Sport</title>
+<title>{% if estado == "assinado" %}Documento assinado{% elif estado == "assinar" %}{% if e_contrato %}Assinar o contrato{% else %}Assinar o termo de compra{% endif %}{% else %}Link de assinatura{% endif %} | Lazer &amp; Sport</title>
 {% include "partials/icones_da_aba.html" %}
 <link rel="stylesheet" href="{% estatico 'vendor/fontes.css' %}">
 <link rel="stylesheet" href="{% static 'interno/vendor/bootstrap-icons.min.css' %}">
 <link rel="stylesheet" href="{% estatico 'site/paginas/assinatura.css' %}">
+{% if documento %}{% include "documento_assinatura/impressao.html" %}{% endif %}
 </head>
 <body class="estado-{{ estado }}">
 
 <header class="app-barra nao-imprime">
   <span class="app-barra-marca">
     <img src="{% static 'images/logoofi.png' %}" alt="Lazer &amp; Sport" width="34" height="34">
-    <span><strong>Lazer &amp; Sport</strong><small>{% if estado == "assinado" %}Comprovante{% elif estado == "assinar" %}Termo de compra{% else %}Assinatura{% endif %}</small></span>
+    <span><strong>Lazer &amp; Sport</strong><small>{% if estado == "assinado" %}Comprovante{% elif estado == "assinar" %}{% if e_contrato %}Contrato de compra e venda{% else %}Termo de compra{% endif %}{% else %}Assinatura{% endif %}</small></span>
   </span>
   {% if estado == "assinar" %}
     <span class="relogio" id="relogio" role="timer" aria-live="off"
@@ -55,12 +56,19 @@
     {# "pago" só quando o termo diz que estava pago (o modelo antigo era sempre). #}
     <span class="kicker"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pedido nº {{ doc.orcamento.numero }} · {% if doc.pagamento.situacao == "Pago" %}pago{% else %}aprovado{% endif %}</span>
     <h1>Olá{% if doc.cliente.nome %}, {{ doc.cliente.nome }}{% endif %}! Falta só assinar.</h1>
-    <p>Confira o termo de compra abaixo e assine com o dedo. Este link vale por {{ validade_minutos }} minutos.</p>
+    {% if e_contrato %}
+      <p>Leia o contrato de compra e venda abaixo — com as fotos do que você está comprando — e assine com o dedo no fim da página. Este link vale por {{ validade_minutos }} minutos.</p>
+    {% else %}
+      <p>Confira o termo de compra abaixo e assine com o dedo. Este link vale por {{ validade_minutos }} minutos.</p>
+    {% endif %}
     <ol class="passos" aria-label="Como assinar">
-      <li><span>1</span>Confira</li>
+      <li><span>1</span>{% if e_contrato %}Leia{% else %}Confira{% endif %}</li>
       <li><span>2</span>Seus dados</li>
       <li><span>3</span>Assine</li>
     </ol>
+    {% if e_contrato %}
+      <a class="ir-assinar" href="#formAssinatura"><i class="bi bi-arrow-down-circle" aria-hidden="true"></i> Ir direto para a assinatura</a>
+    {% endif %}
   </section>
 
   {% if erro %}
@@ -93,7 +101,7 @@
     <label class="concordo{% if erro_campo == 'concordo' %} com-erro{% endif %}" data-campo="concordo">
       <input type="checkbox" name="concordo" id="campoConcordo" value="1">
       <span class="concordo-caixa" aria-hidden="true"><i class="bi bi-check-lg"></i></span>
-      <span>Li e concordo com o {{ doc.titulo|default:"termo de compra"|lower }} acima.</span>
+      <span>{% if e_contrato %}Li e concordo com todas as cláusulas deste contrato de compra e venda.{% else %}Li e concordo com o {{ doc.titulo|default:"termo de compra"|lower }} acima.{% endif %}</span>
     </label>
 
     <div class="quadro{% if erro_campo == 'assinatura' %} com-erro{% endif %}" data-campo="assinatura">
@@ -141,7 +149,7 @@
         <span class="icone-grande ambar"><i class="bi bi-hourglass-bottom" aria-hidden="true"></i></span>
         <h2>O tempo do link acabou</h2>
         <p>Por segurança, cada link vale {{ validade_minutos }} minutos. Nada foi salvo. Peça um link novo ao atendente — seu nome e documento continuam preenchidos neste aparelho.</p>
-        {% if whatsapp_empresa %}<a class="botao-principal verde" href="https://wa.me/{{ whatsapp_empresa }}?text={{ 'Olá! O link para assinar o termo do pedido nº '|urlencode }}{{ doc.orcamento.numero|urlencode }}{{ ' expirou. Pode me mandar um novo?'|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp" aria-hidden="true"></i> Pedir um novo link</a>{% endif %}
+        {% if whatsapp_empresa %}<a class="botao-principal verde" href="https://wa.me/{{ whatsapp_empresa }}?text={% if e_contrato %}{{ 'Olá! O link para assinar o contrato do pedido nº '|urlencode }}{% else %}{{ 'Olá! O link para assinar o termo do pedido nº '|urlencode }}{% endif %}{{ doc.orcamento.numero|urlencode }}{{ ' expirou. Pode me mandar um novo?'|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp" aria-hidden="true"></i> Pedir um novo link</a>{% endif %}
         <button type="button" class="botao-secundario" data-fechar>Fechar</button>
       </div>
     </div>

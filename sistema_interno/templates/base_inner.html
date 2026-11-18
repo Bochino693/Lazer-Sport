@@ -389,6 +389,13 @@
           <span class="ls-nav-count" data-selo="count_orcamentos" data-mostrar-zero="1" title="Em aberto">…</span>
         </a>
         {% endif %}
+        {% if permissoes_interno.dados_contrato %}
+        {# Os dados do vendedor no contrato de compra e venda (LEIA-ME-V10, seção 109). #}
+        <a data-titulo="Dados do contrato" aria-label="Dados do contrato" class="ls-nav-item {% if request.resolver_match.url_name == 'dados_contrato_inner' %}active{% endif %}" href="{% url 'dados_contrato_inner' %}">
+          <span class="ls-nav-icon"><i class="bi bi-file-earmark-ruled-fill"></i></span>
+          <span>Dados do contrato</span>
+        </a>
+        {% endif %}
         {% if permissoes_interno.clientes %}
         <a data-titulo="Projetos 3D do site" aria-label="Projetos 3D do site" class="ls-nav-item {% if request.resolver_match.url_name == 'pedidos_projeto_3d' or request.resolver_match.url_name == 'pedido_projeto_3d' %}active{% endif %}" href="{% url 'pedidos_projeto_3d' %}">
           <span class="ls-nav-icon"><i class="bi bi-badge-3d-fill"></i></span>

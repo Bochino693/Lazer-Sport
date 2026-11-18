@@ -156,8 +156,9 @@ class VendaDoPagamentoTests(BaseVenda):
 
     def test_sem_cadastro_vale_o_cpf_de_quem_assinou(self):
         from . import documento_assinatura as svc
-        from .tests_documento_assinatura import png_de_assinatura
+        from .tests_documento_assinatura import png_de_assinatura, preencher_dados_do_contrato
 
+        preencher_dados_do_contrato()  # o contrato não sai sem o vendedor
         orcamento = self.orcamento(cliente=False, forma_pagamento="50% no Pix e 50% no cartão")
         documento = svc.gerar(orcamento, self.financeiro)
         token, _ = svc.emitir_link(documento)

@@ -1,0 +1,197 @@
+{% load static interno_extras contrato_extras %}
+{% comment %}
+  O CONTRATO DE COMPRA E VENDA -- o papel que o cliente assina no celular
+  (LEIA-ME-V10, seção 109).
+
+  O dono: "no contrato final de assinatura, devem ter essas cláusulas,
+  fotos do item também e melhor aproveitamento das folhas (...) ponha um
+  contrato de assinatura bom e visível, como o de orçamento."
+
+  A ORDEM É A DO CONTRATO DA EMPRESA: o título, o quadro "Quantidade |
+  Equipamento" com o valor, o preâmbulo (VENDEDOR por inteiro, as duas
+  partes lado a lado), as onze cláusulas -- a 1ª com a foto de cada item,
+  a 2ª com o valor por extenso e a condição de pagamento, a 3ª com o
+  prazo --, o fecho com cidade e data e as assinaturas: VENDEDOR,
+  COMPRADOR (a assinatura feita no celular entra aqui) e duas testemunhas.
+  O registro da assinatura eletrônica fica num rodapé discreto.
+
+  TUDO SAI DO RETRATO (`doc`), inclusive o texto das cláusulas: o que foi
+  assinado não muda se `contrato.py` mudar amanhã. Fora do painel o
+  CPF/CNPJ chega mascarado (`core.views_assinatura.contexto_da_folha`).
+
+  A FOLHA, NA TELA E NO PAPEL (site/paginas/assinatura.css, ".contrato"):
+  no celular, uma coluna e letra de leitura; no computador, o papel; na
+  impressão (o "Salvar em PDF"), A4 com margens de 16-18 mm, as partes em
+  duas colunas, cláusulas justificadas a 10,2 pt, título de seção que
+  nunca fica sozinho no pé da página, foto que não se parte, o bloco das
+  assinaturas inteiro na mesma folha e "Página X de Y" com o código do
+  contrato no rodapé de cada página (`documento_assinatura/impressao.html`).
+{% endcomment %}
+<article class="contrato" aria-label="{{ doc.titulo_curto|default:'Contrato de compra e venda' }}" lang="pt-BR">
+
+  <header class="ct-capa">
+    <div class="ct-marca">
+      <img src="{% static 'images/logoofi.png' %}" alt="" width="60" height="60">
+      <div>
+        <strong>{{ doc.vendedor.nome_fantasia }}</strong>
+        <span>{{ doc.vendedor.razao_social }}</span>
+        <span>CNPJ {{ doc.vendedor.cnpj }}{% if doc.empresa.telefone %} · {{ doc.empresa.telefone }}{% endif %}</span>
+      </div>
+    </div>
+    <dl class="ct-meta">
+      <div><dt>Contrato nº</dt><dd>{{ doc.orcamento.numero }}{% if doc.orcamento.versao > 1 %} · v{{ doc.orcamento.versao }}{% endif %}</dd></div>
+      {% if doc.orcamento.codigo %}<div><dt>Código</dt><dd class="ct-codigo">{{ doc.orcamento.codigo }}</dd></div>{% endif %}
+      <div><dt>Emitido em</dt><dd>{{ doc.emitido_em_texto }}</dd></div>
+    </dl>
+  </header>
+
+  <h1 class="ct-titulo">{{ doc.titulo }}</h1>
+
+  {# O QUADRO: logo abaixo do título, como no contrato da empresa. #}
+  <table class="ct-quadro">
+    <thead><tr><th scope="col">Quantidade</th><th scope="col">Equipamento</th></tr></thead>
+    <tbody>
+      {% for item in doc.itens %}
+        <tr>
+          <td class="ct-qtd">{{ item.quantidade }}</td>
+          <td>{{ item.descricao }}{% if item.adesivo and not item.adesivo_no_nome %} <small>· adesivo {{ item.adesivo }}</small>{% endif %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot><tr><th scope="row">Valor</th><td>R$ {{ doc.valor_total_texto }}</td></tr></tfoot>
+  </table>
+
+  <section class="ct-preambulo" aria-label="Partes">
+    <p>{{ doc.preambulo.abertura|destaque_contrato }}</p>
+    <div class="ct-partes">
+      <div class="ct-parte">
+        <h2>Vendedor</h2>
+        <strong>{{ doc.vendedor.nome_fantasia }}</strong>
+        <dl>
+          <div><dt>Razão social</dt><dd>{{ doc.vendedor.razao_social }}</dd></div>
+          <div><dt>CNPJ</dt><dd>{{ doc.vendedor.cnpj }}</dd></div>
+          <div><dt>Sede</dt><dd>{{ doc.vendedor.endereco_sede }}</dd></div>
+          <div><dt>Representante</dt><dd>{{ doc.vendedor.representante_nome }} · RG {{ doc.vendedor.representante_rg }}</dd></div>
+        </dl>
+      </div>
+      <div class="ct-parte comprador">
+        <h2>Comprador</h2>
+        <strong>{{ doc.cliente.nome }}</strong>
+        <dl>
+          <div><dt>CPF ou CNPJ</dt><dd>{% if cliente_documento %}{{ cliente_documento }}{% elif assinante_documento %}{{ assinante_documento }}{% else %}<span class="ct-vazio">informado na assinatura</span>{% endif %}</dd></div>
+          <div><dt>Endereço completo</dt><dd>{{ doc.cliente.endereco|default:"—" }}</dd></div>
+          <div><dt>E-mail</dt><dd>{{ doc.cliente.email|default:"—" }}</dd></div>
+          <div><dt>Telefone</dt><dd>{{ doc.cliente.telefone|default:"—" }}</dd></div>
+        </dl>
+      </div>
+    </div>
+    <p>{{ doc.preambulo.fechamento }}</p>
+  </section>
+
+  {% for secao in doc.secoes %}
+    <section class="ct-secao" aria-label="{{ secao.titulo|capfirst }}">
+      <h2 class="ct-secao-titulo">{{ secao.titulo }}</h2>
+      {% for clausula in secao.clausulas %}
+        <div class="ct-clausula{% if clausula.fotos %} ct-clausula-com-fotos{% endif %}" id="clausula-{{ clausula.numero }}">
+          <p><strong class="ct-rotulo">{{ clausula.rotulo }}</strong> {{ clausula.texto|destaque_contrato }}</p>
+          {% if clausula.fotos %}
+            {% comment %}
+              AS FOTOS DO QUE ESTÁ SENDO VENDIDO: a do catálogo de cada item
+              (a do adesivo escolhido, quando o produto tem vários). Sem foto,
+              um quadro discreto com o nome -- nunca uma imagem quebrada (e a
+              foto que não abrir vira esse quadro: ver assinatura.js).
+            {% endcomment %}
+            <ul class="ct-fotos" data-quantidade="{{ doc.itens|length }}">
+              {% for item in doc.itens %}
+                <li class="ct-foto">
+                  <span class="ct-foto-quadro{% if not item.foto %} sem-foto{% endif %}">
+                    {% if item.foto %}
+                      <img src="{{ item.foto }}" alt="Foto: {{ item.descricao }}" decoding="async" data-ct-foto>
+                    {% endif %}
+                    <span class="ct-foto-nome"{% if item.foto %} hidden{% endif %}><i class="bi bi-box-seam" aria-hidden="true"></i>{{ item.descricao }}</span>
+                  </span>
+                  <span class="ct-legenda">
+                    {% if item.foto %}<strong>{{ item.descricao }}</strong>{% endif %}
+                    {% if item.adesivo %}<span>Adesivo: {{ item.adesivo }}</span>{% endif %}
+                    <span>Quantidade: {{ item.quantidade }}</span>
+                  </span>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% if clausula.complemento %}<p class="ct-complemento">{{ clausula.complemento|destaque_contrato }}</p>{% endif %}
+          {% for paragrafo in clausula.paragrafos %}
+            <p class="ct-paragrafo"><strong class="ct-rotulo">{{ paragrafo.rotulo }}</strong> {{ paragrafo.texto|destaque_contrato }}</p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </section>
+  {% endfor %}
+
+  {# O fecho e as assinaturas: um bloco só, que nunca se parte entre duas folhas. #}
+  <section class="ct-final{% if documento.assinado %} assinada{% endif %}" aria-label="Assinaturas">
+    <p class="ct-fecho">{{ doc.fecho }}</p>
+    <p class="ct-local">{{ doc.local_data }}</p>
+    <div class="ct-assinaturas">
+      <div class="ct-assina">
+        <span class="ct-assina-linha" aria-hidden="true"></span>
+        <strong>VENDEDOR <small>(Proprietário)</small></strong>
+        <span>{{ doc.vendedor.representante_nome }}</span>
+        <span>{{ doc.vendedor.nome_fantasia }}</span>
+      </div>
+      <div class="ct-assina ct-assina-comprador">
+        <span class="ct-assina-linha"{% if not assinatura_img %} aria-hidden="true"{% endif %}>
+          {% if assinatura_img %}<img src="{{ assinatura_img }}" alt="Assinatura de {{ documento.assinante_nome }}">{% endif %}
+        </span>
+        <strong>COMPRADOR</strong>
+        {% if documento.assinado %}
+          <span>{{ documento.assinante_nome }}{% if assinante_documento %} · {{ assinante_documento }}{% endif %}</span>
+          <span class="ct-assina-eletronica">Assinado eletronicamente em {{ documento.assinado_em|date:"d/m/Y \à\s H:i" }}</span>
+        {% else %}
+          <span>{{ doc.cliente.nome }}</span>
+          <span class="ct-assina-eletronica">Assinatura eletrônica, no celular</span>
+        {% endif %}
+      </div>
+      <div class="ct-assina">
+        <span class="ct-assina-linha" aria-hidden="true"></span>
+        <strong>TESTEMUNHA 1</strong>
+        <span class="ct-campo">Nome:</span>
+        <span class="ct-campo">CPF:</span>
+      </div>
+      <div class="ct-assina">
+        <span class="ct-assina-linha" aria-hidden="true"></span>
+        <strong>TESTEMUNHA 2</strong>
+        <span class="ct-campo">Nome:</span>
+        <span class="ct-campo">CPF:</span>
+      </div>
+    </div>
+  </section>
+
+  {% if documento.assinado %}
+    {% comment %}
+      A TRILHA DA ASSINATURA, num rodapé discreto. É o que dá para conferir
+      depois: o código do documento, o hash do retrato (quem recalcular o
+      SHA-256 do JSON guardado chega ao mesmo número), a hora com o fuso, o
+      IP e o navegador que assinaram, e quantos links a equipe gerou.
+    {% endcomment %}
+    <section class="ct-auditoria" aria-label="Registro da assinatura eletrônica">
+      <h2>Registro da assinatura eletrônica</h2>
+      <dl>
+        <div><dt>Documento</dt><dd>{{ documento.codigo_publico }}</dd></div>
+        <div><dt>Contrato</dt><dd>nº {{ doc.orcamento.numero }} · versão {{ doc.orcamento.versao }}{% if doc.orcamento.codigo %} · {{ doc.orcamento.codigo }}{% endif %}</dd></div>
+        <div><dt>Assinado em</dt><dd>{{ documento.assinado_em|date:"d/m/Y H:i:s O" }}</dd></div>
+        <div><dt>Assinante</dt><dd>{{ documento.assinante_nome }} · {{ assinante_documento }}</dd></div>
+        <div><dt>IP</dt><dd>{{ documento.assinatura_ip|default:"não informado" }}</dd></div>
+        <div><dt>Links gerados</dt><dd>{{ documento.links_gerados }} (cada um válido por 5 minutos)</dd></div>
+        <div class="largo"><dt>Aparelho (navegador)</dt><dd>{{ documento.assinatura_navegador|default:"não informado" }}</dd></div>
+        <div class="largo"><dt>SHA-256 do documento</dt><dd class="hash">{{ documento.hash_conteudo }}</dd></div>
+        <div class="largo"><dt>SHA-256 conferido na assinatura</dt><dd class="hash">{{ documento.hash_assinado }}</dd></div>
+      </dl>
+    </section>
+  {% endif %}
+
+  <footer class="ct-rodape">
+    <span>{{ codigo_contrato }}</span>
+    <span>{{ doc.vendedor.nome_fantasia }} · CNPJ {{ doc.vendedor.cnpj }} · lazersport.com.br · modelo {{ doc.modelo }}</span>
+  </footer>
+</article>

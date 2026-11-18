@@ -1,0 +1,119 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+{% block title %}Dados do contrato | Lazer &amp; Sport{% endblock %}
+{% block top_title %}Dados do contrato{% endblock %}
+{% block body_class %}ls-orcamentos-body ls-commercial-body{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="dados-contrato" href="{% estatico 'interno/dados-contrato.css' %}">
+{% endblock %}
+
+{% block content %}
+{% comment %}
+  OS DADOS DO VENDEDOR NO CONTRATO (views_dados_contrato.py; LEIA-ME-V10,
+  seção 109). A empresa já vem preenchida; o representante (nome, RG,
+  endereço residencial) o dono preenche aqui -- não mora no código. Ao
+  lado, o preâmbulo como sai no contrato, mudando enquanto se digita
+  (dados-contrato.js). Sem select: tudo é campo de texto.
+{% endcomment %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Orçamentos · contrato de compra e venda</span>
+    <h1>Dados do contrato</h1>
+    <p>Quem vende, no contrato que o cliente assina no celular: a empresa e quem a representa. Vale para os contratos gerados depois de salvar — o que já foi gerado guarda os dados da época.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'orcamentos_inner' %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Orçamentos
+    </a>
+  </div>
+</section>
+
+<div class="ls-dc-situacao {% if faltando %}falta{% else %}ok{% endif %}" id="dcSituacao" role="status">
+  {% if faltando %}
+    <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+    <div>
+      <strong>O contrato ainda não sai para assinatura.</strong>
+      <span>Falta preencher: {{ faltando|join:", " }}.</span>
+    </div>
+  {% else %}
+    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+    <div>
+      <strong>Tudo pronto.</strong>
+      <span>Os contratos saem com estes dados{% if dados.atualizado %} (atualizados em {{ dados.atualizado|date:"d/m/Y \à\s H:i" }}{% if dados.atualizado_por %} por {{ dados.atualizado_por.get_full_name|default:dados.atualizado_por.username }}{% endif %}){% endif %}.</span>
+    </div>
+  {% endif %}
+</div>
+
+<div class="ls-dc-tela">
+  <form class="ls-dc-cartao" id="formDadosContrato" method="post" action="{% url 'dados_contrato_inner' %}" autocomplete="off" novalidate>
+    {% csrf_token %}
+    <input type="hidden" name="action" value="salvar">
+    <div class="ls-dc-erro d-none" id="dcErro" role="alert"></div>
+
+    <fieldset>
+      <legend><i class="bi bi-building" aria-hidden="true"></i> A empresa</legend>
+      <p class="ls-dc-nota">Dados públicos (os do cartão do CNPJ). Já vêm preenchidos.</p>
+      <div class="ls-dc-grade">
+        <label class="ls-dc-campo">
+          <span>Nome fantasia</span>
+          <input class="form-control" type="text" name="nome_fantasia" maxlength="120" required value="{{ dados.nome_fantasia }}" data-dc-campo="nome_fantasia" data-rotulo="Nome fantasia">
+        </label>
+        <label class="ls-dc-campo">
+          <span>CNPJ</span>
+          <input class="form-control" type="text" name="cnpj" maxlength="18" inputmode="numeric" required value="{{ dados.cnpj }}" data-dc-campo="cnpj" data-rotulo="CNPJ">
+        </label>
+        <label class="ls-dc-campo largo">
+          <span>Razão social</span>
+          <input class="form-control" type="text" name="razao_social" maxlength="160" required value="{{ dados.razao_social }}" data-dc-campo="razao_social" data-rotulo="Razão social">
+        </label>
+        <label class="ls-dc-campo largo">
+          <span>Endereço da sede <small>(“com sede na …”)</small></span>
+          <input class="form-control" type="text" name="endereco_sede" maxlength="240" required value="{{ dados.endereco_sede }}" data-dc-campo="endereco_sede" data-rotulo="Endereço da sede">
+        </label>
+        <label class="ls-dc-campo">
+          <span>Cidade do contrato <small>(o fecho: “São Paulo, 18 de novembro…”)</small></span>
+          <input class="form-control" type="text" name="cidade" maxlength="80" required value="{{ dados.cidade }}" data-dc-campo="cidade" data-rotulo="Cidade do contrato">
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend><i class="bi bi-person-vcard" aria-hidden="true"></i> O representante <small>(quem assina pela empresa)</small></legend>
+      <p class="ls-dc-nota"><i class="bi bi-shield-lock" aria-hidden="true"></i> Dados pessoais: ficam só aqui e no contrato que o cliente assina.</p>
+      <div class="ls-dc-grade">
+        <label class="ls-dc-campo largo{% if not dados.representante_nome %} vazio{% endif %}">
+          <span>Nome completo</span>
+          <input class="form-control" type="text" name="representante_nome" maxlength="160" autocapitalize="words" value="{{ dados.representante_nome }}" data-dc-campo="representante_nome" data-rotulo="Nome do representante">
+        </label>
+        <label class="ls-dc-campo{% if not dados.representante_rg %} vazio{% endif %}">
+          <span>RG</span>
+          <input class="form-control" type="text" name="representante_rg" maxlength="30" value="{{ dados.representante_rg }}" data-dc-campo="representante_rg" data-rotulo="RG do representante">
+        </label>
+        <label class="ls-dc-campo largo{% if not dados.representante_endereco %} vazio{% endif %}">
+          <span>Endereço residencial <small>(“residente e domiciliado na …”)</small></span>
+          <input class="form-control" type="text" name="representante_endereco" maxlength="240" value="{{ dados.representante_endereco }}" data-dc-campo="representante_endereco" data-rotulo="Endereço do representante">
+        </label>
+      </div>
+    </fieldset>
+
+    <div class="ls-dc-acoes">
+      <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Salvar dados do contrato</button>
+    </div>
+  </form>
+
+  <aside class="ls-dc-cartao ls-dc-previa" aria-label="Como sai no contrato">
+    <h2><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Como sai no contrato</h2>
+    <p class="ls-dc-preambulo" id="dcPrevia">{{ previa }}</p>
+    <div class="ls-dc-assina">
+      <span class="ls-dc-assina-linha" aria-hidden="true"></span>
+      <strong>VENDEDOR (Proprietário)</strong>
+      <span data-dc-previa="representante_nome">{{ dados.representante_nome|default:"…" }}</span>
+    </div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% estatico 'interno/dados-contrato.js' %}"></script>
+{% endblock %}
