@@ -1,0 +1,14 @@
+{% load contrato_extras %}
+{% comment %}
+  O RODAPÉ DE CADA PÁGINA IMPRESSA (o "Salvar em PDF"): o código do
+  contrato à esquerda e "Página X de Y" à direita -- as caixas de margem
+  do @page, que o Chromium desenha em toda folha. Fica no <head> da página
+  do cliente e da via do painel; o texto passa por `texto_de_rodape`, que
+  só deixa letras, números e a pontuação de um número de documento.
+{% endcomment %}
+<style>
+@page{
+  @bottom-left{content:"{{ codigo_contrato|texto_de_rodape }}";font:600 7.4pt/1.2 Manrope,system-ui,sans-serif;color:#64748b;vertical-align:top;padding-top:3.5mm}
+  @bottom-right{content:"Página " counter(page) " de " counter(pages);font:800 7.4pt/1.2 Manrope,system-ui,sans-serif;color:#071d68;vertical-align:top;padding-top:3.5mm}
+}
+</style>

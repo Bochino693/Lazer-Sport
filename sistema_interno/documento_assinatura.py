@@ -14,6 +14,16 @@ APROVAÇÃO (aprovado -> assinatura -> pagamento -> venda) e é um termo de
 compra: itens, total, as condições de pagamento escritas no orçamento e o
 que já tinha entrado até a emissão. Ele não diz "pago" quando não está.
 
+E DEPOIS O DOCUMENTO VIROU O CONTRATO (LEIA-ME-V10, seção 107): "no
+contrato final de assinatura, devem ter essas cláusulas, fotos do item
+também e melhor aproveitamento das folhas". O papel de agora é o
+INSTRUMENTO PARTICULAR DE COMPRA E VENDA da empresa -- o quadro dos itens,
+VENDEDOR e COMPRADOR, as onze cláusulas, a foto de cada item na 1ª, o
+valor por extenso na 2ª, o prazo na 3ª e as assinaturas. O texto e os
+dados moram em `contrato.py`; os dados do vendedor, em `DadosContrato`
+(o contrato não sai sem eles: ver `gerar`). Os termos de antes continuam
+abrindo, assinando e saindo em PDF como eram.
+
 COMO FICOU, EM QUATRO PEÇAS:
 
   1. O RETRATO (`retrato`). Na hora de gerar, o orçamento é copiado para um
@@ -99,9 +109,14 @@ LADO_MAXIMO_DA_ASSINATURA = 2400
 TENTATIVAS_POR_JANELA = 12
 JANELA_DAS_TENTATIVAS = 10 * 60
 
-#: Muda quando o TEXTO da declaração mudar: o retrato guarda a versão, e
-#: um documento antigo continua dizendo o que dizia.
-VERSAO_DO_MODELO = "2026-11b"
+#: Muda quando o TEXTO do documento mudar: o retrato guarda a versão, e
+#: um documento antigo continua dizendo o que dizia. "2026-11c" é o
+#: CONTRATO de compra e venda (`contrato.py`, LEIA-ME-V10, seção 107).
+VERSAO_DO_MODELO = "2026-11c"
+
+#: O "termo de compra" de antes do contrato (só a declaração, sem
+#: cláusulas). Os gerados com ele continuam valendo como eram.
+MODELO_DO_TERMO = "2026-11b"
 
 #: O modelo de antes, o "termo de compra e recibo" do orçamento PAGO. A
 #: declaração dele diz "o pagamento foi feito e está quitado": se o
@@ -116,6 +131,34 @@ MODELO_DO_RECIBO = "2026-11"
 # ======================================================================
 def _dinheiro(valor) -> str:
     return f"{Decimal(valor or 0).quantize(Decimal('0.01')):.2f}"
+
+
+def _endereco_completo(endereco) -> str:
+    """O "Endereço completo" do COMPRADOR, como um contrato escreve.
+
+    "Rua das Flores, 120, sala 3 – Jardim Exemplo – São Paulo/SP – CEP
+    01234-000" (e o país, quando não é o Brasil).
+    """
+    if not endereco:
+        return ""
+    rua = ", ".join(p for p in (
+        (getattr(endereco, "endereco", "") or "").strip(),
+        (getattr(endereco, "numero", "") or "").strip(),
+        (getattr(endereco, "complemento", "") or "").strip(),
+    ) if p)
+    cidade = "/".join(p for p in (
+        (getattr(endereco, "cidade", "") or "").strip(),
+        (getattr(endereco, "estado", "") or "").strip(),
+    ) if p)
+    pais = (getattr(endereco, "pais", "") or "").strip()
+    partes = [
+        rua,
+        (getattr(endereco, "bairro", "") or "").strip(),
+        cidade,
+        f"CEP {endereco.cep}" if (getattr(endereco, "cep", "") or "").strip() else "",
+        pais if pais and pais.lower() != "brasil" else "",
+    ]
+    return " – ".join(p for p in partes if p)
 
 
 def _linha_do_endereco(endereco, rua_campo="endereco") -> str:
@@ -160,91 +203,25 @@ def _empresa() -> dict:
     }
 
 
-def _recebido_ate_agora(orcamento) -> str:
-    """A frase do dinheiro que já entrou, verdadeira no instante de gerar.
-
-    O termo sai na aprovação, quase sempre antes do pagamento. Ele conta
-    o que já foi recebido ATÉ A EMISSÃO -- e só diz "recebido" do que foi.
-    O que entrar depois é o estágio seguinte (o pagamento), e não muda o
-    papel: a frase é sobre aquele instante.
-    """
-    total = Decimal(orcamento.total or 0)
-    recebido = Decimal(orcamento.valor_pago or 0)
-    if orcamento.quitado and recebido >= total:
-        pago_em = _data_br(orcamento.pago_em)
-        return (
-            "Até a emissão deste termo, o valor total já foi recebido "
-            f"(R$ {_moeda(recebido)}" + (f", em {pago_em}" if pago_em else "") + ")."
-        )
-    if recebido > 0:
-        return (
-            f"Até a emissão deste termo, foram recebidos R$ {_moeda(recebido)}; "
-            f"restam R$ {_moeda(orcamento.saldo_pagamento)}, a pagar nessas "
-            "condições."
-        )
-    return (
-        "Até a emissão deste termo, nenhum valor foi recebido: o total será "
-        "pago nessas condições."
-    )
-
-
-def _declaracao(orcamento, empresa) -> list[str]:
-    """O texto que o cliente assina: curto, sem juridiquês, e verdadeiro.
-
-    Diz o que aconteceu (comprou, aprovou o orçamento), como paga (as
-    condições escritas nele), quanto já entrou até a emissão e o que fica
-    registrado da assinatura. Não diz "pago" do que não está pago, e não
-    promete nada que a tela não faça: o registro é exatamente o da
-    auditoria do documento.
-    """
-    # Sem o ponto final de quem digitou: a frase já termina com o dela.
-    forma = (orcamento.forma_pagamento or "").strip().rstrip(".").strip()
-    envio = (orcamento.forma_envio or "").strip()
-    aprovado_em = _data_br(orcamento.respondido_em)
-    return [
-        (
-            f"Declaro que comprei de {empresa['nome']} (CNPJ {empresa['cnpj']}) "
-            f"os itens descritos neste termo, referentes ao orçamento nº "
-            f"{orcamento.numero_documento} (versão {orcamento.versao}), aprovado"
-            + (f" em {aprovado_em}" if aprovado_em else "")
-            + f", pelo valor total de R$ {_moeda(orcamento.total)}."
-        ),
-        (
-            (
-                f"O pagamento segue as condições combinadas neste orçamento: {forma}. "
-                if forma else
-                "O pagamento segue as condições combinadas neste orçamento. "
-            )
-            + _recebido_ate_agora(orcamento)
-        ),
-        (
-            "A produção, a entrega e a garantia seguem as condições escritas "
-            "neste orçamento"
-            + (f" (forma de envio: {envio})" if envio else "")
-            + "."
-        ),
-        (
-            "Conferi os dados acima. Assino este termo eletronicamente, no meu "
-            "aparelho, e sei que ficam registrados a data e a hora, o endereço "
-            "de internet (IP), o aparelho usado e o código de integridade "
-            "(SHA-256) deste documento."
-        ),
-    ]
-
-
 def _moeda(valor) -> str:
     from core.formatos import dinheiro
 
     return dinheiro(valor)
 
 
-def retrato(orcamento) -> dict:
-    """O documento inteiro, como ele será assinado.
+def retrato(orcamento, dados=None) -> dict:
+    """O documento inteiro, como ele será assinado: o CONTRATO.
 
     Só texto e números já formatados para a leitura -- nada de id interno
     de cadastro, token ou link. O retrato é o que vai para a tela do
     cliente, para o PDF e para o hash, e os três têm de ser a mesma coisa.
+    O texto das cláusulas vai junto (`contrato.partes_do_contrato`): o que
+    foi assinado não muda se o arquivo do contrato mudar amanhã.
     """
+    from . import contrato
+    from .models import DadosContrato
+
+    dados = dados or DadosContrato.atual()
     empresa = _empresa()
     cliente = orcamento.cliente if orcamento.cliente_id else None
     endereco_cliente = cliente.endereco_principal if cliente else None
@@ -255,41 +232,35 @@ def retrato(orcamento) -> dict:
             or orcamento.responsavel.get_username()
         )
 
-    itens = []
-    for item in orcamento.itens.all():
-        itens.append({
-            "descricao": item.descricao,
-            "detalhes": list(item.ficha),
-            "quantidade": item.quantidade,
-            "valor_unitario": _dinheiro(item.valor_unitario),
-            "subtotal": _dinheiro(item.subtotal),
-        })
-
     agora = timezone.localtime()
     return {
         "modelo": VERSAO_DO_MODELO,
-        # Sem "e recibo": o termo sai antes do pagamento, e recibo é de
-        # dinheiro que entrou. Os documentos antigos guardam o título deles.
-        "titulo": "Termo de compra",
+        **contrato.partes_do_contrato(orcamento, dados, quando=agora),
         "emitido_em": agora.isoformat(timespec="seconds"),
         "emitido_em_texto": agora.strftime("%d/%m/%Y às %H:%M"),
         "empresa": empresa,
+        # O COMPRADOR: o cadastro do cliente, e o contato que o orçamento usa.
         "cliente": {
             "nome": orcamento.destinatario,
             "documento": (cliente.documento or "").strip() if cliente else "",
-            "telefone": orcamento.whatsapp_destinatario or "",
+            "telefone": (
+                orcamento.whatsapp_destinatario
+                or (cliente.telefone if cliente and cliente.telefone else "")
+            ),
             "email": orcamento.email_destinatario or "",
-            "endereco": _linha_do_endereco(endereco_cliente),
+            "endereco": _endereco_completo(endereco_cliente),
         },
         "orcamento": {
             "id": orcamento.pk,
             "numero": orcamento.numero_documento,
+            "codigo": orcamento.codigo or "",
             "versao": orcamento.versao,
             "data": _data_br(orcamento.criacao),
             "aprovado_em": _data_br(orcamento.respondido_em),
             "responsavel": responsavel or "Equipe Lazer & Sport",
         },
-        "itens": itens,
+        # O quadro "Quantidade | Equipamento" e as fotos da Cláusula 1ª.
+        "itens": contrato.itens_do_contrato(orcamento),
         "valores": {
             "subtotal": _dinheiro(orcamento.subtotal),
             "frete": _dinheiro(orcamento.frete),
@@ -314,8 +285,14 @@ def retrato(orcamento) -> dict:
             "forma_envio": (orcamento.forma_envio or "").strip(),
             "observacoes": (orcamento.observacoes or "").strip(),
         },
-        "declaracao": _declaracao(orcamento, empresa),
     }
+
+
+def e_contrato(conteudo) -> bool:
+    """O documento é o contrato (e não o termo de compra de antes)?"""
+    from .contrato import e_contrato as _e_contrato
+
+    return _e_contrato(conteudo)
 
 
 def hash_do_retrato(conteudo: dict) -> str:
@@ -438,6 +415,20 @@ def gerar(orcamento, usuario):
             )
         if not orcamento.itens.exists():
             raise ErroDeFormulario("Este orçamento não tem itens para o documento.")
+        # O CONTRATO NÃO SAI PELA METADE. Sem os dados do vendedor (o
+        # representante, preenchido pelo dono em "Dados do contrato") ou
+        # sem a forma de pagamento (a condição da Cláusula 2ª), o papel
+        # teria lacunas -- e o que é gerado fica congelado e assinado.
+        from . import contrato
+        from .models import DadosContrato
+
+        dados = DadosContrato.atual()
+        faltam = contrato.pendencias(orcamento, dados)
+        if faltam:
+            raise ErroDeFormulario(
+                "O contrato ainda não pode ser enviado para assinatura. "
+                + " ".join(p["texto"] for p in faltam)
+            )
 
         anteriores = list(
             DocumentoAssinatura.objects.select_for_update()
@@ -454,7 +445,7 @@ def gerar(orcamento, usuario):
             doc.situacao = DocumentoAssinatura.Situacao.SUBSTITUIDO
             doc.save(update_fields=["situacao", "atualizado"])
 
-        conteudo = retrato(orcamento)
+        conteudo = retrato(orcamento, dados)
         documento = DocumentoAssinatura.objects.create(
             orcamento=orcamento,
             conteudo=conteudo,
@@ -462,7 +453,7 @@ def gerar(orcamento, usuario):
             criado_por=usuario if getattr(usuario, "is_authenticated", False) else None,
         )
 
-    resumo = f"Termo de compra · integridade {documento.hash_conteudo[:12]}…"
+    resumo = f"Contrato de compra e venda · integridade {documento.hash_conteudo[:12]}…"
     if anteriores:
         resumo = (
             f"Documento refeito (o anterior saiu com {links_antes} "
@@ -656,11 +647,12 @@ def mensagem_whatsapp(documento, link) -> str:
     conteudo = documento.conteudo or {}
     numero = (conteudo.get("orcamento") or {}).get("numero", "")
     nome = (conteudo.get("cliente") or {}).get("nome", "")
+    papel = "o contrato de compra e venda" if e_contrato(conteudo) else "o termo de compra"
     return "\n".join([
         f"Olá, {nome}! 👋" if nome else "Olá! 👋",
         "",
         f"Seu pedido nº {numero} foi *aprovado*. Obrigado! ✅",
-        "Agora é só assinar o termo de compra, direto no seu celular. Assine aqui:",
+        f"Agora é só assinar {papel}, direto no seu celular. Assine aqui:",
         link,
         "",
         "⏱️ O link vale por *5 minutos*. Se passar, é só pedir outro aqui.",
@@ -786,7 +778,8 @@ def assinar(documento, *, nome, cpf_cnpj, png, ip, navegador):
         None,
         AtividadeOrcamento.Tipo.ASSINATURA,
         (
-            f"Termo de compra assinado no celular · "
+            ("Contrato de compra e venda" if e_contrato(documento.conteudo) else "Termo de compra")
+            + " assinado no celular · "
             f"{mascarar_documento(cpf_cnpj)} · {links} link{'s' if links != 1 else ''} "
             f"gerado{'s' if links != 1 else ''} até a assinatura"
         ),

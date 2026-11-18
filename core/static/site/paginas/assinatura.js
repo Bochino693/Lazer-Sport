@@ -54,6 +54,23 @@
     }
   }
 
+  /* ----------------------- a foto do contrato que não abre vira o nome */
+  // A Cláusula 1ª mostra a foto do catálogo de cada item. Foto apagada ou
+  // fora do ar não pode virar o ícone de imagem quebrada no contrato: o
+  // quadro passa a mostrar o nome do item, como o item que não tem foto.
+  document.querySelectorAll("img[data-ct-foto]").forEach(function (img) {
+    function semFoto() {
+      var quadro = img.parentNode;
+      if (!quadro) return;
+      quadro.classList.add("sem-foto");
+      var nome = quadro.querySelector(".ct-foto-nome");
+      if (nome) nome.hidden = false;
+      img.remove();
+    }
+    if (img.complete && img.naturalWidth === 0) semFoto();
+    else img.addEventListener("error", semFoto);
+  });
+
   var form = document.getElementById("formAssinatura");
   if (!form) return;
 

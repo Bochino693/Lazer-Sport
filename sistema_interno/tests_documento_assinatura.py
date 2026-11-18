@@ -52,6 +52,7 @@ from . import documento_assinatura as svc
 from .models import (
     AtividadeOrcamento,
     Cliente,
+    DadosContrato,
     DocumentoAssinatura,
     ItemOrcamento,
     Orcamento,
@@ -79,9 +80,56 @@ def png_de_assinatura(largura=600, altura=200, com_traco=True):
     return "data:image/png;base64," + base64.b64encode(saida.getvalue()).decode("ascii")
 
 
+#: Os dados do representante nos testes -- INVENTADOS (o contrato real
+#: não tem nada a ver com isto; ver LEIA-ME-V10, seção 107).
+REPRESENTANTE_FICTICIO = {
+    "representante_nome": "Fulano de Teste Ficticio",
+    "representante_rg": "00.000.000-0",
+    "representante_endereco": "Rua Inventada, n. 1, Bairro Ficticio, Cidade Teste",
+}
+
+
+def preencher_dados_do_contrato(**troca):
+    """Os dados do vendedor preenchidos (sintéticos): o contrato pode sair."""
+    dados = DadosContrato.atual()
+    for campo, valor in {**REPRESENTANTE_FICTICIO, **troca}.items():
+        setattr(dados, campo, valor)
+    dados.save()
+    return dados
+
+
+def conteudo_do_termo_antigo(documento, modelo):
+    """O retrato de um TERMO de antes do contrato (modelos "2026-11" e
+    "2026-11b"), montado à mão: é o que os documentos antigos guardam no
+    banco, e eles continuam abrindo, assinando e saindo em PDF como eram."""
+    novo = documento.conteudo
+    pago = modelo == svc.MODELO_DO_RECIBO
+    return {
+        "modelo": modelo,
+        "titulo": "Termo de compra e recibo" if pago else "Termo de compra",
+        "emitido_em": novo["emitido_em"],
+        "emitido_em_texto": novo["emitido_em_texto"],
+        "empresa": novo["empresa"],
+        "cliente": novo["cliente"],
+        "orcamento": {k: v for k, v in novo["orcamento"].items() if k != "codigo"},
+        "itens": [
+            {k: item[k] for k in ("descricao", "detalhes", "quantidade", "valor_unitario", "subtotal")}
+            for item in novo["itens"]
+        ],
+        "valores": novo["valores"],
+        "pagamento": dict(novo["pagamento"], situacao="Pago" if pago else novo["pagamento"]["situacao"]),
+        "condicoes": novo["condicoes"],
+        "declaracao": [
+            "Declaro que comprei os itens descritos neste termo.",
+            "O pagamento foi feito e está quitado." if pago else "Até a emissão deste termo, nenhum valor foi recebido.",
+        ],
+    }
+
+
 class BaseDocumento(TestCase):
     def setUp(self):
         cache.clear()
+        preencher_dados_do_contrato()
         self.vendedor = self.usuario("vendedor", "vendas")
         self.cliente_cadastro = Cliente.objects.create(
             nome_cliente="Buffet Alegria",
@@ -173,7 +221,7 @@ class GerarDocumentoTests(BaseDocumento):
         self.assertEqual(documento.situacao, DocumentoAssinatura.Situacao.AGUARDANDO)
         self.assertEqual(documento.criado_por, self.vendedor)
 
-    def test_aprovado_sem_pagamento_gera_e_o_termo_nao_diz_pago(self):
+    def test_aprovado_sem_pagamento_gera_e_o_contrato_nao_diz_pago(self):
         """A assinatura vem ANTES do pagamento: aprovado basta."""
         pendente = self.criar_orcamento(pago=False, respondido_em=timezone.now())
         self.client.force_login(self.vendedor)
@@ -184,7 +232,11 @@ class GerarDocumentoTests(BaseDocumento):
         resposta = self.client.post(f"/orcamentos/{pendente.pk}/documento/", {"action": "gerar"}, **AJAX)
         self.assertEqual(resposta.status_code, 200, resposta.content)
         conteudo = DocumentoAssinatura.objects.get(orcamento=pendente).conteudo
-        self.assertEqual(conteudo["titulo"], "Termo de compra")
+        self.assertEqual(conteudo["tipo"], "contrato")
+        self.assertEqual(
+            conteudo["titulo"],
+            "INSTRUMENTO PARTICULAR DE COMPRA E VENDA DE EQUIPAMENTO DE ENTRETENIMENTO",
+        )
         self.assertEqual(conteudo["modelo"], svc.VERSAO_DO_MODELO)
         self.assertEqual(conteudo["pagamento"]["situacao"], "Pagamento pendente")
         self.assertFalse(conteudo["pagamento"]["quitado"])
@@ -192,29 +244,30 @@ class GerarDocumentoTests(BaseDocumento):
         self.assertEqual(conteudo["valores"]["pago"], "0.00")
         self.assertEqual(conteudo["valores"]["saldo"], "3000.00")
         self.assertTrue(conteudo["orcamento"]["aprovado_em"])
-        texto = " ".join(conteudo["declaracao"])
-        self.assertIn("aprovado em", texto)
-        self.assertIn("condições combinadas neste orçamento: Pix.", texto)
-        self.assertIn("nenhum valor foi recebido", texto)
-        for palavra in ("quitado", "foi feito", "pago:"):
+        # A condição de pagamento do orçamento é a da Cláusula 2ª.
+        segunda = conteudo["secoes"][0]["clausulas"][1]
+        self.assertIn("da seguinte forma: Pix.", segunda["complemento"])
+        texto = json.dumps(conteudo["secoes"], ensure_ascii=False)
+        for palavra in ("quitado", "foi feito", "pago:", "Pago"):
             self.assertNotIn(palavra, texto)
 
         # A folha (a do cliente e a via) também não diz "Pago".
         documento = DocumentoAssinatura.objects.get(orcamento=pendente)
         folha = self.client.get(f"/assinar/{self.link(documento)}/").content.decode()
-        self.assertIn("Aprovado · pagamento pendente", folha)
-        self.assertIn("A pagar", folha)
         self.assertNotIn("✓ Pago", folha)
+        self.assertNotIn("Pagamento pendente", folha)
         self.assertIn("· aprovado</span>", folha)
-        self.assertIn("Li e concordo com o termo de compra acima.", folha)
+        self.assertIn("Li e concordo com todas as cláusulas deste contrato de compra e venda.", folha)
 
-    def test_pagamento_parcial_entra_no_termo_como_o_que_ja_entrou(self):
+    def test_pagamento_parcial_fica_no_retrato_e_fora_das_clausulas(self):
         parcial = self.criar_orcamento(pago=False)
         parcial.registrar_pagamento(Decimal("1000.00"))
         conteudo = self.gerar(parcial).conteudo
-        texto = " ".join(conteudo["declaracao"])
-        self.assertIn("foram recebidos R$ 1.000,00; restam R$ 2.000,00", texto)
+        texto = json.dumps(conteudo["secoes"], ensure_ascii=False)
+        self.assertNotIn("1.000,00", texto)
         self.assertNotIn("quitado", texto)
+        self.assertIn("3.000,00 (três mil reais)", texto)
+        # O recebido até a emissão continua no retrato (o resumo do painel).
         self.assertEqual(conteudo["valores"]["pago"], "1000.00")
         self.assertEqual(conteudo["valores"]["saldo"], "2000.00")
 
@@ -222,9 +275,11 @@ class GerarDocumentoTests(BaseDocumento):
         documento = self.gerar()
         conteudo = documento.conteudo
 
-        self.assertEqual(conteudo["titulo"], "Termo de compra")
-        self.assertTrue(any("o valor total já foi recebido (R$ 3.000,00" in p for p in conteudo["declaracao"]))
+        self.assertEqual(conteudo["tipo"], "contrato")
+        self.assertEqual(conteudo["valor_total_texto"], "3.000,00")
+        self.assertEqual(conteudo["valor_total_extenso"], "três mil reais")
         self.assertEqual(conteudo["orcamento"]["numero"], self.orcamento.numero_documento)
+        self.assertEqual(conteudo["orcamento"]["codigo"], self.orcamento.codigo)
         self.assertEqual(conteudo["orcamento"]["versao"], 1)
         self.assertEqual(conteudo["cliente"]["nome"], "Buffet Alegria")
         self.assertEqual(conteudo["itens"][0]["descricao"], "Cama elástica 3 m")
@@ -236,7 +291,8 @@ class GerarDocumentoTests(BaseDocumento):
         self.assertEqual(conteudo["condicoes"]["forma_envio"], "Entrega Lazer & Sport")
         self.assertIn("20 dias úteis", conteudo["condicoes"]["observacoes"])
         self.assertTrue(conteudo["empresa"]["nome"] and conteudo["empresa"]["cnpj"])
-        self.assertTrue(any("R$ 3.000,00" in p for p in conteudo["declaracao"]))
+        self.assertEqual(conteudo["vendedor"]["representante_nome"], REPRESENTANTE_FICTICIO["representante_nome"])
+        self.assertIn("R$ 3.000,00", conteudo["secoes"][0]["clausulas"][1]["texto"])
 
         # O hash é o SHA-256 do JSON canônico -- inclusive depois de ir e
         # voltar do banco.
@@ -251,9 +307,14 @@ class GerarDocumentoTests(BaseDocumento):
         item.valor_unitario = Decimal("1.00")
         item.save()
         self.orcamento.observacoes = "Mudou tudo"
+        self.orcamento.forma_pagamento = "Boleto em 10x"
         self.orcamento.save()
+        # E trocar os dados do vendedor depois também não.
+        preencher_dados_do_contrato(representante_nome="Outro Nome Ficticio")
         documento.refresh_from_db()
         self.assertEqual(documento.conteudo["itens"][0]["descricao"], "Cama elástica 3 m")
+        self.assertEqual(documento.conteudo["vendedor"]["representante_nome"], REPRESENTANTE_FICTICIO["representante_nome"])
+        self.assertIn("forma: Pix.", documento.conteudo["secoes"][0]["clausulas"][1]["complemento"])
         self.assertEqual(documento.hash_conteudo, hash_antes)
         self.assertEqual(svc.hash_do_retrato(documento.conteudo), hash_antes)
 
@@ -478,8 +539,8 @@ class LinkDeCincoMinutosTests(BaseDocumento):
         """
         documento = self.gerar()
         # O retrato como a regra antiga gravava: outro modelo, outro título,
-        # sem as chaves novas.
-        conteudo = dict(documento.conteudo, modelo=svc.MODELO_DO_RECIBO, titulo="Termo de compra e recibo")
+        # sem cláusulas e sem as chaves novas.
+        conteudo = conteudo_do_termo_antigo(documento, svc.MODELO_DO_RECIBO)
         conteudo["pagamento"] = {k: v for k, v in conteudo["pagamento"].items() if k != "quitado"}
         conteudo["valores"] = {k: v for k, v in conteudo["valores"].items() if k != "saldo"}
         DocumentoAssinatura.objects.filter(pk=documento.pk).update(
@@ -492,6 +553,8 @@ class LinkDeCincoMinutosTests(BaseDocumento):
         self.assertContains(pagina, "Termo de compra e recibo")
         self.assertContains(pagina, "· pago</span>")
         self.assertContains(pagina, "✓ Pago")
+        self.assertContains(pagina, "O pagamento foi feito e está quitado.")
+        self.assertNotContains(pagina, "Cláusula 1ª")
 
         self.orcamento.registrar_pagamento(Decimal("0.00"))
         leitura = svc.ler_link(token)
@@ -522,7 +585,7 @@ class AssinaturaPublicaTests(BaseDocumento):
         self.assertEqual(resposta.status_code, 200)
         self.assertEqual(resposta["Cache-Control"], "no-store")
         self.assertIn("noindex", resposta["X-Robots-Tag"])
-        self.assertContains(resposta, "Termo de compra")
+        self.assertContains(resposta, "INSTRUMENTO PARTICULAR DE COMPRA E VENDA DE EQUIPAMENTO DE ENTRETENIMENTO")
         self.assertContains(resposta, "Cama elástica 3 m")
         self.assertContains(resposta, "R$ 3.000,00")
         self.assertContains(resposta, "csrfmiddlewaretoken")

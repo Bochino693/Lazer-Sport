@@ -44,6 +44,16 @@
 .ls-doc-vazio p{max-width:520px;margin:0 0 8px;color:var(--text-2)}
 .ls-doc-gerar{min-height:54px;padding-inline:28px;font-weight:800;border-radius:16px}
 
+/* O que impede o contrato de sair (LEIA-ME-V10, seção 107). */
+.ls-doc-pendencias{list-style:none;margin:0 0 6px;padding:0;display:flex;flex-direction:column;gap:8px;max-width:560px;text-align:left}
+.ls-doc-pendencias li{
+  display:flex;gap:10px;align-items:flex-start;padding:11px 14px;border-radius:14px;font-size:.9rem;
+  background:rgba(var(--yellow-rgb),.12);border:1px solid rgba(var(--yellow-rgb),.4);color:var(--text-2);
+}
+.ls-doc-pendencias i{color:var(--yellow-texto);margin-top:2px}
+.ls-doc-pendencias a{display:inline-block;margin-left:4px;font-weight:800;color:var(--acento-texto)}
+.ls-doc-pendencias em{font-style:normal;font-weight:700;color:var(--text)}
+
 /* ------------------------------------------------------------ o topo */
 .ls-doc-topo{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}
 .ls-doc-topo h2{margin:2px 0 4px;font-size:1.25rem;font-weight:800;color:var(--text);line-height:1.25}

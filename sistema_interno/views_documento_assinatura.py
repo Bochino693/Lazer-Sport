@@ -30,6 +30,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import View
 
+from . import contrato
 from . import documento_assinatura as svc
 from .context_processors import invalidar_avisos
 from .models import DocumentoAssinatura, Orcamento
@@ -95,7 +96,21 @@ class _BaseDocumento(OrcamentoInternoRequiredMixin, View):
 
     def contexto_cartao(self, request, orcamento, documento):
         conteudo = (documento.conteudo if documento else None) or {}
+        # O que impede o CONTRATO de sair (os dados do vendedor, a forma de
+        # pagamento): o cartão de "Gerar" mostra a lista e trava o botão; o
+        # servidor recusa do mesmo jeito (`documento_assinatura.gerar`).
+        pendencias = (
+            contrato.pendencias(orcamento)
+            if documento is None and orcamento.status == Orcamento.Status.APROVADO
+            else []
+        )
         return {
+            "pendencias": pendencias,
+            # A Cláusula 3ª de um contrato gerado agora (o lugar único do prazo).
+            "prazo_entrega": contrato.prazo_de_entrega_do_orcamento(orcamento),
+            "pode_dados_contrato": capacidades(request.user)["dados_contrato"],
+            "url_dados_contrato": reverse("dados_contrato_inner", urlconf=URLCONF),
+            "e_contrato": svc.e_contrato(conteudo),
             "orcamento": orcamento,
             "documento": documento,
             "situacao_cartao": situacao_do_cartao(orcamento, documento),

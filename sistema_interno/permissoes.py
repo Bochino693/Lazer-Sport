@@ -181,6 +181,9 @@ def capacidades(user) -> dict[str, bool]:
         # -- é ela que responde por um número errado passado ao cliente.
         "transportadoras": vendas or gestao or producao,
         "transportadoras_editar": gestao,
+        # Os dados do vendedor no contrato de compra e venda (o representante
+        # da empresa): quem responde pela identidade jurídica no papel.
+        "dados_contrato": gestao,
         "site": criacao,
         "usuarios": superusuario,
         "avaliar_blocos_orcamento": superusuario,

@@ -1,0 +1,70 @@
+/* ======================================================================
+   DADOS DO CONTRATO -- quem vende, no contrato de compra e venda
+   (LEIA-ME-V10, seção 107; views_dados_contrato.py).
+
+   SÓ PAPÉIS DE COR DO TEMA (nenhuma cor escrita à mão): o mesmo cartão no
+   Sol, na Lua e no Eclipse. O formulário à esquerda; à direita, o
+   preâmbulo como sai no contrato, com cada dado marcado. No celular, um
+   embaixo do outro.
+   ====================================================================== */
+
+.ls-dc-situacao{
+  display:flex;align-items:flex-start;gap:12px;margin:0 0 16px;padding:14px 16px;
+  border-radius:var(--radius-lg);border:1px solid var(--line);font-size:.92rem;
+}
+.ls-dc-situacao > i{font-size:1.25rem;line-height:1.2}
+.ls-dc-situacao div{display:flex;flex-direction:column;gap:2px}
+.ls-dc-situacao strong{color:var(--text)}
+.ls-dc-situacao span{color:var(--text-2)}
+.ls-dc-situacao.falta{background:rgba(var(--yellow-rgb),.12);border-color:rgba(var(--yellow-rgb),.4)}
+.ls-dc-situacao.falta > i{color:var(--yellow-texto)}
+.ls-dc-situacao.ok{background:rgba(var(--green-rgb),.1);border-color:rgba(var(--green-rgb),.35)}
+.ls-dc-situacao.ok > i{color:var(--green-texto)}
+
+.ls-dc-tela{display:grid;gap:18px;align-items:start;grid-template-columns:minmax(0,1.25fr) minmax(280px,1fr)}
+@media (max-width:980px){.ls-dc-tela{grid-template-columns:1fr}}
+
+.ls-dc-cartao{
+  min-width:0;padding:22px;border:1px solid var(--line);border-radius:var(--radius-xl);
+  background:var(--panel);box-shadow:var(--shadow-soft);
+}
+.ls-dc-cartao fieldset{margin:0 0 18px;padding:0;border:0;min-width:0}
+.ls-dc-cartao legend{
+  display:flex;align-items:center;gap:8px;float:none;width:auto;margin:0 0 4px;padding:0;
+  font-size:1.02rem;font-weight:800;color:var(--text);
+}
+.ls-dc-cartao legend small{font-weight:600;color:var(--muted);font-size:.8rem}
+.ls-dc-nota{display:flex;align-items:center;gap:6px;margin:0 0 12px;color:var(--muted);font-size:.82rem}
+
+.ls-dc-grade{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 14px}
+@media (max-width:620px){.ls-dc-grade{grid-template-columns:1fr}}
+.ls-dc-campo{display:flex;flex-direction:column;gap:5px;min-width:0;margin:0}
+.ls-dc-campo.largo{grid-column:1 / -1}
+.ls-dc-campo > span{font-size:.8rem;font-weight:800;color:var(--text-2)}
+.ls-dc-campo > span small{font-weight:600;color:var(--muted)}
+.ls-dc-campo .form-control{min-height:48px;border-radius:14px}
+.ls-dc-campo.vazio .form-control{border-color:rgba(var(--yellow-rgb),.7);box-shadow:0 0 0 3px rgba(var(--yellow-rgb),.14)}
+
+.ls-dc-erro{
+  margin:0 0 14px;padding:12px 14px;border-radius:14px;font-weight:700;
+  background:rgba(var(--red-rgb),.12);border:1px solid rgba(var(--red-rgb),.4);color:var(--red-texto);
+}
+.ls-dc-acoes{display:flex;justify-content:flex-end}
+.ls-dc-acoes .btn-lg{min-height:54px;border-radius:16px;font-weight:800}
+@media (max-width:620px){.ls-dc-acoes .btn-lg{width:100%}}
+
+.ls-dc-previa h2{display:flex;align-items:center;gap:8px;margin:0 0 12px;font-size:1.02rem;font-weight:800;color:var(--text)}
+.ls-dc-preambulo{margin:0 0 22px;color:var(--text-2);font-size:.9rem;line-height:1.65;text-align:justify;-webkit-hyphens:auto;hyphens:auto}
+.ls-dc-previa mark{
+  padding:0 3px;border-radius:5px;font-weight:800;color:var(--text);
+  background:rgba(var(--acento-rgb),.16);box-decoration-break:clone;-webkit-box-decoration-break:clone;
+}
+.ls-dc-previa mark.vazio{background:rgba(var(--yellow-rgb),.22);color:var(--yellow-texto)}
+.ls-dc-assina{display:flex;flex-direction:column;align-items:center;gap:2px;max-width:300px;margin:0 auto;text-align:center;font-size:.84rem;color:var(--text-2)}
+.ls-dc-assina-linha{display:block;width:100%;height:40px;border-bottom:1.5px solid var(--text-2);margin-bottom:6px}
+.ls-dc-assina strong{color:var(--text);font-size:.82rem;letter-spacing:.4px}
+.ls-dc-assina .vazio{color:var(--yellow-texto)}
+
+@media (max-width:720px){
+  .ls-dc-cartao{padding:16px;border-radius:22px}
+}

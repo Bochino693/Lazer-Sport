@@ -49,6 +49,7 @@ from .views_funil import (
     PrazoProducaoView,
 )
 from .views_transportadoras import TransportadorasInnerView
+from .views_dados_contrato import DadosContratoInnerView
 from .views_documento_assinatura import (
     DocumentoAssinaturaInnerView,
     EstadoDocumentoAssinaturaView,
@@ -292,6 +293,14 @@ urlpatterns = [
         'orcamentos/<int:pk>/documento/via/',
         ViaDocumentoAssinaturaInnerView.as_view(),
         name='documento_assinatura_via',
+    ),
+    # Os dados do VENDEDOR no contrato (o representante: nome, RG, endereço),
+    # que o dono preenche -- sem eles o contrato não sai para assinatura.
+    # Ver `views_dados_contrato.py` e LEIA-ME-V10, seção 107.
+    path(
+        'orcamentos/dados-do-contrato/',
+        DadosContratoInnerView.as_view(),
+        name='dados_contrato_inner',
     ),
     # O orçamento escrito no Word vira rascunho conferido: sobe o .docx,
     # confere campo por campo (com a fonte de cada valor) e cria. Ver

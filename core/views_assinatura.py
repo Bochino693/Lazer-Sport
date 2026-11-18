@@ -56,6 +56,25 @@ def _contato_empresa():
     }
 
 
+def codigo_do_documento(documento) -> str:
+    """"Contrato nº 0012/2026 · LS-7K3QX9 · integridade 3f2a9c1b0e".
+
+    O que identifica o papel em qualquer folha impressa: o número (o do
+    orçamento), o código que o cliente digita em Meus pedidos e o começo
+    do SHA-256 -- quem tiver uma folha solta acha o resto.
+    """
+    conteudo = documento.conteudo or {}
+    orcamento = conteudo.get("orcamento") or {}
+    partes = [
+        f"{'Contrato' if svc.e_contrato(conteudo) else 'Documento'} nº {orcamento.get('numero', '')}".strip(),
+    ]
+    if orcamento.get("codigo"):
+        partes.append(orcamento["codigo"])
+    if documento.hash_conteudo:
+        partes.append(f"integridade {documento.hash_conteudo[:10]}")
+    return " · ".join(partes)
+
+
 def contexto_da_folha(documento, *, painel=False):
     """O que a folha do documento precisa, no painel e no site.
 
@@ -70,6 +89,9 @@ def contexto_da_folha(documento, *, painel=False):
         "documento": documento,
         "doc": conteudo,
         "painel": painel,
+        "e_contrato": svc.e_contrato(conteudo),
+        # O código que vai no rodapé de cada página impressa e no pé da folha.
+        "codigo_contrato": codigo_do_documento(documento),
         "cliente_documento": (
             documento_cliente if painel or not documento_cliente
             else mascarar_documento(documento_cliente)

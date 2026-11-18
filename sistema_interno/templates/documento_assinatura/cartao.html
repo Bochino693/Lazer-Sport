@@ -38,14 +38,39 @@
     <span class="ls-doc-icone acento"><i class="bi bi-pen" aria-hidden="true"></i></span>
     <h2>Gerar documento para assinatura</h2>
     <p>
-      O orçamento está aprovado. O termo de compra sai dele — itens, total e condições de
-      pagamento — e fica <strong>congelado</strong>. O cliente assina no telefone dele por um
+      O orçamento está aprovado. O <strong>contrato de compra e venda</strong> sai dele — os itens
+      com as fotos, o valor por extenso, a condição de pagamento, o prazo de entrega e as onze
+      cláusulas — e fica <strong>congelado</strong>. O cliente assina no telefone dele por um
       link que vale {{ validade_minutos }} minutos e se renova sozinho aqui. O pagamento vem
       depois, como último passo.
     </p>
-    <button type="button" class="btn btn-success btn-lg ls-doc-gerar" data-doc-acao="gerar">
-      <i class="bi bi-file-earmark-plus me-1" aria-hidden="true"></i> Gerar documento
-    </button>
+    {% if pendencias %}
+      {% comment %}
+        O CONTRATO NÃO SAI PELA METADE: sem os dados do vendedor (o
+        representante, em "Dados do contrato") ou sem a forma de pagamento
+        no orçamento, o botão fica travado e a lista diz o que fazer. O
+        servidor recusa do mesmo jeito (`documento_assinatura.gerar`).
+      {% endcomment %}
+      <ul class="ls-doc-pendencias" role="alert">
+        {% for pendencia in pendencias %}
+          <li data-pendencia="{{ pendencia.chave }}">
+            <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+            <span>{{ pendencia.texto }}
+              {% if pendencia.chave == "dados" %}
+                {% if pode_dados_contrato %}<a href="{{ url_dados_contrato }}">Preencher os dados do contrato</a>{% else %}<em>Peça à Gestão para preencher.</em>{% endif %}
+              {% endif %}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+      <button type="button" class="btn btn-success btn-lg ls-doc-gerar" disabled aria-disabled="true">
+        <i class="bi bi-lock me-1" aria-hidden="true"></i> Gerar documento
+      </button>
+    {% else %}
+      <button type="button" class="btn btn-success btn-lg ls-doc-gerar" data-doc-acao="gerar">
+        <i class="bi bi-file-earmark-plus me-1" aria-hidden="true"></i> Gerar documento
+      </button>
+    {% endif %}
   </div>
 
 {% elif documento.assinado %}
