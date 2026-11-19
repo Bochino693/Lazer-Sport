@@ -8143,3 +8143,73 @@ Dependência nova: rjsmin (requirements.txt).
    Testes: core/tests_fundo_liso.py; core/tests_fotos_estudio.py,
    core/tests_capas_catalogo.py e core/tests_capas_em_cena.py (os tamanhos,
    a máquina que não encolhe, a "vida" das fotos).
+
+121) TODO CLIENTE COM ENDEREÇO NO MAPA, E A TELA DO DOCUMENTO CONFERIDA BOTÃO A BOTÃO
+   O PEDIDO: "verifique na área interna, nos clientes, o 'no mapa, sem
+   local', pois tem endereço e deve estar no mapa tudo que tiver" e
+   "verifique a tela de documento, para apertar os botões e ir
+   corretamente".
+   A CAUSA DO "SEM LOCAL": o cadastro do painel só ganhava coordenada pela
+   consulta rápida do CEP que o NAVEGADOR faz enquanto a pessoa digita
+   (BrasilAPI, `consultar_cep_inner`). Ela não traz o ponto de muitos CEPs,
+   e o endereço sem CEP (rua e cidade bastam para salvar) nunca tinha
+   ponto nenhum. Ficava salvo sem latitude e NADA tentava de novo: a busca
+   completa (`EnderecoCliente.localizar`) só rodava no "Recalcular" da
+   gestão e no importador. Por isso o selo ficava para sempre.
+   O QUE MUDOU (sistema_interno/localizacao.py):
+     * gravou um endereço de cliente sem ponto (painel, importador, gestão,
+       /system/), ele entra numa fila DEPOIS do commit (post_save ->
+       on_commit). Uma thread por processo procura o ponto; o clique de
+       salvar não espera serviço de fora;
+     * uma varredura, 45 s depois de o site subir e a cada 30 min, põe na
+       fila todo endereço que ainda está sem ponto: os cadastros antigos se
+       acertam sozinhos depois do deploy, sem ninguém abrir um por um;
+     * as fontes, da mais precisa para a mais larga, parando na primeira
+       que responde: o ponto do CEP (BrasilAPI); CEP + número no Nominatim
+       (exato, rua, bairro, cidade); SEM CEP, rua + número + cidade no
+       Nominatim (core/utils.geocodificar_sem_cep); o centro da cidade no
+       Nominatim e, se ele falhar, no Open-Meteo (core/utils.
+       buscar_cidade_open_meteo -- gratuito, sem chave, recebe só o nome
+       da cidade; cidade com nome repetido só vale quando o estado bate);
+     * a precisão fica gravada como sempre ("Centro da cidade" não é
+       "Endereço exato"); nunca sobrescreve um ponto (grava só se o
+       endereço AINDA está sem coordenada: o ajuste à mão vence);
+     * respeita o Nominatim público: uma consulta por segundo dentro da
+       fila (core/utils.no_ritmo_do_nominatim; fora dela -- frete,
+       Recalcular -- nada muda). As funções de core/utils guardam a
+       resposta por processo (lru_cache), inclusive a falha; a fila chama a
+       função de verdade (`__wrapped__`), para uma queda do serviço não
+       deixar o cadastro sem ponto até o próximo deploy;
+     * endereço que nenhuma fonte acha volta à fila só 6 h depois (ou na
+       hora, se for editado). Na tela, ele continua "no mapa, sem local":
+       aí é conferir o CEP e a cidade.
+   NÃO liga o "Aparece no mapa do site" de ninguém: o que vai ao site
+   continua sendo decisão do cadastro (e da proposta em andamento, como
+   antes). Ligar/desligar: LOCALIZAR_ENDERECOS_NO_SITE (padrão ligado;
+   desligado nos testes). Para ver na hora, endereço por endereço:
+       python manage.py localizar_enderecos [--limite N]
+   A mensagem da gestão ao salvar sem ponto passou a dizer que o ponto
+   está sendo procurado e aparece em instantes.
+   A TELA DO DOCUMENTO, CONFERIDA NO NAVEGADOR (PC 1366 e celular), nos
+   cinco estados (sem documento, aguardando, assinado, suspenso, rascunho):
+   Gerar documento (folha, confirmar -> cartão vira "aguardando" com QR e
+   link), Copiar (o link vai à área de transferência), Gerar novo link
+   (link novo, "Link nº 2"), Enviar no WhatsApp (wa.me com o número do
+   cliente e a mensagem com o link), Conferir documento (a via), Gerar de
+   novo (folha; Cancelar e Esc fecham; confirmar troca o documento), Baixar
+   PDF e Ver documento (a via, com ?imprimir=1 no primeiro), Voltar ao
+   orçamento (a janela abre sozinha) e Voltar aos orçamentos. Nenhum erro
+   de JS nem resposta 4xx/5xx. DOIS ACERTOS:
+     * "Registrar pagamento" na régua da tela do contrato abria a janela
+       do orçamento no TOPO, e o quadro do pagamento ficava 1.700 px abaixo.
+       Agora o link leva `&ir=orcamentoPagamentoResumo` e a janela abre já
+       no quadro (orcamentos_inner.html, etapas_do_pedido.py);
+     * no celular, a nota de cada fase da régua quebrava uma palavra por
+       linha ("Esperando / a / assinatura"; "R$" numa linha e o número na
+       outra). No celular a nota sai (o "Próximo passo" logo abaixo diz o
+       mesmo) e o valor usa espaço que não quebra.
+   Testes: sistema_interno/tests_localizacao.py (as fontes em ordem, a
+   precisão, o ajuste à mão que vence, a fila depois do commit, a
+   varredura que pula a falha recente, o comando, o Open-Meteo pelo
+   estado, o ritmo do Nominatim); tests_etapas_do_pedido.py (o link do
+   pagamento com o quadro).

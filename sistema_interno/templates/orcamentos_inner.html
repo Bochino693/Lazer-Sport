@@ -2326,6 +2326,19 @@ LSTela.pronto(function () {
   window.LSReabrirOrcamento = null;
   if (parametrosIniciais.get("editar")) {
     abrir(parametrosIniciais.get("editar"));
+    /* "Registrar pagamento" na tela do contrato chega com ?ir=<quadro>: a
+       janela abre JÁ no quadro do passo (seção 121), não no topo dela. */
+    var irPara = parametrosIniciais.get("ir");
+    if (irPara && /^[A-Za-z][\w-]*$/.test(irPara)) {
+      setTimeout(function () {
+        var quadro = document.getElementById(irPara);
+        if (!quadro || quadro.hidden) return;
+        quadro.scrollIntoView({ behavior: "auto", block: "center" });
+        quadro.classList.remove("ls-etapa-pisca");
+        void quadro.offsetWidth;
+        quadro.classList.add("ls-etapa-pisca");
+      }, 450);
+    }
   } else if (botaoNovoOrcamento && parametrosIniciais.get("novo") === "1") {
     abrir(null);
     /* "Nova proposta" no cartão (ou no menu) de um cliente chega com

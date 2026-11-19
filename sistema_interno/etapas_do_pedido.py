@@ -93,7 +93,8 @@ def _moeda(valor) -> str:
     valor = Decimal(valor or 0).quantize(Decimal("0.01"))
     inteiro, centavos = f"{valor:.2f}".split(".")
     inteiro = f"{int(inteiro):,}".replace(",", ".")
-    return f"R$ {inteiro},{centavos}"
+    # espaço que não quebra: "R$" e o número nunca ficam em linhas diferentes
+    return f"R$\u00a0{inteiro},{centavos}"
 
 
 def _url(nome, *args):
@@ -242,7 +243,9 @@ def _proximo(orcamento, acomp, documento, acesso, tela) -> ProximoPasso:
             f"Registre o pagamento: faltam {saldo}.",
             "Ao chegar a 100%, o pedido vira venda sozinho e entra na fila da fábrica.",
             quem=quem, icone="bi-wallet2",
-            acao="Registrar pagamento" if pode else "", url=janela if pode else "",
+            # de fora da janela (a tela do contrato), o link já abre no quadro do pagamento
+            acao="Registrar pagamento" if pode else "",
+            url=f"{janela}&ir=orcamentoPagamentoResumo" if pode else "",
             alvo="orcamentoPagamentoResumo" if pode else "",
         )
     pode_lista = acesso.get("lista_montagem")

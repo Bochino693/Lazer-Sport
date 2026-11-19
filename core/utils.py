@@ -1,6 +1,9 @@
 import logging
 import math
 import re
+import threading
+import time
+from contextlib import contextmanager
 from functools import lru_cache
 
 import requests
@@ -260,8 +263,45 @@ PRECISAO_CIDADE = "cidade"
 PRECISAO_CONFIAVEL = (PRECISAO_EXATO, PRECISAO_RUA)
 
 
+#: O uso público do Nominatim pede no máximo uma consulta por segundo.
+INTERVALO_NOMINATIM_S = 1.1
+_ritmo_nominatim = threading.local()
+_trava_nominatim = threading.Lock()
+_ultima_nominatim = [0.0]
+
+
+@contextmanager
+def no_ritmo_do_nominatim():
+    """Dentro deste bloco, cada consulta ao Nominatim espera a sua vez.
+
+    É o que a localização em segundo plano dos endereços usa
+    (sistema_interno/localizacao.py): ela passa por dezenas de cadastros
+    seguidos, e cada um pode pedir até cinco buscas. Sem o ritmo, a fila
+    viraria uma rajada -- e quem abusa do serviço público é bloqueado.
+    Fora do bloco (o frete, o "Recalcular"), nada muda: uma pessoa
+    esperando não pode ficar parada atrás de uma fila.
+    """
+    anterior = getattr(_ritmo_nominatim, "ativo", False)
+    _ritmo_nominatim.ativo = True
+    try:
+        yield
+    finally:
+        _ritmo_nominatim.ativo = anterior
+
+
+def _esperar_a_vez_no_nominatim():
+    if not getattr(_ritmo_nominatim, "ativo", False):
+        return
+    with _trava_nominatim:
+        espera = _ultima_nominatim[0] + INTERVALO_NOMINATIM_S - time.monotonic()
+        if espera > 0:
+            time.sleep(espera)
+        _ultima_nominatim[0] = time.monotonic()
+
+
 def _consultar_nominatim(params):
     """Uma consulta ao Nominatim, já com cabeçalhos e tratamento de erro."""
+    _esperar_a_vez_no_nominatim()
     try:
         return _request_json(
             "https://nominatim.openstreetmap.org/search",
@@ -400,6 +440,7 @@ def buscar_coordenadas_por_cidade(cidade, estado="", pais="Brasil"):
     if not partes:
         return None, None
 
+    _esperar_a_vez_no_nominatim()
     try:
         resultados = _request_json(
             "https://nominatim.openstreetmap.org/search",
@@ -426,6 +467,99 @@ def buscar_coordenadas_por_cidade(cidade, estado="", pais="Brasil"):
             float(resultados[0]["lat"]),
             float(resultados[0]["lon"]),
         )
+    except (KeyError, TypeError, ValueError):
+        return None, None
+
+
+def geocodificar_sem_cep(rua, numero, cidade, estado="", pais="Brasil"):
+    """(latitude, longitude, precisao) de rua + cidade, para o endereço sem CEP.
+
+    O cadastro aceita endereço sem CEP (rua e cidade bastam), e era
+    exatamente esse que ficava "no mapa, sem local" para sempre: a busca
+    do painel só sabia partir do CEP. Aqui a mesma consulta estruturada do
+    Nominatim, com o que há. Sem resposta: (None, None, None), e quem
+    chamou cai no centro da cidade.
+    """
+    rua = str(rua or "").strip()
+    cidade = str(cidade or "").strip()
+    if not rua or not cidade:
+        return None, None, None
+    numero = str(numero or "").strip()
+    base = {"city": cidade, "state": str(estado or "").strip(), "country": pais or "Brasil"}
+    tentativas = []
+    if numero:
+        tentativas.append((PRECISAO_EXATO, {**base, "street": f"{numero} {rua}"}))
+    tentativas.append((PRECISAO_RUA, {**base, "street": rua}))
+    for nivel, params in tentativas:
+        params = {chave: valor for chave, valor in params.items() if valor}
+        ponto = _ler_ponto(_consultar_nominatim(params))
+        if not ponto:
+            continue
+        latitude, longitude, endereco = ponto
+        if nivel == PRECISAO_EXATO and not endereco.get("house_number"):
+            nivel = PRECISAO_RUA
+        return latitude, longitude, nivel
+    return None, None, None
+
+
+def _sem_acento(texto):
+    import unicodedata
+
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", str(texto or "").strip().lower())
+        if not unicodedata.combining(c)
+    )
+
+
+def buscar_cidade_open_meteo(cidade, estado="", pais="Brasil"):
+    """(latitude, longitude) do centro da cidade pela base do Open-Meteo.
+
+    A SEGUNDA FONTE DO CENTRO DA CIDADE. Quando o Nominatim recusa ou não
+    responde (é um serviço público, e quem usa muito é barrado por um
+    tempo), o cadastro ficava sem ponto nenhum. O Open-Meteo é gratuito,
+    sem chave, e só recebe o NOME DA CIDADE -- nada do cliente.
+
+    Cidade com nome repetido em vários estados ("São José", "Bom Jesus")
+    só é aceita quando o estado bate; sem estado no cadastro, vale a
+    primeira do país. Nunca chuta: sem certeza, (None, None).
+    """
+    nome = str(cidade or "").strip()
+    if not nome:
+        return None, None
+    brasil = _sem_acento(pais or "Brasil") in ("brasil", "brazil", "br")
+    params = {"name": nome, "count": 10, "language": "pt", "format": "json"}
+    if brasil:
+        params["countryCode"] = "BR"
+    try:
+        resposta = _request_json(
+            "https://geocoding-api.open-meteo.com/v1/search",
+            params=params,
+            timeout=(2, 4),
+        )
+    except (requests.RequestException, ValueError) as exc:
+        logger.warning("[GEO] Open-Meteo indisponível para %s: %s", nome, exc)
+        return None, None
+
+    resultados = [r for r in (resposta or {}).get("results") or [] if isinstance(r, dict)]
+    alvo = _sem_acento(nome)
+    resultados = [r for r in resultados if _sem_acento(r.get("name")) == alvo]
+    if not brasil:
+        pais_alvo = _sem_acento(pais)
+        resultados = [r for r in resultados if _sem_acento(r.get("country")) == pais_alvo] or resultados
+
+    estado = str(estado or "").strip()
+    if estado:
+        from core.mapa_estados import UFS
+
+        nomes_aceitos = {_sem_acento(estado)}
+        if estado.upper() in UFS:
+            nomes_aceitos.add(_sem_acento(UFS[estado.upper()]))
+        resultados = [r for r in resultados if _sem_acento(r.get("admin1")) in nomes_aceitos]
+
+    if not resultados:
+        return None, None
+    try:
+        return float(resultados[0]["latitude"]), float(resultados[0]["longitude"])
     except (KeyError, TypeError, ValueError):
         return None, None
 

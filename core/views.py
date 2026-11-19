@@ -2629,9 +2629,9 @@ class ClienteAdminView(AdminOnlyMixin, View):
         if salvo.publicar_no_mapa and not salvo.no_mapa:
             messages.warning(
                 request,
-                f"“{salvo.nome_cliente}” foi salvo, mas ainda não tem um ponto "
-                "no mapa: confira o CEP ou a cidade, ou informe latitude e "
-                "longitude à mão pelo cadastro."
+                f"“{salvo.nome_cliente}” foi salvo. O ponto no mapa está sendo "
+                "procurado pelo endereço e aparece em instantes; se não "
+                "aparecer, confira o CEP e a cidade."
             )
         else:
             messages.success(request, f"“{salvo.nome_cliente}” salvo.")

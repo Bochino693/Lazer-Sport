@@ -92,6 +92,7 @@ PRESENCA_DE_USUARIOS = os.getenv("PRESENCA_DE_USUARIOS", "0").strip().lower() in
 # e os números "ao vivo" são montados na hora (core/renovar.py)
 RENOVAR_EM_SEGUNDO_PLANO = False
 FILA_DE_EMAILS_NO_SITE = False  # nos testes, a fila anda só quando o teste chama (sistema_interno/fila_de_emails.py)
+LOCALIZAR_ENDERECOS_NO_SITE = False  # nos testes, a localização dos endereços só roda quando o teste chama (sistema_interno/localizacao.py)
 # e sem as pausas do ritmo de envio nem o teto diário do Gmail (os testes que tratam disso os ligam)
 CAMPANHA_EMAIL_PAUSA = 0
 CAMPANHA_EMAIL_PAUSA_LOTE = 0

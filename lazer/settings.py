@@ -850,6 +850,10 @@ EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "").strip()
 FILA_DE_EMAILS_NO_SITE = os.getenv("FILA_DE_EMAILS_NO_SITE", "true").strip().lower() != "false"
 FILA_DE_EMAILS_INTERVALO = int(os.getenv("FILA_DE_EMAILS_INTERVALO", "60").strip() or "60")
 
+# Todo endereço de cliente ganha o ponto no mapa sozinho, numa fila por trás
+# (sistema_interno/localizacao.py, LEIA-ME-V10 seção 121).
+LOCALIZAR_ENDERECOS_NO_SITE = os.getenv("LOCALIZAR_ENDERECOS_NO_SITE", "true").strip().lower() != "false"
+
 
 def _numero_do_ambiente(nome, padrao, tipo=int, minimo=0):
     try:

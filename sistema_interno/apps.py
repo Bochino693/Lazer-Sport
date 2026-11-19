@@ -21,6 +21,14 @@ class SistemaInternoConfig(AppConfig):
         # aprovado sozinha (LEIA-ME-V10, seção 112).
         signals_montagem.ligar()
 
+        # Todo endereço de cliente ganha o ponto no mapa sozinho, por trás:
+        # o que se grava sem ponto entra na fila, e uma varredura acerta os
+        # antigos (LEIA-ME-V10, seção 121; ver `localizacao.py`).
+        from . import localizacao
+
+        localizacao.ligar_ouvinte()
+        localizacao.ligar()
+
         # Depois de cada `migrate` (o deploy roda um ao subir), a lista se
         # acerta com a regra de agora: a máquina que uma migração tirou da
         # trilha de brinquedão volta à fila das máquinas sem esperar alguém

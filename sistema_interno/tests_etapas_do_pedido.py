@@ -120,9 +120,14 @@ class EtapasDoPedidoTests(_BaseEtapas):
         self.assertEqual(self.estados(regua)["termo"], "feita")
         self.assertEqual(self.estados(regua)["pagamento"], "atual")
         self.assertEqual(regua.proximo.quem, "Financeiro")
-        self.assertIn("R$ 3.000,00", regua.proximo.texto)
+        self.assertIn("R$\u00a03.000,00", regua.proximo.texto)
         self.assertEqual(regua.proximo.acao, "Registrar pagamento")
         self.assertEqual(regua.proximo.alvo, "orcamentoPagamentoResumo")
+        # de fora da janela (a tela do contrato), o link abre JÁ no quadro do pagamento
+        self.assertEqual(
+            regua.proximo.url,
+            f"/orcamentos/?q={orcamento.pk}&editar={orcamento.pk}&ir=orcamentoPagamentoResumo",
+        )
         # o Comercial não registra pagamento: o passo aparece, o botão não
         self.assertEqual(etapas(orcamento, self.vendas).proximo.acao, "")
 
@@ -132,7 +137,7 @@ class EtapasDoPedidoTests(_BaseEtapas):
         regua = etapas(orcamento, self.financeiro)
         nota = next(e.nota for e in regua.lista if e.chave == "pagamento")
         self.assertIn("33% pago", nota)
-        self.assertIn("R$ 2.000,00", nota)
+        self.assertIn("R$\u00a02.000,00", nota)
 
     def test_recusado_para_em_vermelho(self):
         regua = etapas(self.orcamento(status=Orcamento.Status.RECUSADO), self.vendas)

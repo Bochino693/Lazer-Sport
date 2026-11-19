@@ -4550,8 +4550,9 @@ body.modal-open .ls-rascunhos{display:none!important}
   .ls-etapa+.ls-etapa::before{top:14px;right:calc(50% + 17px);left:calc(-50% + 17px)}
   .ls-etapa-texto strong{font-size:.6rem;letter-spacing:-.01em;hyphens:none;overflow-wrap:normal;word-break:keep-all}
   .ls-etapa-ordem{display:none}
+  /* a nota de cada fase não cabe em 1/6 da tela ("Esperando / a / assinatura",
+     uma palavra por linha): no celular quem diz o estado é o próximo passo, logo abaixo */
   .ls-etapa-texto small{display:none}
-  .ls-etapa.atual .ls-etapa-texto small{display:block;font-size:.6rem}
   .ls-etapas-proximo{flex-wrap:wrap;align-items:flex-start;gap:10px;margin:10px 4px 0;padding:10px}
   .ls-etapas-proximo-icone{width:34px;height:34px}
   .ls-etapas-proximo-texto{flex:1 1 calc(100% - 44px)}
