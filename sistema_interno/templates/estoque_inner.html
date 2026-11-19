@@ -217,7 +217,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="itemErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="itemErro" class="visually-hidden" role="alert"></div>
         <div class="row g-3">
           {% comment %}
             CADASTRAR SEM SAIR DAQUI.
@@ -323,7 +323,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="movimentoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="movimentoErro" class="visually-hidden" role="alert"></div>
         <div class="ls-movimento-resumo mb-3">
           <div><span class="d-block text-muted small">Material selecionado</span><strong id="movimentoNome"></strong></div>
           <span class="ls-status neutral">Saldo atual: <strong id="movimentoSaldo"></strong></span>
@@ -415,7 +415,7 @@
       <input type="hidden" name="longitude" id="clienteMovimentoLongitude">
       <div class="modal-header"><h5 class="modal-title">Cadastrar cliente para a saída</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
-        <div id="clienteMovimentoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="clienteMovimentoErro" class="visually-hidden" role="alert"></div>
         <p class="text-muted small">Ao salvar, o cliente já ficará selecionado na movimentação.</p>
         <div class="row g-3">
           <div class="col-12 col-md-7"><label class="form-label">Nome *</label><input class="form-control" id="clienteMovimentoNome" name="nome_cliente" maxlength="90" required></div>
@@ -448,7 +448,7 @@
             <div><h6 class="mb-1"><i class="bi bi-truck me-1"></i> Estimativa de frete</h6><span class="text-muted small">Usa o CEP, número e a mesma regra por quilômetro da loja.</span></div>
             <button class="btn btn-outline-primary" type="button" id="calcularFreteCliente"><i class="bi bi-calculator me-1"></i> Calcular frete</button>
           </div>
-          <div class="alert alert-light border mt-3 mb-0" id="resultadoFreteCliente">Preencha CEP e número para calcular distância, tempo e valor estimado.</div>
+          <div class="ls-nota-app mt-3 mb-0" id="resultadoFreteCliente" role="status" aria-live="polite">Preencha CEP e número para calcular distância, tempo e valor estimado.</div>
         </section>
 
         <hr class="my-4">
@@ -485,7 +485,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="materialRapidoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="materialRapidoErro" class="visually-hidden" role="alert"></div>
         {% include "partials/material_foto.html" %}
         <p class="text-muted small">
           Entra no cadastro de materiais e já fica escolhido nesta linha,
@@ -553,7 +553,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="tipoRapidoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="tipoRapidoErro" class="visually-hidden" role="alert"></div>
         <label class="form-label" for="tipoRapidoDescricao">Nome do tipo *</label>
         <input class="form-control" id="tipoRapidoDescricao" name="descricao"
                data-rotulo="nome do tipo" maxlength="120" required
@@ -581,7 +581,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="fornecedorRapidoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="fornecedorRapidoErro" class="visually-hidden" role="alert"></div>
         <div class="row g-3">
           <div class="col-12">
             <label class="form-label" for="fornecedorRapidoNome">Nome *</label>
@@ -871,12 +871,16 @@ LSTela.pronto(function () {
     var cep = document.getElementById("clienteMovimentoCep").value;
     var numero = document.getElementById("clienteMovimentoNumero").value;
     var resultado = document.getElementById("resultadoFreteCliente");
+    /* O resultado é um cartão do app; o erro é a janela (seção 123). */
     if (cep.replace(/\D/g, "").length !== 8) {
-      resultado.className = "alert alert-warning mt-3 mb-0";
-      resultado.textContent = "Informe um CEP válido com oito dígitos.";
+      resultado.className = "ls-nota-app mt-3 mb-0";
+      resultado.textContent = "Preencha CEP e número para calcular distância, tempo e valor estimado.";
+      Painel.erro(null, "Informe um CEP válido com oito dígitos.", {
+        titulo: "Confira o CEP", campo: document.getElementById("clienteMovimentoCep")
+      });
       return;
     }
-    resultado.className = "alert alert-info mt-3 mb-0";
+    resultado.className = "ls-nota-app mt-3 mb-0";
     resultado.textContent = "Calculando rota e frete…";
     var dados = new FormData();
     dados.append("action", "calcular_frete_cliente");
@@ -888,12 +892,13 @@ LSTela.pronto(function () {
       .then(function (json) {
         var valor = Number(json.valor_frete || 0).toLocaleString("pt-BR", {style:"currency", currency:"BRL"});
         var tempo = json.tempo_estimado_min == null ? "tempo indisponível" : Math.round(json.tempo_estimado_min) + " min";
-        resultado.className = "alert alert-success mt-3 mb-0";
+        resultado.className = "ls-nota-app ok mt-3 mb-0";
         resultado.textContent = valor + " · " + Number(json.distancia_km || 0).toLocaleString("pt-BR", {maximumFractionDigits:2}) + " km · " + tempo + (json.estimado ? " · rota estimada" : "");
       })
       .catch(function (erro) {
-        resultado.className = "alert alert-danger mt-3 mb-0";
-        resultado.textContent = erro.message;
+        resultado.className = "ls-nota-app mt-3 mb-0";
+        resultado.textContent = "Sem cálculo de frete.";
+        Painel.erro(null, erro.message, { titulo: "Não deu para calcular o frete" });
       });
   });
 

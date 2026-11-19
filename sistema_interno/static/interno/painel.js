@@ -365,16 +365,192 @@
     }
   };
 
-  Painel.erro = function (id, texto) {
-    var caixa = document.getElementById(id);
-    if (!caixa) {
-      return;
+  /* ==================================================================
+     O ERRO É UMA JANELA DE APLICATIVO (LEIA-ME-V10, seção 123).
+
+     "Tire as notificações de erros como um texto comum e trate tudo como
+     app, renderizando janelas, sendo claro." Antes, `Painel.erro(id, msg)`
+     enchia uma tarja vermelha do Bootstrap no alto da janela -- texto solto,
+     às vezes fora da vista, sem dizer o que fazer. Agora a MESMA chamada
+     abre a folha do LSAviso (cartão no meio no computador, folha que sobe
+     no celular): ícone, um título curto ("Não deu para salvar", "Contrato
+     assinado"), a explicação e o botão que resolve, quando há um. O campo
+     do erro fica aceso e recebe o foco quando a folha fecha.
+
+     A caixa de antes continua no HTML como a FALA do leitor de tela: uma
+     região viva visualmente oculta (`visually-hidden`), com o mesmo texto.
+     Sem o ls-aviso.js (o script não chegou), ela aparece, como reserva.
+
+     detalhes (todos opcionais): {titulo, campo, acao, acoes, form, nivel,
+       icone, lista, acharCampo}
+       - campo: o `name` (ou o `data-campo`) do campo que errou, ou o elemento;
+       - acao: a do servidor -- {rotulo, url} ou {rotulo, chave}; a chave é
+         resolvida em `acoes` (a tela dá as dela) ou nas de sempre
+         ("recarregar");
+       - acharCampo(nome): a tela acha campos que o nome não acha sozinho
+         ("item:2:quantidade", a linha 2 da tabela de itens).
+     ================================================================== */
+  var CLASSES_DA_TARJA = ["d-none", "alert", "alert-danger", "alert-warning", "alert-success", "alert-info"];
+  var janelaDeErroAberta = "";
+
+  function tituloDoErro(detalhes, escopo) {
+    if (detalhes.titulo) return detalhes.titulo;
+    if (detalhes.rede) return "Sem conexão";
+    if (detalhes.status === 403) return "Sem permissão";
+    if (detalhes.validacao) return "Confira antes de salvar";
+    var botao = escopo && escopo.querySelector && escopo.querySelector('[type="submit"]');
+    var verbo = botao ? botao.textContent.trim().toLocaleLowerCase("pt-BR") : "";
+    if (/exclu/.test(verbo)) return "Não deu para excluir";
+    if (/envi/.test(verbo)) return "Não deu para enviar";
+    if (/registr/.test(verbo)) return "Não deu para registrar";
+    return "Não deu para salvar";
+  }
+
+  function acharCampoDoErro(escopo, nome, detalhes) {
+    if (!nome) return null;
+    if (nome.nodeType === 1) return nome;
+    if (detalhes && typeof detalhes.acharCampo === "function") {
+      var proprio = detalhes.acharCampo(nome);
+      if (proprio) return proprio;
     }
-    caixa.textContent = texto || "";
-    caixa.classList.toggle("d-none", !texto);
-    if (texto) {
-      caixa.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    var raiz = escopo || document;
+    var seguro = String(nome).replace(/["\\]/g, "");
+    return raiz.querySelector('[data-campo="' + seguro + '"]')
+      || raiz.querySelector('[name="' + seguro + '"]:not([type="hidden"])')
+      || null;
+  }
+
+  function apagarDestaques(escopo) {
+    if (!escopo || !escopo.querySelectorAll) return;
+    escopo.querySelectorAll(".ls-campo-erro").forEach(function (campo) {
+      campo.classList.remove("ls-campo-erro");
+      campo.removeAttribute("aria-invalid");
+    });
+  }
+
+  function destacarCampo(campo) {
+    if (!campo) return;
+    campo.classList.add("ls-campo-erro");
+    campo.setAttribute("aria-invalid", "true");
+    function limpar() {
+      campo.classList.remove("ls-campo-erro");
+      campo.removeAttribute("aria-invalid");
+      campo.removeEventListener("input", limpar);
+      campo.removeEventListener("change", limpar);
     }
+    campo.addEventListener("input", limpar);
+    campo.addEventListener("change", limpar);
+  }
+
+  function focarCampo(campo) {
+    if (!campo || !campo.isConnected || campo.disabled) return;
+    var semMovimento = global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    try { campo.focus({ preventScroll: true }); } catch (erro) { /* sem foco, sem drama */ }
+    campo.scrollIntoView({ block: "center", behavior: semMovimento ? "auto" : "smooth" });
+  }
+
+  /* A ação do servidor vira o botão da folha: link segue o endereço; a
+     chave chama quem a tela registrou (ou uma das de sempre). Sem quem a
+     resolva, a folha fica só com o "Entendi". */
+  function acaoDaJanela(detalhes) {
+    var acao = detalhes.acao;
+    if (!acao || !acao.rotulo) return null;
+    if (acao.url) return { rotulo: acao.rotulo, url: acao.url };
+    var acoes = detalhes.acoes || {};
+    var fazer = acoes[acao.chave];
+    if (!fazer && acao.chave === "recarregar") fazer = function () { global.location.reload(); };
+    if (typeof fazer !== "function") return null;
+    return { rotulo: acao.rotulo, aoClicar: function () { fazer(acao); } };
+  }
+
+  /* A caixa vira a fala do leitor de tela (região viva, visualmente oculta). */
+  function prepararFala(caixa) {
+    CLASSES_DA_TARJA.forEach(function (classe) { caixa.classList.remove(classe); });
+    caixa.classList.remove("ls-erro-reserva");
+    caixa.classList.add("visually-hidden");
+    if (!caixa.getAttribute("role")) caixa.setAttribute("role", "alert");
+  }
+
+  Painel.erro = function (id, texto, detalhes) {
+    detalhes = detalhes || {};
+    var caixa = typeof id === "string" ? document.getElementById(id) : id;
+    var escopo = detalhes.form || (caixa && (caixa.closest(".modal") || caixa.closest("form"))) || null;
+    if (caixa) prepararFala(caixa);
+    if (!texto) {
+      if (caixa) caixa.textContent = "";
+      apagarDestaques(escopo);
+      return Promise.resolve();
+    }
+    if (caixa) caixa.textContent = texto;
+    var campo = acharCampoDoErro(escopo, detalhes.campo, detalhes);
+    apagarDestaques(escopo);
+    destacarCampo(campo);
+
+    if (!global.LSAviso || typeof global.LSAviso.modal !== "function") {
+      /* Reserva: sem a folha, a caixa aparece no alto da janela. */
+      if (caixa) {
+        caixa.classList.remove("visually-hidden");
+        caixa.classList.add("ls-erro-reserva");
+        caixa.scrollIntoView({ block: "nearest" });
+      }
+      focarCampo(campo);
+      return Promise.resolve();
+    }
+    var titulo = tituloDoErro(detalhes, escopo);
+    /* O mesmo erro duas vezes seguidas (dois toques em Salvar) é uma folha só. */
+    var chave = titulo + "|" + texto;
+    if (janelaDeErroAberta === chave) return Promise.resolve();
+    janelaDeErroAberta = chave;
+    return global.LSAviso.modal({
+      nivel: detalhes.nivel || "erro",
+      titulo: titulo,
+      texto: texto,
+      icone: detalhes.icone || (detalhes.rede ? "alerta" : ""),
+      acao: acaoDaJanela(detalhes),
+      lista: detalhes.lista || null
+    }).then(function () {
+      janelaDeErroAberta = "";
+      focarCampo(campo);
+    }, function () { janelaDeErroAberta = ""; });
+  };
+
+  /* O que falta no campo, em português e do mesmo jeito em qualquer
+     aparelho (o balão do navegador fala a língua do navegador). */
+  function dataBr(iso) {
+    var partes = String(iso || "").slice(0, 10).split("-");
+    return partes.length === 3 ? partes[2] + "/" + partes[1] + "/" + partes[0] : String(iso || "");
+  }
+
+  function mensagemDoCampo(campo) {
+    var v = campo.validity || {};
+    if (campo.dataset && campo.dataset.erro) return campo.dataset.erro;
+    if (v.valueMissing) return campo.type === "checkbox" ? "marque para continuar." : "preencha este campo.";
+    if (v.typeMismatch && campo.type === "email") return "escreva um e-mail completo, como nome@empresa.com.br.";
+    if (v.typeMismatch) return "o formato não está certo.";
+    if (v.rangeUnderflow) {
+      return /date/.test(campo.type) ? "a data não pode ser antes de " + dataBr(campo.min) + "." : "o mínimo é " + campo.min + ".";
+    }
+    if (v.rangeOverflow) {
+      return /date/.test(campo.type) ? "a data não pode ser depois de " + dataBr(campo.max) + "." : "o máximo é " + campo.max + ".";
+    }
+    if (v.tooShort) return "escreva pelo menos " + campo.minLength + " caracteres.";
+    if (v.badInput) return "o valor não está num formato que dê para ler.";
+    return campo.validationMessage || "confira o valor.";
+  }
+
+  /* Os detalhes que o servidor mandou junto do erro (`titulo`, `campo`,
+     `acao`), lidos do Error que `Painel.enviar` levanta. */
+  Painel.detalhesDoErro = function (erro, extras) {
+    var base = {};
+    if (erro) {
+      ["titulo", "campo", "acao", "status", "rede", "lista", "icone", "nivel"].forEach(function (chave) {
+        if (erro[chave] !== undefined && erro[chave] !== null && erro[chave] !== "") base[chave] = erro[chave];
+      });
+    }
+    Object.keys(extras || {}).forEach(function (chave) {
+      if (extras[chave] !== undefined && base[chave] === undefined) base[chave] = extras[chave];
+    });
+    return base;
   };
 
   document.addEventListener("hidden.bs.modal", function () {
@@ -1158,6 +1334,19 @@
      aparência. */
   Painel.aviso = function (mensagem, tipo, tema) {
     if (!mensagem) return;
+    /* O recado com título, texto e botão (o resultado que precisa ser
+       lido: "Contrato refeito", "Proposta atualizada") é a folha de app;
+       com `toast: true`, o toast. A ação vem como a do erro: {rotulo, url}
+       ou {rotulo, chave} resolvida em `acoes`. */
+    if (typeof mensagem === "object") {
+      if (!global.LSAviso) return;
+      var folha = Object.assign({}, mensagem);
+      folha.acao = acaoDaJanela({ acao: mensagem.acao, acoes: mensagem.acoes });
+      delete folha.acoes;
+      if (folha.toast) global.LSAviso.toast(folha);
+      else global.LSAviso.modal(folha);
+      return;
+    }
     /* O aviso comum é o toast de aplicativo (ls-aviso.js), o mesmo dos
        recados do servidor. A tarja de baixo fica para a troca de tema --
        que tem desenho próprio -- e de reserva, se o script não chegou. */
@@ -1283,10 +1472,22 @@
         })
         .then(function (json) {
           if (!resposta.ok || !json || json.status !== "sucesso") {
-            throw new Error(
+            var erro = new Error(
               (json && json.msg) ||
                 "Não foi possível salvar. Tente novamente em instantes."
             );
+            /* O que a janela do erro usa (seção 123): o título, o campo e o
+               botão que resolve, quando o servidor os mandou. */
+            erro.status = resposta.status;
+            if (json) {
+              erro.titulo = json.titulo;
+              erro.campo = json.campo;
+              erro.acao = json.acao;
+              erro.icone = json.icone;
+              erro.nivel = json.nivel;
+              erro.json = json;
+            }
+            throw erro;
           }
           /* Salvou: os avisos podem ter mudado agora mesmo -- um pedido
              que virou produção, um orçamento que saiu. Perguntar aqui faz
@@ -1308,11 +1509,13 @@
 
          O texto diz as três coisas que faltavam: o que aconteceu, que
          nada foi perdido, e qual é o próximo passo. */
-      throw new Error(
+      var queda = new Error(
         "A conexão caiu antes de o servidor responder. Nada foi perdido: "
         + "o que está na janela continua aqui e fica guardado como rascunho. "
         + "Confira a internet e toque em salvar de novo."
       );
+      queda.rede = true;
+      throw queda;
     });
   };
 
@@ -1336,6 +1539,11 @@
       var recado = typeof opcoes.mensagemPronta === "function"
         ? opcoes.mensagemPronta(ultimaResposta)
         : opcoes.mensagemPronta;
+      /* O servidor mandou a janela do resultado (seção 123: "Contrato
+         refeito..."): ela é o recado, com o botão dela. */
+      if (!recado && ultimaResposta && ultimaResposta.janela) {
+        recado = Object.assign({}, ultimaResposta.janela, { acoes: opcoes.acoes });
+      }
       return recado || "Salvo.";
     }
 
@@ -1352,18 +1560,44 @@
       botao.textContent = on ? (opcoes.rotuloCarregando || "Salvando...") : rotulo;
     }
 
+    /* O erro na janela de app (seção 123): o que o servidor mandou
+       (`titulo`, `campo`, `acao`) mais o que a tela sabe (as ações dela,
+       como achar um campo, o título padrão). */
+    function mostrarErro(texto, extras) {
+      return Painel.erro(opcoes.erro, texto, Painel.detalhesDoErro(extras && extras.erro, {
+        form: form,
+        titulo: extras && extras.titulo,
+        campo: extras && extras.campo,
+        validacao: extras && extras.validacao,
+        acoes: opcoes.acoes,
+        acharCampo: opcoes.acharCampo
+      }));
+    }
+
     // A validacao nativa nao bubbla e o balaozinho some quando o modal
-    // rola; o motivo tambem vai pro banner fixo do modal.
+    // rola; o motivo vai para a janela de app, com o campo aceso. Só o
+    // primeiro campo de cada tentativa: cinco vazios não são cinco folhas.
+    var invalidoEm = 0;
     form.addEventListener(
       "invalid",
       function (e) {
+        /* A janela de app SUBSTITUI o balão do navegador: sem isto ele
+           ainda tentaria focar o campo atrás da folha aberta. */
+        e.preventDefault();
         travar(false);
-        Painel.erro(
-          opcoes.erro,
-          "Confira o campo " +
-            (e.target.getAttribute("data-rotulo") || e.target.name) +
-            ": " +
-            e.target.validationMessage
+        if (Date.now() - invalidoEm < 600) return;
+        invalidoEm = Date.now();
+        /* O nome que a pessoa lê na tela: o `data-rotulo`, o rótulo do
+           campo ou, por último, o `name`. */
+        var rotuloDoCampo = e.target.getAttribute("data-rotulo");
+        if (!rotuloDoCampo && e.target.id) {
+          var rotuloNaTela = form.querySelector('label[for="' + e.target.id + '"]');
+          if (rotuloNaTela) rotuloDoCampo = rotuloNaTela.textContent.replace(/\s+/g, " ").trim();
+        }
+        var nomeDoCampo = String(rotuloDoCampo || e.target.name || "Campo");
+        mostrarErro(
+          nomeDoCampo.charAt(0).toLocaleUpperCase("pt-BR") + nomeDoCampo.slice(1) + ": " + mensagemDoCampo(e.target),
+          { titulo: "Confira o campo", campo: e.target }
         );
       },
       true
@@ -1375,9 +1609,16 @@
       Painel.erro(opcoes.erro, "");
 
       if (opcoes.antes) {
+        /* O impedimento é o texto, ou {texto, campo, titulo} quando a tela
+           sabe qual campo acender. */
         var impedimento = opcoes.antes(form);
         if (impedimento) {
-          Painel.erro(opcoes.erro, impedimento);
+          var comCampo = typeof impedimento === "object";
+          mostrarErro(comCampo ? impedimento.texto : impedimento, {
+            validacao: true,
+            titulo: comCampo ? impedimento.titulo : "",
+            campo: comCampo ? impedimento.campo : ""
+          });
           return;
         }
       }
@@ -1463,8 +1704,22 @@
         })
         .catch(function (err) {
           Painel.pronto();
-          Painel.erro(opcoes.erro, err.message);
           travar(false);
+          /* A rede caiu: o botão da janela tenta de novo, com o mesmo envio. */
+          if (err && err.rede && !err.acao) {
+            err.acao = { rotulo: "Tentar de novo", chave: "tentar" };
+          }
+          var acoesDaTela = Object.assign({
+            tentar: function () {
+              if (typeof form.requestSubmit === "function") form.requestSubmit();
+            }
+          }, opcoes.acoes || {});
+          Painel.erro(opcoes.erro, err.message, Painel.detalhesDoErro(err, {
+            form: form,
+            titulo: opcoes.tituloErro,
+            acoes: acoesDaTela,
+            acharCampo: opcoes.acharCampo
+          }));
         });
     });
   };

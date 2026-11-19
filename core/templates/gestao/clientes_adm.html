@@ -832,13 +832,14 @@ LSTela.pronto(function () {
       const button = form.querySelector('[type="submit"]');
       if (button) button.disabled = true;
       let erro = form.querySelector('[data-erro-envio]');
-      if (!erro) { erro = document.createElement('p'); erro.dataset.erroEnvio='1'; erro.setAttribute('role','alert'); erro.className='alert alert-danger'; form.appendChild(erro); }
-      erro.hidden=true;
+      /* O erro é a janela de app (LEIA-ME-V10, seção 123); este parágrafo é só a fala do leitor de tela. */
+      if (!erro) { erro = document.createElement('p'); erro.dataset.erroEnvio='1'; erro.setAttribute('role','alert'); erro.className='visually-hidden'; form.appendChild(erro); }
+      Painel.erro(erro, '');
       try {
         await Painel.enviar(form);
         closeClientForm(); closeDeleteConfirmation();
         await LSAtualizarTela();
-      } catch (e) { erro.textContent=e.message; erro.hidden=false; }
+      } catch (e) { Painel.erro(erro, e.message, Painel.detalhesDoErro(e, { form: form })); }
       finally { enviando=false; if(button) button.disabled=false; }
     });
   });

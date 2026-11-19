@@ -213,7 +213,7 @@ def _enviar_assinatura(request, token):
         if not leitura.valido and not _liberado(request, leitura):
             mensagens = {
                 "expirado": "O tempo do link acabou antes do envio. Nada foi salvo: peça um novo link ao atendente.",
-                "substituido": "Este link é de uma versão anterior do documento. Nada foi salvo: peça o link novo ao atendente.",
+                "substituido": "Este link é de uma versão anterior do contrato: o pedido foi atualizado e o contrato refeito. Nada foi salvo; peça o link novo ao atendente.",
                 "suspenso": (
                     "Este documento está suspenso: o pagamento do pedido mudou. Nada foi salvo; fale com o atendente."
                     if leitura.motivo == "pagamento" else

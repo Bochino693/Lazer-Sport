@@ -52,7 +52,27 @@
       </div>
 
       <div class="modal-body ls-compact-form">
-        <div id="orcamentoErro" class="alert alert-danger d-none" role="alert"></div>
+        {# O erro é a janela de app (Painel.erro); esta caixa é só a fala do leitor de tela. #}
+        <div id="orcamentoErro" class="visually-hidden" role="alert"></div>
+        {% comment %}
+          ATÉ A ASSINATURA (LEIA-ME-V10, seção 123). A proposta muda aqui
+          mesmo enquanto o contrato não foi assinado. Quando ela não muda
+          (assinada, com O.S., recusada, expirada, substituída), a janela
+          abre só para consulta e a TRAVA diz por quê, com o botão que
+          resolve; quando muda, o AVISO diz o que anda junto ao salvar.
+        {% endcomment %}
+        <section class="ls-janela-trava" id="orcamentoTrava" hidden aria-labelledby="orcamentoTravaTitulo">
+          <span class="ls-nota-app-icone" aria-hidden="true"><i class="bi bi-lock-fill" id="orcamentoTravaIcone"></i></span>
+          <div class="ls-nota-app-corpo">
+            <strong id="orcamentoTravaTitulo"></strong>
+            <span id="orcamentoTravaTexto"></span>
+          </div>
+          <a class="ls-janela-trava-acao" id="orcamentoTravaAcao" href="#" hidden></a>
+        </section>
+        <div class="ls-janela-aviso" id="orcamentoAvisoEdicao" hidden>
+          <span class="ls-nota-app-icone" aria-hidden="true"><i class="bi bi-arrow-repeat"></i></span>
+          <div class="ls-nota-app-corpo"><span id="orcamentoAvisoEdicaoTexto"></span></div>
+        </div>
         <div id="orcamentoContexto" class="ls-refazer-nota" hidden></div>
 
         {% comment %}
@@ -148,9 +168,10 @@
               <button type="button" class="ls-chip ls-chip-zerar" data-validade-limpar>Sem prazo</button>
             </div>
             <span class="form-text">Proposta nova já nasce com {{ validade_padrao_dias }} dias.</span>
-            <span class="form-text d-block" id="orcamentoDataDocumento" hidden>
+            {# div, e não span com d-block: o d-block (!important) vencia o `hidden` e a nota vazia aparecia em toda proposta #}
+            <div class="form-text" id="orcamentoDataDocumento" hidden>
               <i class="bi bi-calendar-event" aria-hidden="true"></i> Documento importado de <strong></strong>
-            </span>
+            </div>
           </div>
 
         </div>
@@ -235,7 +256,7 @@
                       id="descontoUnidade" data-modo="valor"
                       title="Trocar entre reais e porcentagem"
                       aria-label="Trocar entre reais e porcentagem">R$</button>
-              <input class="form-control ls-recalcula" id="orcamentoDesconto"
+              <input class="form-control ls-recalcula" id="orcamentoDesconto" data-campo="desconto"
                      inputmode="decimal" data-mascara="moeda-valor" autocomplete="off"
                      placeholder="0,00">
             </div>
@@ -394,7 +415,7 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" id="fecharOrcamento">Cancelar</button>
         <button type="submit" class="btn btn-success" id="salvarOrcamento">Salvar orçamento</button>
       </div>
     </form>
@@ -421,7 +442,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
       </div>
 
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="brinquedoNovoErro"></div>
+        <div class="visually-hidden" id="brinquedoNovoErro" role="alert"></div>
 
         <p class="text-muted small">
           Entra no catálogo do site e já fica disponível na linha do orçamento.
@@ -584,7 +605,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
       </div>
 
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="pecaNovaErro"></div>
+        <div class="visually-hidden" id="pecaNovaErro" role="alert"></div>
         <p class="text-muted small">
           A peça fica salva no catálogo da loja e entra nesta proposta sem perder o que já foi digitado.
         </p>
@@ -716,7 +737,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
       </div>
 
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="clienteNovoErro"></div>
+        <div class="visually-hidden" id="clienteNovoErro" role="alert"></div>
 
         <p class="text-muted small">
           O cadastro fica salvo na aba Clientes e já entra neste orçamento.
@@ -848,8 +869,8 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="linkErro"></div>
-        <div class="alert alert-success d-none" id="linkSucesso" role="status"></div>
+        <div class="visually-hidden" id="linkErro" role="alert"></div>
+        <div class="visually-hidden" id="linkSucesso" role="status"></div>
         <p class="text-muted small mb-2">Escolha como compartilhar com <strong id="linkCliente"></strong>. O cliente abre uma página Lazer &amp; Sport com todos os detalhes e responde por ali.</p>
         <input type="hidden" id="linkOrcamentoId">
         <section class="ls-share-preview" aria-label="Prévia do compartilhamento">
@@ -887,13 +908,15 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
                 mensagem genérica e ficava achando que a proposta tinha
                 saído -- o cliente é que sabia que não chegou.
               {% endcomment %}
-              <div class="alert alert-warning mt-2 mb-0 py-2 px-3 small" role="status">
-                <i class="bi bi-exclamation-triangle me-1"></i>
-                O envio por e-mail ainda não está ligado nesta hospedagem.
-                Use o WhatsApp ou copie o link. Para ligar, veja
-                <strong>docs/CONFIGURAR_EMAIL.md</strong> — faltam
-                <code>EMAIL_HOST_USER</code> e <code>EMAIL_HOST_PASSWORD</code>.
-                <span class="d-block mt-1">{{ email_diagnostico }}</span>
+              <div class="ls-nota-app alerta mt-2 mb-0" role="status">
+                <span class="ls-nota-app-icone" aria-hidden="true"><i class="bi bi-envelope-exclamation"></i></span>
+                <div class="ls-nota-app-corpo">
+                  <strong>E-mail ainda não ligado</strong>
+                  <span>Use o WhatsApp ou copie o link. Para ligar, veja
+                  <b>docs/CONFIGURAR_EMAIL.md</b> — faltam
+                  <code>EMAIL_HOST_USER</code> e <code>EMAIL_HOST_PASSWORD</code>.
+                  {{ email_diagnostico }}</span>
+                </div>
               </div>
             {% endif %}
           </div>
@@ -1021,7 +1044,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="situacaoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div class="visually-hidden" id="situacaoErro" role="alert"></div>
         <p class="mb-3"><strong id="situacaoNome"></strong></p>
         {# A situação em chips (rádios dentro de <label>), nunca <select>: a de agora já vem marcada. #}
         <fieldset class="ls-situacao-chips" id="situacaoStatus">
@@ -1087,7 +1110,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="refazerErro" class="alert alert-danger d-none" role="alert"></div>
+        <div class="visually-hidden" id="refazerErro" role="alert"></div>
         <p class="mb-2"><strong id="refazerNome"></strong></p>
         <div class="ls-refazer-contexto" id="refazerContexto" hidden></div>
         <label class="form-label mt-3" for="refazerMotivo">O que muda nesta versão</label>
@@ -1125,7 +1148,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="pagamentoErro" class="alert alert-danger d-none"></div>
+        <div class="visually-hidden" id="pagamentoErro" role="alert"></div>
 
         {% comment %}
           O RESUMO ERA UM ALERTA CLARO DO BOOTSTRAP: fundo branco num painel
@@ -1188,7 +1211,7 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="avaliacaoBlocoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div class="visually-hidden" id="avaliacaoBlocoErro" role="alert"></div>
         <div class="row g-3">
           <div class="col-12 col-sm-6">
             <label class="form-label" for="avaliacaoBloco">Bloco responsável</label>
@@ -2017,6 +2040,15 @@ LSTela.pronto(function () {
     ["dias", "previsao", "inicio", "nota", "texto"].forEach(function (chave) {
       orcamentoEmEdicao.producao[chave] = novo[chave];
     });
+    /* O prazo gravado à parte mudou a revisão do orçamento: a janela anda
+       junto (senão o "Salvar" seguinte diria "mudou em outro atendimento").
+       Só quando ela estava em dia -- se outra pessoa mudou antes, o aviso
+       da concorrência continua valendo. */
+    var revisao = document.getElementById("orcamentoRevisao");
+    if (novo.revisao && revisao && revisao.value === novo.revisao_anterior) {
+      revisao.value = novo.revisao;
+      orcamentoEmEdicao.revisao = novo.revisao;
+    }
     document.getElementById("orcamentoProducaoSituacao").textContent =
       novo.previsao ? "Pronto em " + novo.previsao.slice(0, 5)
         : novo.dias == null ? "Sem prazo" : "Prazo";
@@ -2242,6 +2274,20 @@ LSTela.pronto(function () {
       Painel.valor("orcamentoStatus", orcamento.status);
       Painel.valor("orcamentoValidade", orcamento.validade);
       Painel.valor("orcamentoFrete", orcamento.frete);
+      /* A VALIDADE QUE JÁ PASSOU NÃO BLOQUEIA A JANELA (seção 123). O piso
+         do calendário (hoje) faria o navegador recusar o "Salvar" de uma
+         aprovada de semanas atrás -- que pode mudar até a assinatura. O piso
+         desce até a data gravada: a aprovada salva com ela; a que ainda
+         espera o cliente ouve do servidor "Validade no passado", com o
+         atalho dos 5 dias. */
+      var campoValidade = document.getElementById("orcamentoValidade");
+      var hojeNoAparelho = Painel.datas.paraDataLocal(new Date());
+      if (campoValidade) {
+        var passada = Boolean(orcamento.validade && orcamento.validade < hojeNoAparelho);
+        /* sem o `data-nao-passado`, a montagem da tela não põe o piso de volta */
+        campoValidade.toggleAttribute("data-nao-passado", !passada);
+        campoValidade.min = passada ? orcamento.validade : hojeNoAparelho;
+      }
       /* A data do documento importado (o contrato de 2016 que entrou hoje). */
       var dataDocumento = document.getElementById("orcamentoDataDocumento");
       if (dataDocumento) {
@@ -2270,12 +2316,60 @@ LSTela.pronto(function () {
        aplica o mesmo prazo quando o campo chega vazio numa proposta nova,
        então o valor é o mesmo por qualquer caminho. */
     if (!orcamento) definirValidade(VALIDADE_PADRAO_DIAS);
+    if (!orcamento && document.getElementById("orcamentoValidade")) {
+      document.getElementById("orcamentoValidade").setAttribute("data-nao-passado", "");
+      document.getElementById("orcamentoValidade").min = Painel.datas.paraDataLocal(new Date());
+    }
     if (!orcamento) Painel.valor("orcamentoStatus", "aguardando_resposta");
 
     recalcular();
     aplicarPermissoesEdicao(!orcamento || orcamento.pode_editar);
+    mostrarTrava(orcamento);
     Painel.abrir("modalOrcamento");
   }
+
+  /* ATÉ A ASSINATURA (seção 123): a trava diz por que a janela abriu só
+     para consulta (e oferece o que resolve); o aviso diz o que anda junto
+     quando a proposta que muda for salva. Quem decide é o servidor
+     (`edicao_orcamento.trava` e `aviso_da_janela`). */
+  var ICONES_DA_TRAVA = { assinado: "bi-patch-check-fill", os: "bi-tools", encerrada: "bi-arrow-repeat", substituida: "bi-clock-history" };
+
+  function mostrarTrava(orcamento) {
+    var trava = orcamento && orcamento.trava;
+    var caixa = document.getElementById("orcamentoTrava");
+    var aviso = document.getElementById("orcamentoAvisoEdicao");
+    if (caixa) {
+      caixa.hidden = !trava;
+      if (trava) {
+        document.getElementById("orcamentoTravaTitulo").textContent = trava.titulo || "";
+        document.getElementById("orcamentoTravaTexto").textContent = trava.texto || "";
+        document.getElementById("orcamentoTravaIcone").className = "bi " + (ICONES_DA_TRAVA[trava.chave] || "bi-lock-fill");
+        var botao = document.getElementById("orcamentoTravaAcao");
+        var acao = trava.acao;
+        /* "Refazer proposta" só para quem refaz (o Comercial). */
+        var pode = acao && (acao.url || (acao.chave === "refazer" && podeEditarComercial));
+        botao.hidden = !pode;
+        if (pode) {
+          botao.textContent = acao.rotulo;
+          botao.setAttribute("href", acao.url || "#");
+          botao.dataset.chave = acao.chave || "";
+          botao.dataset.id = acao.id || (orcamento && orcamento.id) || "";
+        }
+      }
+    }
+    if (aviso) {
+      var texto = (orcamento && !trava && orcamento.aviso_edicao) || "";
+      aviso.hidden = !texto;
+      document.getElementById("orcamentoAvisoEdicaoTexto").textContent = texto;
+    }
+  }
+
+  document.getElementById("orcamentoTravaAcao")?.addEventListener("click", function (evento) {
+    var botao = evento.currentTarget;
+    if (botao.dataset.chave !== "refazer") return;  // o link segue
+    evento.preventDefault();
+    refazerProposta(botao.dataset.id);
+  });
 
   function aplicarPermissoesEdicao(mutavel) {
     [
@@ -2306,6 +2400,9 @@ LSTela.pronto(function () {
     });
     var salvar = document.getElementById("salvarOrcamento");
     if (salvar) salvar.hidden = !mutavel;
+    /* Só para consulta, não há o que cancelar: a janela só fecha. */
+    var fechar = document.getElementById("fecharOrcamento");
+    if (fechar) fechar.textContent = mutavel ? "Cancelar" : "Fechar";
   }
 
   var botaoNovoOrcamento = document.getElementById("novoOrcamento");
@@ -2364,23 +2461,30 @@ LSTela.pronto(function () {
 
   // A nova versão chega no POST com todos os dados de edição.
   // O motivo já registrado acompanha os itens e preços no formulário.
-  Painel.aoClicar("[data-refazer]", function (botao) {
-    Painel.valor("refazerId", botao.dataset.refazer);
+  /* A versão nova, pelo botão da linha ou pelo da trava da janela. O erro
+     é a janela de app (seção 123), sem abrir outra janela por baixo. */
+  function refazerProposta(id, botao) {
+    Painel.valor("refazerId", id);
     Painel.valor("refazerMotivo", "");
-    botao.disabled = true;
+    if (botao) botao.disabled = true;
     Painel.ocupado("Preparando itens e preços…");
-    Painel.enviar(document.getElementById("formRefazer"))
+    return Painel.enviar(document.getElementById("formRefazer"))
       .then(function (json) {
         abrir(json.id, json.orcamento);
       })
       .catch(function (erro) {
-        Painel.erro("refazerErro", erro.message);
-        Painel.abrir("modalRefazer");
+        Painel.erro("refazerErro", erro.message, Painel.detalhesDoErro(erro, {
+          titulo: "Não deu para criar a versão nova"
+        }));
       })
       .finally(function () {
-        botao.disabled = false;
+        if (botao) botao.disabled = false;
         Painel.pronto();
       });
+  }
+
+  Painel.aoClicar("[data-refazer]", function (botao) {
+    refazerProposta(botao.dataset.refazer, botao);
   });
 
   Painel.ligar({
@@ -2395,13 +2499,78 @@ LSTela.pronto(function () {
   /* ------------------------------------------------------------------
      Envio
      ------------------------------------------------------------------ */
+  /* AS AÇÕES DAS JANELAS DE ERRO E DE RESULTADO (seção 123): o botão que
+     resolve, pela chave que o servidor manda. */
+  function verVersaoAtual(acao) {
+    var id = String((acao && acao.id) || (orcamentoEmEdicao && orcamentoEmEdicao.id) || "");
+    if (!id) return;
+    Painel.ocupado("Buscando a versão atual…");
+    var busca = typeof window.LSAtualizarTela === "function" ? window.LSAtualizarTela({ partes: true }) : null;
+    Promise.resolve(busca).then(function () {
+      Painel.pronto();
+      if (achar(id)) {
+        abrir(id);
+        Painel.aviso("Esta é a versão atual. Refaça a sua mudança e salve.", "info");
+      } else {
+        window.location.href = "?q=" + encodeURIComponent(id) + "&editar=" + encodeURIComponent(id);
+      }
+    }, function () { Painel.pronto(); });
+  }
+
+  function usarValidadePadrao() {
+    definirValidade(VALIDADE_PADRAO_DIAS);
+    var campo = document.getElementById("orcamentoValidade");
+    if (campo) {
+      campo.classList.remove("ls-campo-erro");
+      campo.removeAttribute("aria-invalid");
+      campo.focus();
+    }
+  }
+
+  function reenviarAoCliente(acao) {
+    var id = String((acao && acao.id) || "");
+    var botao = id ? document.querySelector('[data-enviar="' + id + '"]') : null;
+    if (botao) botao.click();
+  }
+
+  var ACOES_DA_JANELA = {
+    versao_atual: verVersaoAtual,
+    validade_padrao: usarValidadePadrao,
+    reenviar: reenviarAoCliente,
+    refazer: function (acao) { refazerProposta(acao && acao.id); }
+  };
+
+  /* As linhas de item que vão ao servidor (as em branco ficam de fora): o
+     "Item 2" do erro é a 2ª linha PREENCHIDA, e não a 2ª da tabela. */
+  function linhasPreenchidas() {
+    return Array.prototype.filter.call(corpo.querySelectorAll("tr"), function (linha) {
+      var descricao = linha.querySelector(".ls-item-descricao").value.trim();
+      var quantidade = parseInt(linha.querySelector(".ls-item-quantidade").value, 10) || 0;
+      var valor = linha.querySelector(".ls-item-valor").value.trim();
+      return descricao || valor || quantidade > 1;
+    });
+  }
+
+  function campoDoItem(nome) {
+    var partes = /^item:(\d+):(\w+)$/.exec(String(nome || ""));
+    if (!partes) return null;
+    var linhas = linhasPreenchidas();
+    var linha = linhas[Number(partes[1]) - 1] || corpo.querySelector("tr");
+    if (!linha) return null;
+    var classe = { descricao: ".ls-item-descricao", quantidade: ".ls-item-quantidade", valor: ".ls-item-valor" }[partes[2]];
+    return classe ? linha.querySelector(classe) : null;
+  }
+
   Painel.ligar({
     form: "formOrcamento",
     partes: true,
     erro: "orcamentoErro",
+    acoes: ACOES_DA_JANELA,
+    acharCampo: campoDoItem,
     antes: function () {
       var itens = [];
       var vazio = false;
+      var linhaVazia = null;
 
       corpo.querySelectorAll("tr").forEach(function (linha) {
         var descricao = linha.querySelector(".ls-item-descricao").value.trim();
@@ -2414,6 +2583,7 @@ LSTela.pronto(function () {
 
         if (!descricao) {
           vazio = true;
+          linhaVazia = linhaVazia || linha.querySelector(".ls-item-descricao");
           return;
         }
 
@@ -2434,8 +2604,12 @@ LSTela.pronto(function () {
         });
       });
 
-      if (vazio) return "Há item sem descrição. Preencha ou remova a linha.";
-      if (!itens.length) return "Adicione pelo menos um item ao orçamento.";
+      if (vazio) {
+        return { texto: "Há item sem descrição. Preencha ou remova a linha.", titulo: "Confira o item", campo: linhaVazia };
+      }
+      if (!itens.length) {
+        return { texto: "Adicione pelo menos um item ao orçamento.", titulo: "Faltam os itens", campo: corpo.querySelector(".ls-item-descricao") };
+      }
 
       document.getElementById("orcamentoItens").value = JSON.stringify(itens);
       return null;
@@ -2967,13 +3141,18 @@ LSTela.pronto(function () {
     marcarMensagem();
   }
 
-  function avisarEnvio(texto, tipo) {
+  /* O recado do envio é de app (seção 123): o erro é a janela, o "deu
+     certo" é o toast. A caixa `linkSucesso` fica como a fala do leitor
+     de tela. */
+  function avisarEnvio(texto, tipo, campo) {
     var sucesso = document.getElementById("linkSucesso");
-    Painel.erro("linkErro", tipo === "erro" ? texto : "");
-    if (sucesso) {
-      sucesso.textContent = tipo === "sucesso" ? texto : "";
-      sucesso.classList.toggle("d-none", tipo !== "sucesso" || !texto);
+    if (sucesso) sucesso.textContent = tipo === "sucesso" ? texto : "";
+    if (tipo === "erro") {
+      Painel.erro("linkErro", texto, { titulo: "Não deu para enviar", campo: campo || "" });
+      return;
     }
+    Painel.erro("linkErro", "");
+    if (tipo === "sucesso" && texto) Painel.aviso(texto, "ok");
   }
 
   function atualizarPrevia() {
@@ -3176,9 +3355,9 @@ LSTela.pronto(function () {
       if (!/^\d+$/.test(id)) {
         if (!propostaAtual.link) {
           campoLink.placeholder = "Link indisponível";
-          Painel.erro(
-            "linkErro",
-            "Não consegui identificar o orçamento. Recarregue a página e tente novamente."
+          avisarEnvio(
+            "Não consegui identificar o orçamento. Recarregue a página e tente novamente.",
+            "erro"
           );
         }
         return;
@@ -3221,19 +3400,16 @@ LSTela.pronto(function () {
         "Olá! Sua proposta Lazer & Sport está pronta: " + propostaAtual.link;
     }
     if (!mensagem) {
-      document.getElementById("linkErro").className = "alert alert-danger";
-      Painel.erro(
-        "linkErro",
-        "A proposta ainda não tem link. Recarregue a página e toque em Enviar novamente."
+      avisarEnvio(
+        "A proposta ainda não tem link. Recarregue a página e toque em Enviar novamente.",
+        "erro"
       );
       return;
     }
 
     var url = montarConversa(telefone, mensagem);
     if (!url) {
-      document.getElementById("linkErro").className = "alert alert-danger";
-      Painel.erro("linkErro", "Informe o WhatsApp do cliente com DDD.");
-      campo.focus();
+      avisarEnvio("Informe o WhatsApp do cliente com DDD.", "erro", campo);
       return;
     }
 
@@ -3278,10 +3454,9 @@ LSTela.pronto(function () {
 
     Painel.erro("linkErro", "");
     if (!/^\d+$/.test(document.getElementById("linkOrcamentoId").value.trim())) {
-      document.getElementById("linkErro").className = "alert alert-danger";
-      Painel.erro(
-        "linkErro",
-        "O orçamento não foi identificado. Feche esta janela e toque em Enviar novamente."
+      avisarEnvio(
+        "O orçamento não foi identificado. Feche esta janela e toque em Enviar novamente.",
+        "erro"
       );
       return;
     }

@@ -300,7 +300,7 @@
       {% csrf_token %}<input type="hidden" name="action" value="modulo_salvar">
       <div class="modal-header"><div><span class="ls-modal-kicker">Laboratório</span><h5 class="modal-title">Guardar peça 3D</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="moduloErro"></div>
+        <div class="visually-hidden" id="moduloErro" role="alert"></div>
         <div class="row g-3">
           <div class="col-12 col-md-7"><label class="form-label" for="moduloNome">Nome da peça</label><input class="form-control" id="moduloNome" name="nome" maxlength="80" required data-rotulo="nome" placeholder="Ex.: Torre 2 andares"></div>
           <div class="col-12 col-md-5"><label class="form-label" for="moduloCategoria">Categoria</label><select class="form-select" id="moduloCategoria" name="categoria" required data-rotulo="categoria">{% for valor, rotulo in categorias_modulo %}<option value="{{ valor }}">{{ rotulo }}</option>{% endfor %}</select></div>
@@ -319,7 +319,7 @@
       {% csrf_token %}<input type="hidden" name="action" value="salvar">
       <div class="modal-header"><div><span class="ls-modal-kicker">Objeto 3D</span><h5 class="modal-title" id="objetoTitulo">Enviar objeto 3D</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="objetoErro"></div>
+        <div class="visually-hidden" id="objetoErro" role="alert"></div>
         <div class="row g-3">
           <div class="col-12">
             <label class="form-label" for="objetoBrinquedo">Brinquedo</label>
@@ -366,7 +366,7 @@
       {% csrf_token %}<input type="hidden" name="origem" id="criarOrigem" value="fotos"><input type="hidden" name="vistas" id="criarVistas" value="{}">
       <div class="modal-header"><div><span class="ls-modal-kicker">Criar objeto 3D</span><h5 class="modal-title" id="criarTitulo">Do que vocês tiverem: fotos, projeto ou arquivo 3D</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="criarErro"></div>
+        <div class="visually-hidden" id="criarErro" role="alert"></div>
         <div class="ls-criar3d-grade">
           <div class="ls-criar3d-passos">
             <div class="ls-criar3d-origens" role="group" aria-label="De onde vem o objeto">
@@ -498,7 +498,7 @@
       {% csrf_token %}<input type="hidden" name="action" value="conjunto_salvar"><input type="hidden" name="brinquedo" id="conjuntoId"><input type="hidden" name="itens" id="conjuntoItens">
       <div class="modal-header"><div><span class="ls-modal-kicker">Conjunto</span><h5 class="modal-title" id="conjuntoTitulo">O que vem junto</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="conjuntoErro"></div>
+        <div class="visually-hidden" id="conjuntoErro" role="alert"></div>
         <p class="small text-muted">Os brinquedos do catálogo que vêm <strong>dentro</strong> deste conjunto — como os círculos do Gol Flash e as cestas do Swish no espaço esportivo. Cada um continua com a sua página; a deste conjunto passa a mostrar o que ele traz, e a de cada brinquedo diz em que conjunto ele também vem.</p>
         <div class="ls-3d-sugestoes d-none" id="conjuntoSugestoesCaixa">
           <div class="d-flex align-items-center justify-content-between gap-2 mb-2"><strong><i class="bi bi-stars"></i> Sugestões</strong><button class="btn btn-sm btn-success" type="button" id="conjuntoLigarTodas">Ligar todas</button></div>

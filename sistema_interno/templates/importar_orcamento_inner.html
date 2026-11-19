@@ -48,7 +48,7 @@
 {% else %}
 <div class="ls-panel ls-imp-envio">
   <div class="ls-panel-body">
-    {% if erro %}<div class="alert alert-danger" role="alert" id="importarErro">{{ erro }}</div>{% endif %}
+    {% if erro %}{% include "partes/erro_janela.html" with titulo="Não deu para importar" texto=erro icone="arquivo-x" id="importarErro" %}{% endif %}
 
     <form method="post" enctype="multipart/form-data" action="{% url 'importar_orcamento_word' %}" id="formImportarWord">
       {% csrf_token %}

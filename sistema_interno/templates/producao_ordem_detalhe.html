@@ -46,7 +46,7 @@
           </form>
         {% endif %}
       </article>
-    {% empty %}<div class="alert alert-warning">Esta ordem ainda não possui etapas. O gestor precisa sincronizar o guia do produto.</div>{% endfor %}
+    {% empty %}<div class="ls-nota-app alerta"><span class="ls-nota-app-icone" aria-hidden="true"><i class="bi bi-list-check"></i></span><div class="ls-nota-app-corpo"><strong>Sem etapas ainda</strong><span>Esta ordem ainda não possui etapas. O gestor precisa sincronizar o guia do produto.</span></div></div>{% endfor %}
   </section>
 
   <aside class="history"><header><h2><i class="bi bi-clock-history me-1"></i> Histórico</h2></header><div class="history-list">{% for item in historico %}<div class="history-item"><strong>{% if item.etapa %}{{ item.etapa.guia_etapa.titulo }}{% else %}{{ item.get_evento_display }}{% endif %}</strong><span>{{ item.usuario.get_full_name|default:item.usuario.username|default:"Sistema" }} · {{ item.criacao|date:"d/m/Y H:i" }}</span>{% if item.status_novo %}<span>{{ item.status_anterior|default:"—" }} → {{ item.status_novo }}</span>{% endif %}{% if item.observacao %}<span>{{ item.observacao }}</span>{% endif %}</div>{% empty %}<div class="history-item"><span>Nenhuma movimentação registrada.</span></div>{% endfor %}</div></aside>

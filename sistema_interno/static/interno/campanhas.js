@@ -27,6 +27,14 @@
     };
   }
   function mensagemFeedback(texto, sucesso) {
+    /* O erro é a janela de app (LEIA-ME-V10, seção 123), por cima desta;
+       o cartão de baixo fica para o "deu certo". */
+    if (texto && !sucesso && window.LSAviso) {
+      feedback.hidden = true;
+      feedback.textContent = "";
+      window.LSAviso.modal({ nivel: "erro", titulo: "Não deu para enviar a oferta", texto: texto });
+      return;
+    }
     feedback.hidden = !texto;
     feedback.textContent = texto || "";
     feedback.classList.toggle("is-success", Boolean(sucesso));

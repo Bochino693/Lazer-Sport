@@ -43,7 +43,7 @@
   <article class="ls-metric-card"><span class="ls-metric-label">Variação por ajustes</span><strong class="ls-metric-value">R$ {{ valor_ajustes|moeda }}</strong><span class="ls-metric-note">Não é compra nem pagamento</span></article>
 </section>
 <p class="ls-subtext">Balanço operacional por data de lançamento. Totais incluem todos os registros filtrados; 50 por página. Não é fluxo de caixa, lucro ou balanço contábil.</p>
-{% if sem_custo or estimados or sem_preco %}<div class="alert alert-warning">{{ sem_custo }} movimentos antigos sem custo de baixa/ajuste conhecido; {{ sem_preco }} entradas sem preço; {{ estimados }} movimentos com custo estimado. Totais podem estar incompletos. O histórico não foi inventado.</div>{% endif %}
+{% if sem_custo or estimados or sem_preco %}<div class="ls-nota-app alerta"><span class="ls-nota-app-icone" aria-hidden="true"><i class="bi bi-calculator"></i></span><div class="ls-nota-app-corpo"><strong>Totais podem estar incompletos</strong><span>{{ sem_custo }} movimentos antigos sem custo de baixa/ajuste conhecido; {{ sem_preco }} entradas sem preço; {{ estimados }} movimentos com custo estimado. O histórico não foi inventado.</span></div></div>{% endif %}
 
 <section class="ls-filter-panel">
   <form method="get" class="row g-3 align-items-end">

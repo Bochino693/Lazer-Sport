@@ -2630,19 +2630,39 @@ class Orcamento(Prime):
         """Somente rascunho é mutável; negociação gera uma nova versão."""
         return self.status == self.Status.RASCUNHO
 
+    #: Onde a proposta ainda muda NO LUGAR, pela janela (LEIA-ME-V10,
+    #: seção 123): da montagem até a aprovação. Recusada, expirada e
+    #: substituída são história (o caminho delas é "Refazer proposta").
+    EDITAVEIS = (
+        Status.RASCUNHO,
+        Status.AGUARDANDO_RESPOSTA,
+        Status.EM_NEGOCIACAO,
+        Status.APROVADO,
+    )
+
     @property
     def pode_editar_formulario(self):
-        """Permite ajustar a proposta nova até ela ser enviada ao cliente.
+        """A janela grava por cima desta proposta? ATÉ A ASSINATURA.
 
-        O salvamento normal já a coloca na fila de aguardando resposta, mas
-        o primeiro envio continua sendo o ponto que congela o documento.
-        ``pode_editar`` permanece estrito para preservar a regra histórica
-        de versões/refação.
+        O dono (seção 123): "o sistema deve permitir alterações até a
+        assinatura, se assinou não muda mais". A regra antiga congelava a
+        proposta no primeiro envio, e a aprovada que ganhava mais um item
+        tinha de virar a versão 2 -- o contrato da versão 1 ficava
+        suspenso, o pagamento numa e a produção na outra. Agora a proposta
+        enviada, em negociação ou aprovada muda no mesmo lugar, e o que
+        deriva dela acompanha (`edicao_orcamento.acompanhar`). Com o
+        contrato ASSINADO não muda mais; a que liberou uma O.S. continua
+        congelada junto com ela (a regra de sempre). O porquê, para a
+        tela, está em `edicao_orcamento.trava`.
+
+        ``pode_editar`` continua estrito (só rascunho): é ele que diz se
+        "Refazer proposta" faz sentido (`pode_refazer`).
         """
-        return self.pode_editar or (
-            self.status == self.Status.AGUARDANDO_RESPOSTA
-            and self.enviado_em is None
-        )
+        if self.status not in self.EDITAVEIS:
+            return False
+        if not self.pk:
+            return True
+        return not self.contrato_assinado and not hasattr(self, "ordem_servico")
 
     @property
     def saldo_pagamento(self):

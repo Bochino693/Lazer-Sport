@@ -41,7 +41,7 @@
   {% if proposta.formato == "pdf_ia" %}O PDF foi enviado à Anthropic (Claude) para a leitura. {% elif proposta.ia.usada %}O texto do documento foi enviado à Anthropic (Claude) para ajudar na leitura. {% endif %}O arquivo não ficou guardado; só o nome entra no histórico.
 </p>
 
-{% if erro %}<div class="alert alert-danger" role="alert" id="conferenciaErro">{{ erro }}</div>{% endif %}
+{% if erro %}{% include "partes/erro_janela.html" with titulo="Confira antes de criar" texto=erro id="conferenciaErro" %}{% endif %}
 
 <form method="post" action="{% url 'conferir_importacao_word' token %}" id="formConferencia" class="ls-imp" novalidate>
   {% csrf_token %}

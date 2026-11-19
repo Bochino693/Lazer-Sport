@@ -213,7 +213,7 @@
       {% csrf_token %}<input type="hidden" name="action" value="salvar"><input type="hidden" name="id" id="jogoId">
       <div class="modal-header"><div><span class="ls-modal-kicker">Lazer &amp; Sport Games</span><h5 class="modal-title" id="jogoTitulo">Novo jogo</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="jogoErro"></div>
+        <div class="visually-hidden" id="jogoErro" role="alert"></div>
         <div class="ls-jf-grade">
           <div class="ls-jf-passos">
 
@@ -312,7 +312,7 @@
                   <div class="border rounded-3 p-3">
                     <strong class="d-block mb-1"><i class="bi bi-windows me-1"></i>Programa para Windows (.exe)</strong>
                     <span class="form-text mt-0 d-block mb-2">Um .exe só: dois cliques e o jogo abre numa janela própria (a do Edge, que todo Windows 10/11 tem, ou a do Chrome), em tela cheia, <b>sem internet</b> e com o jogo salvo guardado no computador. Roda <b>qualquer console</b> do site, inclusive PSP e DOS. Na primeira vez o Windows pode avisar “o Windows protegeu o computador”: <em>Mais informações › Executar assim mesmo</em> (programa sem assinatura digital paga).</span>
-                    <div class="alert alert-warning py-2 small d-none" id="jfExeLicenca"></div>
+                    <div class="ls-nota-app alerta small d-none" id="jfExeLicenca"></div>
                     <div class="d-flex flex-wrap gap-2 align-items-center">
                       <button type="button" class="btn btn-sm btn-primary" id="jfExeBaixar"><i class="bi bi-download me-1"></i>Gerar e baixar o .exe</button>
                       <button type="button" class="btn btn-sm btn-outline-primary" id="jfExeGuardar"><i class="bi bi-hdd me-1"></i>Gerar e guardar como versão para computador</button>
@@ -1026,7 +1026,11 @@ LSTela.pronto(function () {
     function escrever(texto, erro) {
       var caixa = el(idStatus);
       caixa.textContent = texto;
-      caixa.className = "small " + (erro ? "text-danger" : "text-muted");
+      caixa.className = "small text-muted";
+      /* O erro é a janela de app (seção 123), não uma linha vermelha. */
+      if (erro && window.LSAviso) {
+        window.LSAviso.modal({ nivel: "erro", titulo: "Não deu para gerar o " + (tipo === "apk" ? "APK" : "programa"), texto: texto });
+      }
     }
     function ocupado(sim) { el(idBaixar).disabled = sim; el(idGuardar).disabled = sim; }
     [[idBaixar, false], [idGuardar, true]].forEach(function (par) {

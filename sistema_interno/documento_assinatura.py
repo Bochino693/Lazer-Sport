@@ -407,7 +407,7 @@ def situacao_do_cartao(orcamento, documento) -> str:
     return documento.situacao
 
 
-def gerar(orcamento, usuario):
+def gerar(orcamento, usuario, *, motivo=""):
     """Congela o orçamento num documento novo. Só para orçamento APROVADO.
 
     Seja qual for o pagamento: o termo vem antes dele (aprovado ->
@@ -415,6 +415,10 @@ def gerar(orcamento, usuario):
     O anterior que ainda esperava assinatura vira "substituído" na mesma
     transação, e com isso todos os links dele morrem (ver `ler_link`).
     Depois de assinado não há "gerar de novo": o assinado é o documento.
+
+    `motivo`: por que foi refeito sem ninguém apertar "Gerar de novo" --
+    a proposta mudou na janela antes da assinatura (seção 123,
+    `edicao_orcamento`). Vai para o histórico e para o diário do novo.
     """
     with transaction.atomic():
         # A linha do orçamento travada: dois cliques em "Gerar" de duas
@@ -467,7 +471,8 @@ def gerar(orcamento, usuario):
     resumo = f"Contrato de compra e venda · integridade {documento.hash_conteudo[:12]}…"
     if anteriores:
         resumo = (
-            f"Documento refeito (o anterior saiu com {links_antes} "
+            ("Contrato refeito: " + motivo + " " if motivo else "Documento refeito ")
+            + f"(o anterior saiu com {links_antes} "
             f"link{'s' if links_antes != 1 else ''} gerado{'s' if links_antes != 1 else ''}) · "
             f"integridade {documento.hash_conteudo[:12]}…"
         )
@@ -475,8 +480,38 @@ def gerar(orcamento, usuario):
     por = ""
     if getattr(usuario, "is_authenticated", False):
         por = usuario.get_full_name() or usuario.username
-    anotar(documento, "gerado", por=por or "equipe")
+    if motivo and anteriores:
+        anotar(documento, "gerado", por=por or "equipe", motivo=motivo[:120])
+    else:
+        anotar(documento, "gerado", por=por or "equipe")
     return documento
+
+
+def aposentar(orcamento, usuario, *, motivo=""):
+    """Tira de circulação o contrato que espera assinatura, SEM gerar outro.
+
+    Para a proposta que mudou depois de o contrato sair e não pode ganhar
+    um novo agora (ela não está aprovada: em negociação, o contrato estava
+    suspenso). Sem isto, o suspenso voltaria a valer -- com os itens velhos
+    -- no dia em que ela fosse aprovada de novo. Os links dele morrem como
+    no "Gerar de novo". O assinado nunca é tocado. Devolve quantos saíram.
+    """
+    with transaction.atomic():
+        vivos = list(
+            DocumentoAssinatura.objects.select_for_update()
+            .filter(orcamento=orcamento, situacao=DocumentoAssinatura.Situacao.AGUARDANDO)
+        )
+        for doc in vivos:
+            doc.situacao = DocumentoAssinatura.Situacao.SUBSTITUIDO
+            doc.save(update_fields=["situacao", "atualizado"])
+    if vivos:
+        links = sum(doc.links_gerados for doc in vivos)
+        registrar_no_historico(
+            orcamento, usuario, AtividadeOrcamento.Tipo.DOCUMENTO,
+            "Contrato retirado" + (f": {motivo}" if motivo else "")
+            + f" ({links} link{'s' if links != 1 else ''} deixa{'m' if links != 1 else ''} de valer)",
+        )
+    return len(vivos)
 
 
 # ======================================================================
@@ -583,7 +618,10 @@ def linhas_do_diario(documento) -> list[dict]:
     for evento in reversed(list(documento.diario or [])):
         tipo = evento.get("tipo")
         quando = _hora(evento.get("fim") or evento.get("quando"))
-        if tipo == "gerado":
+        if tipo == "gerado" and evento.get("motivo"):
+            # refeito sozinho porque a proposta mudou antes da assinatura (seção 123)
+            icone, texto = "bi-arrow-repeat", f"Contrato refeito por {evento.get('por') or 'equipe'}: {evento['motivo']}"
+        elif tipo == "gerado":
             icone, texto = "bi-file-earmark-plus", f"Contrato gerado por {evento.get('por') or 'equipe'}"
         elif tipo == "link":
             canal = CANAIS_DO_LINK.get(evento.get("canal"), "painel")

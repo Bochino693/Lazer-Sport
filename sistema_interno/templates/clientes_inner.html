@@ -445,7 +445,7 @@
       </div>
 
       <div class="modal-body ls-compact-form">
-        <div id="completarErro" class="alert alert-danger d-none"></div>
+        <div id="completarErro" class="visually-hidden" role="alert"></div>
 
         <p class="ls-completar-resumo" id="completarResumo"></p>
 
@@ -557,7 +557,7 @@
       </div>
 
       <div class="modal-body ls-compact-form">
-        <div class="alert alert-danger d-none" id="clienteErro"></div>
+        <div class="visually-hidden" id="clienteErro" role="alert"></div>
 
         <div class="row g-3">
           <div class="col-12 col-md-6">
@@ -791,7 +791,7 @@
         <button class="btn-close" type="button" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="dossieErro" role="alert"></div>
+        <div class="visually-hidden" id="dossieErro" role="alert"></div>
 
         <section class="ls-dossie-resumo" id="dossieResumo" hidden>
           <div><span>Orçamentos</span><strong id="dossieQtdOrcamentos">0</strong></div>
@@ -855,8 +855,8 @@
               </button>
             </div>
           </div>
-          <div class="alert alert-success d-none mt-2 mb-0" id="dossieOfertaOk" role="status"></div>
-          <div class="alert alert-danger d-none mt-2 mb-0" id="dossieOfertaErro" role="alert"></div>
+          <div class="visually-hidden" id="dossieOfertaOk" role="status"></div>
+          <div class="visually-hidden" id="dossieOfertaErro" role="alert"></div>
         </section>
         {% endif %}
       </div>
@@ -1034,13 +1034,16 @@ LSTela.pronto(function () {
   document.getElementById("dossieOfertaEnviar")?.addEventListener("click", function () {
     var botao = this;
     var ok = document.getElementById("dossieOfertaOk");
-    var erro = document.getElementById("dossieOfertaErro");
-    ok.classList.add("d-none");
-    erro.classList.add("d-none");
+    /* O erro é a janela de app e o "enviada" é o toast com o caminho para
+       acompanhar (seção 123); as caixas ficam como a fala do leitor de tela. */
+    function falhou(texto, campo) {
+      Painel.erro("dossieOfertaErro", texto, { titulo: "Não deu para enviar a oferta", campo: campo || "" });
+    }
+    ok.textContent = "";
+    Painel.erro("dossieOfertaErro", "");
 
     if (!dossieAtual || !objetoOferta.value) {
-      erro.textContent = "Escolha a oferta que vai ser enviada.";
-      erro.classList.remove("d-none");
+      falhou("Escolha a oferta que vai ser enviada.", objetoOferta);
       return;
     }
 
@@ -1061,18 +1064,19 @@ LSTela.pronto(function () {
       .then(function (saida) {
         botao.disabled = false;
         if (!saida.r.ok) {
-          erro.textContent = saida.j.msg || "Não consegui enviar a oferta.";
-          erro.classList.remove("d-none");
+          falhou(saida.j.msg || "Não consegui enviar a oferta.");
           return;
         }
-        ok.innerHTML = (saida.j.msg || "Oferta enviada.") +
-          ' <a href="' + escapar(saida.j.detalhe) + '">Acompanhar</a>';
-        ok.classList.remove("d-none");
+        ok.textContent = saida.j.msg || "Oferta enviada.";
+        Painel.aviso({
+          toast: true, nivel: "sucesso", titulo: "Oferta enviada",
+          texto: saida.j.msg || "Oferta enviada.",
+          acao: saida.j.detalhe ? { rotulo: "Acompanhar", url: saida.j.detalhe } : null
+        });
       })
       .catch(function () {
         botao.disabled = false;
-        erro.textContent = "A rede oscilou. Tente de novo.";
-        erro.classList.remove("d-none");
+        falhou("A rede oscilou. Tente de novo.");
       });
   });
 

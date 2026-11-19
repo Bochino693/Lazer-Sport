@@ -2518,11 +2518,13 @@ select[multiple] option{padding:7px 10px;border-radius:8px}
   .ls-itens-table td:nth-child(5){
     display:inline-block;width:auto;padding-bottom:0;
   }
+  /* !important: o padding das células da tabela do painel (.ls-table
+     tbody td) também é -- sem ele o X de remover cobria a busca do item. */
   .ls-itens-table td:nth-child(6){
-    position:absolute;top:10px;right:10px;padding:0;
+    position:absolute;top:10px;right:10px;padding:0!important;
   }
   .ls-itens-table td:nth-child(6)::before{content:""}
-  .ls-itens-table td:nth-child(1){padding-right:52px}
+  .ls-itens-table td:nth-child(1){padding-right:62px!important}
 }
 
 /* 5. CONTRASTE.
