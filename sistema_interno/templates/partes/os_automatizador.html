@@ -1,0 +1,72 @@
+{% comment %}
+  O AUTOMATIZADOR DA O.S. (LEIA-ME-V10, seção 122): a folha que lê os
+  documentos e cria as O.S. sozinha.
+
+  A folha só existe para quem pode criar O.S. (a tela a inclui com
+  `pode_editar`). Cada documento solto aqui vai num pedido próprio para
+  `importar_documentos_os`, um de cada vez, e volta como uma linha: criada
+  (com o caminho para a O.S.), falta completar (os campos só do que falta,
+  já preenchidos com o que foi lido), já importada ou não deu para ler.
+  Quem desenha as linhas é `os-automatizador.js`; o servidor decide tudo
+  de novo a cada envio.
+{% endcomment %}
+<div class="ls-osdoc" id="osdocFolha" hidden
+     data-url="{% url 'importar_documentos_os' %}"
+     data-url-documento="{% url 'documento_importado_os' 0 %}"
+     data-url-anexos="{% url 'documentos_da_ordem_servico' 0 %}"
+     data-tamanho-maximo="10485760">
+  {% csrf_token %}
+  <div class="ls-osdoc-fundo" data-osdoc-fechar></div>
+  <section class="ls-osdoc-cartao" role="dialog" aria-modal="true" aria-labelledby="osdocTitulo" tabindex="-1">
+    <div class="ls-osdoc-alca" id="osdocAlca" aria-hidden="true"><span></span></div>
+    <header class="ls-osdoc-topo">
+      <div class="ls-osdoc-topo-texto">
+        <span class="ls-osdoc-kicker"><i class="bi bi-magic" aria-hidden="true"></i> Automatizador da O.S.</span>
+        <h2 id="osdocTitulo">Ler documentos</h2>
+        <p>Solte fichas de O.S., pedidos de serviço e laudos. Com cliente, equipamento e o que foi pedido ou feito, a O.S. nasce sozinha; o que faltar, você completa aqui mesmo.</p>
+      </div>
+      <button type="button" class="ls-osdoc-fechar" data-osdoc-fechar aria-label="Fechar">
+        <i class="bi bi-x-lg" aria-hidden="true"></i>
+      </button>
+    </header>
+
+    <div class="ls-osdoc-corpo">
+      <label class="ls-osdoc-soltar" for="osdocArquivos" id="osdocSoltar">
+        <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+        <strong>Escolha ou arraste os documentos</strong>
+        <span>Word (.docx), PDF ou .txt · vários de uma vez · até 10 MB cada</span>
+      </label>
+      <input type="file" id="osdocArquivos" class="ls-osdoc-arquivo" multiple
+             accept=".docx,.pdf,.txt,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+
+      <div class="ls-osdoc-progresso" id="osdocProgresso" hidden>
+        <div class="ls-osdoc-progresso-linha">
+          <div class="ls-osdoc-anel" aria-hidden="true">
+            <svg viewBox="0 0 48 48"><circle class="trilho" cx="24" cy="24" r="20"></circle><circle class="feito" id="osdocAnel" cx="24" cy="24" r="20" stroke-dasharray="0 126"></circle></svg>
+            <span id="osdocPercentual">0%</span>
+          </div>
+          <div class="ls-osdoc-progresso-texto">
+            <strong id="osdocContagem" aria-live="polite">Lendo…</strong>
+            <span id="osdocPlacar"></span>
+          </div>
+          <button type="button" class="btn btn-sm ls-osdoc-proximo" id="osdocProximo" hidden>
+            <i class="bi bi-arrow-down-circle me-1" aria-hidden="true"></i> Próximo<span class="ls-osdoc-proximo-longo"> campo</span>
+          </button>
+        </div>
+      </div>
+
+      <ol class="ls-osdoc-lista" id="osdocLista" aria-label="Documentos lidos"></ol>
+
+      <section class="ls-osdoc-pendentes" id="osdocPendentes" hidden aria-labelledby="osdocPendentesTitulo">
+        <h3 id="osdocPendentesTitulo"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Esperando completar</h3>
+        <p>Documentos lidos antes, que ainda não viraram O.S.</p>
+        <ol class="ls-osdoc-lista" id="osdocListaPendentes"></ol>
+      </section>
+
+      <p class="ls-osdoc-privacidade">
+        <i class="bi bi-shield-lock" aria-hidden="true"></i>
+        Lido aqui no servidor, por regra: nada vai para IA nem para serviço de fora. O arquivo fica anexado à O.S., no cofre privado, sem endereço público. PDF que é foto (digitalização) não tem texto para ler.
+      </p>
+    </div>
+  </section>
+</div>

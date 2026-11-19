@@ -105,6 +105,12 @@ from .views_ordens_servico import (
     OrdemServicoPreviaInnerView,
     OrdensServicoInnerView,
 )
+from .views_importacao_os import (
+    ArquivoDocumentoOSView,
+    DocumentoOSView,
+    DocumentosDaOrdemView,
+    ImportarDocumentosOSView,
+)
 
 
 handler404 = "sistema_interno.resiliencia.pagina_interna_nao_encontrada"
@@ -375,6 +381,28 @@ urlpatterns = [
         'ordens-servico/<int:pk>/previa/',
         OrdemServicoPreviaInnerView.as_view(),
         name='ordem_servico_previa_inner',
+    ),
+    # O automatizador: a equipe solta os documentos e a O.S. nasce sozinha
+    # (LEIA-ME-V10, seção 122; `views_importacao_os.py`, `importacao_os/`).
+    path(
+        'ordens-servico/importar/',
+        ImportarDocumentosOSView.as_view(),
+        name='importar_documentos_os',
+    ),
+    path(
+        'ordens-servico/importar/<int:pk>/',
+        DocumentoOSView.as_view(),
+        name='documento_importado_os',
+    ),
+    path(
+        'ordens-servico/documentos/<int:pk>/arquivo/',
+        ArquivoDocumentoOSView.as_view(),
+        name='documento_ordem_servico_arquivo',
+    ),
+    path(
+        'ordens-servico/<int:pk>/documentos/',
+        DocumentosDaOrdemView.as_view(),
+        name='documentos_da_ordem_servico',
     ),
 
     # ---------------- produção ----------------
