@@ -213,6 +213,9 @@ def capacidades(user) -> dict[str, bool]:
         "rh_pagamento": acesso_financeiro,
         "rh_equipe": gestao or funcao_financeiro,
         "rh_proprio": bool(nomes_das_funcoes(user)),
+        # toda a equipe: "Minha área" do menu (o próprio ponto, as tarefas,
+        # a conta e abrir a loja -- seção 114)
+        "equipe": bool(nomes_das_funcoes(user)),
         "usuarios": superusuario,
         "avaliar_blocos_orcamento": superusuario,
         "avaliar_setores": superusuario,

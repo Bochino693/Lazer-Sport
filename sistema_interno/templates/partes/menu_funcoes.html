@@ -3,11 +3,13 @@
   é um grupo do acordeão; dentro dele, os blocos da função (subtítulos
   pequenos) e as telas de cada bloco. Para o superusuário, o grupo começa
   por "Pessoas da função" -- quem tem aquela função, com o número.
+  Depois das funções vêm Administração (só o dono) e Minha área (cada um:
+  o próprio ponto, as tarefas, a conta, abrir a loja) -- nada fica solto.
   O mapa e a ordem: sistema_interno/menu.py.
 {% endcomment %}
 {% with rota=request.resolver_match.url_name %}
 {% for grupo in menu_funcoes %}
-<div class="ls-nav-section ls-nav-section--funcao" data-funcao="{{ grupo.codigo }}">
+<div class="ls-nav-section ls-nav-section--funcao" data-funcao="{{ grupo.codigo }}" data-papel="{{ grupo.papel }}">
   <span class="ls-nav-caption"><i class="bi {{ grupo.icone }}" aria-hidden="true"></i>{{ grupo.titulo }}</span>
   {% if permissoes_interno.usuarios %}{% for resumo in usuarios_por_funcao.funcoes %}{% if resumo.codigo == grupo.codigo %}
   <a data-titulo="Pessoas · {{ grupo.titulo }}" aria-label="Pessoas · {{ grupo.titulo }}" class="ls-nav-item ls-nav-item--pessoas {% if rota == 'usuarios_equipe' and request.GET.funcao == grupo.codigo %}active{% endif %}" href="{% url 'usuarios_equipe' %}?funcao={{ grupo.codigo }}">
@@ -17,9 +19,9 @@
   </a>
   {% endif %}{% endfor %}{% endif %}
   {% for nome, itens in grupo.blocos %}
-  <span class="ls-nav-bloco">{{ nome }}</span>
+  <span class="ls-nav-bloco" data-bloco="{{ nome|slugify }}">{{ nome }}</span>
   {% for item in itens %}
-  <a data-titulo="{{ item.titulo }}" aria-label="{{ item.titulo }}" class="ls-nav-item {% if rota in item.rotas_ativas %}active{% endif %}" href="{% url item.rota %}">
+  <a data-titulo="{{ item.titulo }}" aria-label="{{ item.titulo }}" class="ls-nav-item {% if rota in item.rotas_ativas %}active{% endif %}" href="{% url item.rota %}"{% if item.externo %} target="_blank" rel="noopener" data-no-soft-nav="true"{% elif item.sem_navegacao_suave %} data-no-soft-nav="true"{% endif %}>
     <span class="ls-nav-icon"><i class="bi {{ item.icone }}"></i></span>
     <span>{{ item.nome }}</span>
     {% if item.selo %}{% if item.selo_zero %}<span class="ls-nav-count" data-selo="{{ item.selo }}" data-mostrar-zero="1"{% if item.selo_titulo %} title="{{ item.selo_titulo }}"{% endif %}>…</span>{% else %}<span class="ls-nav-count" data-selo="{{ item.selo }}" hidden>0</span>{% endif %}{% endif %}

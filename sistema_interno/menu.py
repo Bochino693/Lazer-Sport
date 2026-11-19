@@ -7,9 +7,18 @@ o menu abre pela FUNÇÃO e, dentro dela, pelos blocos dela --
     Criação e site          ->  Site e aplicativo
     Vendas                  ->  Comercial · Produção · Logística
     Vendedor ambulante      ->  Comercial · Produção
-    Financeiro              ->  Financeiro · Comercial · Operação · Produção
-    Gestão                  ->  Painel · Comercial · Financeiro · Estoque ·
-                                Produção · Operação · Logística
+    Financeiro              ->  Financeiro · Estoque · Comercial · Operação ·
+                                Produção · Pessoas
+    Gestão                  ->  Painel · Comercial · Financeiro · Pessoas ·
+                                Estoque · Produção · Operação · Logística
+    Administração (o dono)  ->  Equipe e acessos · Lazer & Sport Games ·
+                                Estúdio 3D
+    Minha área (todos)      ->  Meu dia (ponto, tarefas, termo, conta) · Loja
+
+"Aqui você deve modularizar melhor pelas funções": nada fica solto depois
+das funções -- o RH entra na Gestão e no Financeiro (bloco Pessoas), o
+que é só do dono vira o grupo Administração e o que é de cada um (o
+próprio ponto, as tarefas, a conta, abrir a loja) vira Minha área.
 
 Cada pessoa vê as funções que tem (o superusuário, todas). Dentro de uma
 função só entra a tela que AQUELA função abre -- a conta é a mesma de
@@ -39,6 +48,8 @@ class Item:
     selo_zero: bool = False
     selo_titulo: str = ""
     rotulo: str = ""  # o texto curto no menu (o título vai no balão)
+    externo: bool = False  # abre noutra aba (a loja)
+    sem_navegacao_suave: bool = False  # a tela que carrega a página inteira (o 3D)
 
     @property
     def rotas_ativas(self):
@@ -99,6 +110,40 @@ BLOCOS = {
     "Logística": (
         Item("Transportadoras", "transportadoras_inner", "bi-truck", "transportadoras"),
     ),
+    # RECURSOS HUMANOS da equipe (app `rh`): a Gestão vê tudo; o Financeiro,
+    # o que precisa para pagar (as fichas e o ponto da equipe)
+    "Pessoas": (
+        Item("RH da equipe", "rh_inicio", "bi-person-badge-fill", "rh", ativo=("rh_termo", "rh_termo_via")),
+        Item("Colaboradores", "rh_colaboradores", "bi-people-fill", "rh_equipe",
+             ativo=("rh_ficha", "rh_colaborador_novo", "rh_colaborador_editar", "rh_ficha_imprimir")),
+        Item("Ponto da equipe", "rh_ponto_equipe", "bi-clock-history", "rh_equipe",
+             ativo=("rh_espelho", "rh_espelho_imprimir")),
+        Item("Documentos da equipe", "rh_documentos", "bi-folder2-open", "rh"),
+    ),
+    # SÓ DO DONO (o superusuário)
+    "Equipe e acessos": (
+        Item("Usuários da equipe", "usuarios_equipe", "bi-shield-lock-fill", "usuarios"),
+        Item("Avaliação dos setores", "avaliacao_setores", "bi-clipboard-data-fill", "usuarios"),
+        Item("Contas de clientes", "clients", "bi-person-vcard-fill", "usuarios"),
+    ),
+    "Lazer & Sport Games": (
+        Item("Jogos do portal", "jogos_inner", "bi-controller", "usuarios", rotulo="Jogos · APK · Windows"),
+        Item("Ao vivo no portal", "jogos_ao_vivo", "bi-broadcast", "usuarios"),
+    ),
+    "Estúdio 3D": (
+        Item("Objetos 3D", "objetos_3d_inner", "bi-box", "usuarios"),
+        Item("Montar em 3D", "montar_3d_inner", "bi-bricks", "usuarios", sem_navegacao_suave=True),
+    ),
+    # DE CADA UM (toda a equipe)
+    "Meu dia": (
+        Item("Meu ponto", "rh_ponto", "bi-fingerprint", "equipe", ativo=("rh_comprovante", "rh_ajuste_pedir")),
+        Item("Minhas tarefas", "rh_tarefas", "bi-check2-square", "equipe", ativo=("rh_tarefa_editar",)),
+        Item("Meu termo de exclusividade", "rh_meu_termo", "bi-file-earmark-lock", "equipe", rotulo="Meu termo"),
+        Item("Minha conta", "minha_conta_inner", "bi-person-gear", "equipe"),
+    ),
+    "Loja": (
+        Item("Abrir a loja", "abrir_loja", "bi-box-arrow-up-right", "equipe", externo=True),
+    ),
     "Site e aplicativo": (
         Item("Brinquedos do site", "brinquedos_admin", "bi-controller", "site", rotulo="Brinquedos"),
         Item("Peças de reposição", "pecas_admin", "bi-wrench-adjustable", "site"),
@@ -121,15 +166,24 @@ BLOCOS_DA_FUNCAO = {
     "criacao": ("Site e aplicativo",),
     "vendas": ("Comercial", "Produção", "Logística"),
     "ambulante": ("Comercial", "Produção"),
-    "financeiro": ("Financeiro", "Estoque", "Comercial", "Operação", "Produção"),
-    "gestao": ("Painel", "Comercial", "Financeiro", "Estoque", "Produção", "Operação", "Logística"),
+    "financeiro": ("Financeiro", "Estoque", "Comercial", "Operação", "Produção", "Pessoas"),
+    "gestao": ("Painel", "Comercial", "Financeiro", "Pessoas", "Estoque", "Produção", "Operação", "Logística"),
 }
+
+#: Os grupos que não são função: o do dono e o de cada um. (código, título,
+#: ícone, blocos, a chave que mostra o grupo, aparece no topo?)
+GRUPOS_EXTRAS = (
+    ("admin", "Administração", "bi-shield-lock-fill",
+     ("Equipe e acessos", "Lazer & Sport Games", "Estúdio 3D"), "usuarios", True),
+    ("pessoal", "Minha área", "bi-person-circle", ("Meu dia", "Loja"), "equipe", False),
+)
 
 
 #: O nome curto da função no botão do topo.
 CURTO = {
     "producao": "Produção", "criacao": "Site", "vendas": "Vendas",
     "ambulante": "Ambulante", "financeiro": "Financeiro", "gestao": "Gestão",
+    "admin": "Admin", "pessoal": "Eu",
 }
 
 #: As ações de um toque no atalho do topo: (título, rota, sufixo, capacidade, ícone).
@@ -183,6 +237,8 @@ class Grupo:
     icone: str
     blocos: list = field(default_factory=list)  # [(nome do bloco, [Item, ...])]
     acoes: list = field(default_factory=list)  # [{"titulo", "rota", "sufixo", "icone"}]
+    papel: str = "funcao"  # "funcao", "admin" (o dono) ou "pessoal" (de cada um)
+    no_topo: bool = True  # tem botão nos atalhos do topo
 
     @property
     def curto(self):
@@ -213,6 +269,16 @@ def menu_do_usuario(acesso) -> list:
             for titulo, rota, sufixo, chave, icone in ACOES_DA_FUNCAO.get(funcao.codigo, ())
             if _abre(funcao.codigo, chave) and acesso.get(chave)
         ]
+        if grupo.blocos:
+            grupos.append(grupo)
+    for codigo, titulo, icone, blocos, chave, no_topo in GRUPOS_EXTRAS:
+        if not acesso.get(chave):
+            continue
+        grupo = Grupo(codigo, titulo, icone, papel=codigo, no_topo=no_topo)
+        for nome in blocos:
+            itens = [item for item in BLOCOS[nome] if acesso.get(item.chave)]
+            if itens:
+                grupo.blocos.append((nome, itens))
         if grupo.blocos:
             grupos.append(grupo)
     return grupos

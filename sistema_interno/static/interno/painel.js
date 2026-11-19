@@ -196,7 +196,7 @@
         secao.querySelector('.ls-nav-section-toggle').textContent.trim() === lembrado;
     })[0] || comTela[0];
     if (!escolhido) {
-      var funcoes = novas.filter(function (secao) { return secao.dataset.funcao; });
+      var funcoes = novas.filter(function (secao) { return secao.dataset.papel === 'funcao'; });
       if (funcoes.length === 1) escolhido = funcoes[0];
     }
     if (escolhido) escolhido._lsMudar(true);

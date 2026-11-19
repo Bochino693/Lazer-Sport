@@ -7567,6 +7567,14 @@ Dependência nova: rjsmin (requirements.txt).
        o ícone até 1500 px; no celular somem (as abas de baixo fazem isso).
      * Teste: tests_auditoria_funcoes (toda tela oferecida abre) e
        tests_resiliencia (os contadores no menu novo).
+     * NADA SOLTO DEPOIS DAS FUNÇÕES ("aqui você deve modularizar melhor
+       pelas funções"): o RH entra como bloco "Pessoas" na Gestão (RH da
+       equipe, Colaboradores, Ponto da equipe, Documentos) e no Financeiro
+       (Colaboradores e Ponto da equipe, para pagar); o que é só do dono
+       vira o grupo "Administração" (Equipe e acessos, Lazer & Sport Games,
+       Estúdio 3D); o que é de cada um vira "Minha área" (Meu ponto, Minhas
+       tarefas, Meu termo, Minha conta, Abrir a loja). Todos os grupos têm
+       ícone e o mesmo desenho (menu.GRUPOS_EXTRAS; papel "admin"/"pessoal").
 
    A ASSINATURA SEM TRAVA (seção 109; o dono: "a assinatura está travando...
    que é isso de não identificar pelo texto, nem precisa travar a

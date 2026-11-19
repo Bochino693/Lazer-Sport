@@ -4,9 +4,9 @@
   blocos dela -- sem descer o menu lateral. No celular quem faz isso são
   as abas de baixo, então aqui some (CSS). Comportamento: ls-atalhos.js.
 {% endcomment %}
-{% if menu_funcoes %}
-<nav class="ls-atalhos{% if menu_funcoes|length <= 2 %} ls-atalhos--poucos{% endif %}" id="lsAtalhos" aria-label="Atalhos por função">
-  {% for grupo in menu_funcoes %}
+{% if atalhos_no_topo %}
+<nav class="ls-atalhos{% if atalhos_no_topo|length <= 2 %} ls-atalhos--poucos{% endif %}" id="lsAtalhos" aria-label="Atalhos por função">
+  {% for grupo in atalhos_no_topo %}
   <div class="ls-atalho">
     <button type="button" class="ls-atalho-botao" aria-expanded="false" aria-controls="lsAtalho-{{ grupo.codigo }}" title="{{ grupo.titulo }}">
       <i class="bi {{ grupo.icone }}" aria-hidden="true"></i><span>{{ grupo.curto }}</span>

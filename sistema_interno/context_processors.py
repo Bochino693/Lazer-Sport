@@ -216,7 +216,9 @@ def fab_counts(request):
     # o menu lateral e os atalhos do topo, por função (seção 114)
     from .menu import menu_do_usuario
 
-    contexto["menu_funcoes"] = SimpleLazyObject(lambda: menu_do_usuario(acesso))
+    contexto["menu_funcoes"] = menu = SimpleLazyObject(lambda: menu_do_usuario(acesso))
+    # os botões do topo: as funções e a Administração (Minha área fica só na lateral)
+    contexto["atalhos_no_topo"] = SimpleLazyObject(lambda: [grupo for grupo in menu if grupo.no_topo])
     if acesso.get("usuarios"):
         # o menu "Pessoas" dividido por função (só o superusuário; a conta
         # só acontece se o menu for desenhado)

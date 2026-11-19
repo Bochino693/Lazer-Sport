@@ -66,11 +66,13 @@ class AoVivoTests(TestCase):
         self.assertContains(tela, "O ranking começa com a primeira partida de um cadastrado.")
 
     def test_o_menu_separa_jogos_e_estudio_3d(self):
+        # no menu por função (seção 114) os dois são blocos da Administração
         html = self.abrir().content.decode()
-        jogos = html[html.index("ls-nav-section--games"):html.index("ls-nav-section--estudio")]
+        menu = html[html.index('data-funcao="admin"'):]
+        jogos = menu[menu.index('data-bloco="lazer-sport-games"'):menu.index('data-bloco="estudio-3d"')]
         self.assertIn("/site/jogos/ao-vivo/", jogos)
         self.assertNotIn("/site/objetos-3d/", jogos)
-        estudio = html[html.index("ls-nav-section--estudio"):]
+        estudio = menu[menu.index('data-bloco="estudio-3d"'):menu.index("</div>")]
         self.assertIn("/site/objetos-3d/", estudio)
         self.assertIn("/site/objetos-3d/montar/", estudio)
 

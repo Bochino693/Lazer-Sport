@@ -93,9 +93,11 @@ class OMenuFechadoContinuaLegivelSemVerTests(TestCase):
     def test_todo_item_do_menu_tem_nome_para_quem_nao_ve_o_icone(self):
         import re
 
-        gabarito = (
-            RAIZ / "templates" / "base_inner.html"
-        ).read_text(encoding="utf-8")
+        # o menu por função mora num pedaço próprio (seção 114)
+        gabarito = "".join(
+            (RAIZ / "templates" / nome).read_text(encoding="utf-8")
+            for nome in ("base_inner.html", "partes/menu_funcoes.html")
+        )
 
         itens = re.findall(r'<a data-titulo="([^"]+)"([^>]*)>', gabarito)
         self.assertTrue(itens, "o menu perdeu os itens")

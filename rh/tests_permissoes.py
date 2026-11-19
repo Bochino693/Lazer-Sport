@@ -51,19 +51,33 @@ class Base(PastaPrivadaTemporaria, TestCase):
 
 
 class MenuUmaEntradaTests(Base):
-    def test_uma_entrada_so_no_menu_para_cada_funcao(self):
+    """O RH no menu por função (LEIA-ME-V10, seção 114).
+
+    Cada um acha o PRÓPRIO ponto uma vez só (Minha área); a equipe aparece
+    na função de quem cuida dela: Gestão (RH completo) e Financeiro (as
+    fichas e o ponto, para pagar). Quem não cuida da equipe não a vê.
+    """
+
+    def _menu(self, conta):
+        html = self.abrir(conta, "/rh/ponto/").content.decode()
+        menu = html[html.index('<nav class="ls-nav"'):]
+        return menu[:menu.index("</nav>")]
+
+    def test_o_proprio_ponto_uma_vez_e_a_equipe_so_para_quem_cuida(self):
         for conta in (self.super, self.gestora, self.financeiro, *self.contas.values()):
             with self.subTest(conta=conta.username):
-                html = self.abrir(conta, "/rh/ponto/").content.decode()
-                menu = html[html.index('<nav class="ls-nav"'):]
-                menu = menu[:menu.index("</nav>")]
-                self.assertEqual(menu.count('href="/rh/'), 1)
-                self.assertEqual(menu.count('<span class="ls-nav-caption">Pessoas</span>'), 1)
+                menu = self._menu(conta)
+                self.assertEqual(menu.count('href="/rh/ponto/"'), 1)
+                self.assertEqual(menu.count('data-funcao="pessoal"'), 1)
+        self.assertEqual(self._menu(self.gestora).count('href="/rh/"'), 1)
+        self.assertIn('href="/rh/colaboradores/"', self._menu(self.financeiro))
+        self.assertNotIn('href="/rh/"', self._menu(self.financeiro))
+        self.assertNotIn('href="/rh/colaboradores/"', self._menu(self.contas["criacao"]))
 
     def test_rotulo_do_menu_pela_funcao(self):
-        self.assertContains(self.abrir(self.gestora, "/rh/"), "RH · Equipe")
-        self.assertContains(self.abrir(self.financeiro, "/rh/colaboradores/"), "RH · Equipe")
-        self.assertContains(self.abrir(self.contas["criacao"], "/rh/ponto/"), "Meu ponto e tarefas")
+        self.assertContains(self.abrir(self.gestora, "/rh/"), "RH da equipe")
+        self.assertContains(self.abrir(self.financeiro, "/rh/colaboradores/"), "Ponto da equipe")
+        self.assertContains(self.abrir(self.contas["criacao"], "/rh/ponto/"), "Meu ponto")
 
 
 class CadaFuncaoEntraNasTelasTests(Base):
