@@ -1001,7 +1001,12 @@ class AparelhoQueAbriuEDiarioTests(BaseDocumento):
         self.assertEqual(documento.diario[1]["ate"], 2)
         self.assertEqual(documento.diario[2]["aparelho"], "iPhone")
         self.assertEqual(documento.diario[3]["vezes"], 2)
-        self.assertNotIn("111", str(documento.diario))  # o CPF digitado não vai para o diário
+        # o CPF digitado não vai para o diário, com ou sem pontuação. (Buscava
+        # só "111", e o relógio do teste às vezes escrevia 111 nos
+        # microssegundos dos horários do diário -- falha de mentira.)
+        diario = str(documento.diario)
+        for pedaco in ("111.444.777-35", "11144477735", "444.777", "44477735"):
+            self.assertNotIn(pedaco, diario)
         linhas = svc.linhas_do_diario(documento)
         self.assertEqual(linhas[0]["tipo"], "assinado")  # o mais novo primeiro
         self.assertIn("Links 1 a 2", [l["texto"] for l in linhas][3])
