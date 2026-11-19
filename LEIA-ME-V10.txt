@@ -8436,6 +8436,16 @@ Dependência nova: rjsmin (requirements.txt).
    rh/templatetags/rh_extras.py e rh/sinais.py;
    ferramentas/carga/acoes_do_painel.py (novo); docs/RENDER_502.md.
    SEM MIGRAÇÃO.
+   NA JUNÇÃO (agente principal): A TELA DO CONTRATO. A sugestão do
+   levantamento aplicada em views_documento_assinatura.py: o orçamento da
+   tela do documento (/orcamentos/<pk>/documento/, o "Gerar", o link, o
+   estado e a via) já vem com os itens (prefetch), a O.S. e a produção
+   (select_related). Os itens eram lidos 4 vezes sem documento e 6 com o
+   documento gerado; agora 1. O "Gerar" continua relendo o orçamento depois
+   de gravar (refresh_from_db limpa o que veio junto). Teste:
+   tests_documento_assinatura.TelaDoDocumentoSemLeiturasRepetidasTests
+   (itens lidos no máximo 1 vez; teto de 13 consultas sem documento e 15
+   com documento).
 121) TODO CLIENTE COM ENDEREÇO NO MAPA, E A TELA DO DOCUMENTO CONFERIDA BOTÃO A BOTÃO
    O PEDIDO: "verifique na área interna, nos clientes, o 'no mapa, sem
    local', pois tem endereço e deve estar no mapa tudo que tiver" e

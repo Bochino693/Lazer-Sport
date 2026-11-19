@@ -80,7 +80,12 @@ class _BaseDocumento(OrcamentoInternoRequiredMixin, View):
         return get_object_or_404(
             limitar_orcamentos(
                 request.user,
-                Orcamento.objects.select_related("cliente", "responsavel"),
+                # Itens, O.S. e produção já vêm junto: a tela (régua, total,
+                # retrato do contrato) lia os itens até 7 vezes, e cada
+                # leitura custa uma viagem ao banco (~170 ms no ar).
+                Orcamento.objects
+                .select_related("cliente", "responsavel", "ordem_servico", "producao")
+                .prefetch_related("itens"),
             ),
             pk=pk,
         )

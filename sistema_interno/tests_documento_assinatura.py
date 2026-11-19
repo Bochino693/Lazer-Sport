@@ -1028,3 +1028,40 @@ class AparelhoQueAbriuEDiarioTests(BaseDocumento):
         self.assertIn("O cliente está com o contrato aberto", corpo["html"])
         self.assertIn("Diário de bordo", corpo["html"])
         self.assertIn("WhatsApp", corpo["html"])
+
+
+# ======================================================================
+# A TELA DO CONTRATO SEM REPETIR LEITURAS (cada consulta ~170 ms no ar)
+# ======================================================================
+class TelaDoDocumentoSemLeiturasRepetidasTests(BaseDocumento):
+    """A tela lia os itens do orçamento 7 vezes (17 consultas).
+
+    O orçamento chega com os itens, a O.S. e a produção já carregados; o
+    teto abaixo pega a volta de uma leitura repetida.
+    """
+
+    TETO_SEM_DOCUMENTO = 13
+    TETO_COM_DOCUMENTO = 15
+
+    def medir(self):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        self.client.force_login(self.vendedor)
+        self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/", **INTERNO)  # sessão e caches aquecidos
+        with CaptureQueriesContext(connection) as capturadas:
+            resposta = self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/", **INTERNO)
+        self.assertEqual(resposta.status_code, 200)
+        itens = [q["sql"] for q in capturadas.captured_queries if "itemorcamento" in q["sql"].lower()]
+        return len(capturadas.captured_queries), itens, [q["sql"] for q in capturadas.captured_queries]
+
+    def test_sem_documento_os_itens_sao_lidos_uma_vez(self):
+        total, itens, todas = self.medir()
+        self.assertLessEqual(len(itens), 1, "\n".join(itens))
+        self.assertLessEqual(total, self.TETO_SEM_DOCUMENTO, "\n".join(todas))
+
+    def test_com_documento_gerado_tambem(self):
+        self.gerar()
+        total, itens, todas = self.medir()
+        self.assertLessEqual(len(itens), 1, "\n".join(itens))
+        self.assertLessEqual(total, self.TETO_COM_DOCUMENTO, "\n".join(todas))
