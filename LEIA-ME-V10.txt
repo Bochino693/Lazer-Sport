@@ -7762,3 +7762,81 @@ Dependência nova: rjsmin (requirements.txt).
    bi-receipt-cutoff, chave `entrada_nota_ver`) entra junto com o menu novo;
    contas a pagar (vencimentos) se o dono quiser; DANFE que é foto continua
    pedindo o XML (sem leitura por imagem).
+
+   O APARELHO QUE ABRIU NÃO PRECISA DE LINK NOVO E O DIÁRIO DE BORDO (seção
+   109; o dono: "você deve fazer o diário de bordo, quando estiver na mesma
+   tela não deve relogar, poupando tempo"):
+     * O link continua valendo 10 minutos (eram 5; seção 117) para ABRIR. Quem abriu um link
+       válido ganha TEMPO_PARA_ASSINAR (30 min) naquele navegador (sessão,
+       documento_assinatura.liberar_aparelho): recarregar a página ou
+       enviar depois dos 10 minutos funciona; outro aparelho com o link
+       vencido não entra. Documento substituído ou suspenso continua
+       barrando antes do relógio (ler_link).
+     * O painel percebe a abertura (DocumentoAssinatura.aberto_em, pela
+       sondagem de 10 s) e PARA DE GIRAR O QR: "O cliente está com o
+       contrato aberto desde HH:MM", com "Mostrar o QR de novo" para outro
+       aparelho.
+     * DIÁRIO DE BORDO (DocumentoAssinatura.diario, no cartão do painel):
+       contrato gerado (por quem), links (seguidos do mesmo canal numa
+       linha só: "Links 1 a 6 · QR do balcão", "WhatsApp", "Meus pedidos,
+       pelo cliente"), aberto pelo cliente (iPhone/Android/computador),
+       envio recusado e por quê (sem o CPF digitado; repetido vira "3x") e
+       assinado. Os links que o próprio painel gira não refazem o cartão.
+     * Banco: sistema_interno/0080_diario_de_bordo_da_assinatura (só esquema).
+
+117) O LINK DE 10 MINUTOS E A RÉGUA DO PEDIDO (AS ETAPAS CLARAS PARA SEGUIR)
+   O dono: "deixe o tempo de assinatura 10 min agora em vez de 5, revise
+   todo o sistema e deixe fluido, com as etapas bem definidas e claras para
+   seguir." (A seção 116 fica para as notificações, em andamento.)
+
+   O LINK VALE 10 MINUTOS
+     * documento_assinatura.VALIDADE_DO_LINK = 10 * 60. É a mesma constante
+       do termo do RH (rh.termo.VALIDADE_DO_LINK lê dela): contrato do
+       cliente e termo do colaborador andam juntos.
+     * Nenhum texto escreve o número à mão: `minutos_do_link()` (serviço),
+       a tag `{% minutos_do_link %}` (contrato_extras, nas folhas em PDF),
+       `validade_minutos` no cartão e o número que o servidor manda no JSON
+       do link (painel e RH: o toast "vale N minutos"). A conversa do
+       WhatsApp diz "*10 minutos*".
+     * Quem abriu continua com TEMPO_PARA_ASSINAR (30 min) naquele aparelho
+       (seção 109): os 10 minutos são para ABRIR.
+     * rh/0003_canal_do_termo_sem_minutos: só o rótulo da escolha ("Pelo
+       link do celular"), sem o número que tinha ficado velho.
+
+   A RÉGUA DO PEDIDO (sistema_interno/etapas_do_pedido.py)
+     * Uma régua só, com as SEIS fases que o cliente vê em Meus pedidos:
+       1 Proposta, 2 Aprovação, 3 Contrato assinado, 4 Pagamento,
+       5 Produção, 6 Entregue. Os estados (feita/atual/parada/futura) vêm
+       de codigo_orcamento.acompanhamento -- a MESMA regra do cliente, sem
+       segunda cópia. A régua antiga da janela (Aprovado -> Assinatura ->
+       Pagamento -> Venda, desenhada em JS) saiu; a venda virou a nota do
+       pagamento ("Pago em 12/11 · venda #31").
+     * A nota de cada fase está na voz da EQUIPE ("Cliente responde até
+       28/11", "O cliente está lendo agora", "33% pago · faltam R$ 2.000,00").
+     * O PRÓXIMO PASSO, embaixo: o que fazer agora, COM QUEM está a vez
+       (Comercial: proposta, aprovação e contrato; Financeiro: pagamento;
+       Produção: produção e entrega) e o botão que leva lá. O botão só
+       aparece para quem pode: o Financeiro vê "Passe o contrato", mas o
+       botão é do Comercial; o Comercial vê "Registre o pagamento", sem
+       botão. Recusada, vencida ou trocada: a fase para em vermelho e o
+       próximo passo diz o que fazer ("faça uma nova versão").
+     * ONDE APARECE:
+         - na janela do orçamento (orcamentos_inner): o script pede o HTML
+           pronto em orcamento_etapas (/orcamentos/<id>/etapas/) ao abrir
+           e quando o orçamento SALVO muda (revisão, contrato, pagamento,
+           venda) -- digitar um desconto não pede nada. A "marca" evita
+           redesenhar o que não mudou. O botão rola até o quadro da janela
+           (contrato, pagamento) quando ele está na tela;
+         - na tela do contrato (documento_assinatura_inner): nasce com a
+           régua e a troca junto com o cartão quando o cliente assina (a
+           sondagem de 10 s manda "etapas" no JSON).
+     * Desenho: partes/etapas_do_pedido.html; CSS na seção "A RÉGUA DO
+       PEDIDO" de interno_modern.css (só variáveis de tema). No celular
+       os nomes não quebram com hífen e só a fase de agora mostra a nota.
+     * De carona: o texto pequeno do topo das telas (.ls-page-kicker)
+       passou de max-content para fit-content -- no celular ele quebra a
+       linha em vez de sair pela borda.
+     * Testes: tests_etapas_do_pedido.py (as fases, o próximo passo por
+       função, a rota com a marca, a régua na tela do contrato andando
+       quando o cliente assina) e os do link (tests_documento_assinatura:
+       vale até VALIDADE_DO_LINK, expira 1 s depois).

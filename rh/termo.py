@@ -372,7 +372,7 @@ def mensagem_whatsapp(termo, link) -> str:
         "Leia com calma e assine direto no seu celular:",
         link,
         "",
-        "O link vale por 5 minutos. Se passar, é só pedir outro.",
+        f"O link vale por {VALIDADE_DO_LINK // 60} minutos. Se passar, é só pedir outro.",
     ])
 
 

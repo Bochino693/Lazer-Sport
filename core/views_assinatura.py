@@ -3,13 +3,13 @@
 Mora no `core` pelo mesmo motivo da proposta (ver `views_orcamento.py`): o
 painel responde em interno.lazersport.com.br, atrás de login de equipe, e
 o cliente não tem login. Aqui a página sai no site, aberta, e quem abre a
-porta é o link de 5 minutos gerado pelo painel.
+porta é o link de 10 minutos gerado pelo painel.
 
 O QUE SUSTENTA ISSO (o resto está em `sistema_interno/documento_assinatura.py`):
 
   * o link é um `TimestampSigner` com sal próprio, preso ao id e ao hash do
     documento: não se fabrica, não se aproveita de outro documento e morre
-    em 5 minutos -- conferido ao ABRIR e de novo ao ENVIAR;
+    em 10 minutos -- conferido ao ABRIR e de novo ao ENVIAR;
   * a página mostra o documento daquele link e mais nada: nenhum outro
     orçamento, nenhum id de cadastro, nenhum caminho para o painel;
   * o envio leva o CSRF do Django, passa por um freio curto por IP e trava
@@ -21,6 +21,7 @@ O QUE SUSTENTA ISSO (o resto está em `sistema_interno/documento_assinatura.py`)
 from __future__ import annotations
 
 import logging
+import time
 
 from django.conf import settings
 from django.db import transaction
@@ -117,6 +118,7 @@ def _tela_de_aviso(request, situacao, documento=None, *, status, mensagem="", mo
         # Por que o termo está suspenso: "aprovacao" ou "pagamento" (ver
         # `documento_assinatura.motivo_da_suspensao`).
         "motivo": motivo,
+        "minutos_do_link": svc.minutos_do_link(),
         **_contato_empresa(),
     }
     return _cabecalhos(render(request, "assinatura_publica.html", contexto, status=status))
@@ -145,24 +147,46 @@ def assinar_documento(request, token):
     leitura = svc.ler_link(token)
     if leitura.situacao == "assinado":
         return redirect("documento_assinado_publico", codigo=leitura.documento.codigo_publico)
-    if not leitura.valido:
+    ate = _liberado(request, leitura)
+    if not ate:
         return _tela_de_aviso(
             request, leitura.situacao, leitura.documento,
             status=STATUS_DA_SITUACAO[leitura.situacao],
             motivo=leitura.motivo,
         )
+    if leitura.valido:
+        # O APARELHO QUE ABRIU NÃO PRECISA DE LINK NOVO: tem TEMPO_PARA_ASSINAR
+        # para ler e assinar (o painel para de girar o QR e anota no diário).
+        ate = svc.liberar_aparelho(request.session, leitura.documento)
+        svc.registrar_abertura(leitura.documento, request.META.get("HTTP_USER_AGENT", ""))
 
     contexto = contexto_da_folha(leitura.documento)
     contexto.update({
         "estado": "assinar",
         "token": token,
-        # O relógio da página: o instante em que o link morre, em ms. O
+        # O relógio da página: até quando ESTE aparelho assina, em ms. O
         # navegador desconta a diferença do relógio dele (`agora`).
-        "expira_em_ms": leitura.expira_em * 1000,
-        "segundos_restantes": leitura.segundos_restantes,
-        "validade_minutos": svc.VALIDADE_DO_LINK // 60,
+        "expira_em_ms": ate * 1000,
+        "segundos_restantes": max(0, ate - int(time.time())),
+        "validade_minutos": svc.TEMPO_PARA_ASSINAR // 60,
+        "minutos_do_link": svc.minutos_do_link(),
     })
     return _cabecalhos(render(request, "assinatura_publica.html", contexto))
+
+
+def _liberado(request, leitura) -> int:
+    """Até quando (s) este aparelho assina: o link válido, ou o aparelho que já abriu.
+
+    O link vencido NÃO barra quem já estava com o contrato aberto neste
+    navegador (sessão) -- desde que o documento seja a mesma versão e não
+    tenha sido substituído nem suspenso (`ler_link` diz isso antes do
+    relógio). Para os outros, o link vencido continua vencido.
+    """
+    if leitura.valido:
+        return leitura.expira_em
+    if leitura.situacao == "expirado" and leitura.documento is not None:
+        return svc.aparelho_liberado(request.session, leitura.documento)
+    return 0
 
 
 def _enviar_assinatura(request, token):
@@ -186,7 +210,7 @@ def _enviar_assinatura(request, token):
                     + ". Nada foi alterado."
                 ),
             )
-        if not leitura.valido:
+        if not leitura.valido and not _liberado(request, leitura):
             mensagens = {
                 "expirado": "O tempo do link acabou antes do envio. Nada foi salvo: peça um novo link ao atendente.",
                 "substituido": "Este link é de uma versão anterior do documento. Nada foi salvo: peça o link novo ao atendente.",
@@ -212,16 +236,20 @@ def _enviar_assinatura(request, token):
             )
             png = svc.png_da_assinatura(request.POST.get("assinatura"))
         except svc.AssinaturaRecusada as recusa:
+            # no diário de bordo: o que travou o cliente (sem o CPF digitado)
+            svc.anotar(documento, "recusa", campo=recusa.campo, motivo=str(recusa)[:120])
             corpo = {"ok": False, "situacao": "campo", "campo": recusa.campo, "msg": str(recusa)}
             if request.headers.get("Accept", "").startswith("application/json"):
                 return _cabecalhos(JsonResponse(corpo, status=400))
             contexto = contexto_da_folha(documento)
+            ate = _liberado(request, leitura)
             contexto.update({
                 "estado": "assinar",
                 "token": token,
-                "expira_em_ms": leitura.expira_em * 1000,
-                "segundos_restantes": leitura.segundos_restantes,
-                "validade_minutos": svc.VALIDADE_DO_LINK // 60,
+                "expira_em_ms": ate * 1000,
+                "segundos_restantes": max(0, ate - int(time.time())),
+                "validade_minutos": svc.TEMPO_PARA_ASSINAR // 60,
+                "minutos_do_link": svc.minutos_do_link(),
                 "erro": str(recusa),
                 "erro_campo": recusa.campo,
                 "nome_tentado": request.POST.get("nome", "")[:160],

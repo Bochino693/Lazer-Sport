@@ -1,0 +1,38 @@
+{% comment %}
+  A RÉGUA DO PEDIDO (LEIA-ME-V10, seção 117): as seis fases que o cliente
+  também vê em Meus pedidos -- Proposta, Aprovação, Contrato assinado,
+  Pagamento, Produção, Entregue -- e, embaixo, o PRÓXIMO PASSO: o que fazer
+  agora, com quem está a vez e o botão que leva lá.
+
+  Recebe `etapas` (`etapas_do_pedido.etapas`). A janela do orçamento pede
+  este HTML pronto (`orcamento_etapas`); a tela do contrato já nasce com
+  ele. O botão leva ao quadro da janela quando ele está na tela
+  (`data-etapa-ir`) e, fora dela, segue o link.
+{% endcomment %}
+<ol class="ls-etapas-lista" aria-label="Etapas do pedido: {{ etapas.feitas }} de {{ etapas.lista|length }} feitas">
+  {% for etapa in etapas.lista %}
+  <li class="ls-etapa{% if etapa.estado == 'feita' %} feito{% elif etapa.estado == 'atual' %} atual{% elif etapa.estado == 'parada' %} parada{% endif %}"{% if etapa.estado == 'atual' %} aria-current="step"{% endif %} data-etapa="{{ etapa.chave }}">
+    <span class="ls-etapa-marca" aria-hidden="true">{% if etapa.estado == 'parada' %}<i class="bi bi-x-lg"></i>{% else %}<i class="bi {{ etapa.icone }}"></i>{% endif %}</span>
+    <span class="ls-etapa-texto">
+      <strong><span class="ls-etapa-ordem">{{ etapa.numero }}</span> {{ etapa.nome }}</strong>
+      {% if etapa.nota %}<small>{{ etapa.nota }}</small>{% endif %}
+      <span class="visually-hidden">{% if etapa.estado == 'feita' %}(feito){% elif etapa.estado == 'atual' %}(etapa de agora){% elif etapa.estado == 'parada' %}(parou aqui){% else %}(ainda não){% endif %}</span>
+    </span>
+  </li>
+  {% endfor %}
+</ol>
+{% with p=etapas.proximo %}{% if p %}
+<div class="ls-etapas-proximo is-{{ p.tom }}" role="status">
+  <span class="ls-etapas-proximo-icone" aria-hidden="true"><i class="bi {{ p.icone }}"></i></span>
+  <div class="ls-etapas-proximo-texto">
+    <span class="ls-etapas-proximo-rotulo">{% if p.tom == 'ok' %}Tudo certo{% elif p.tom == 'alerta' %}Atenção{% else %}Próximo passo{% endif %}{% if p.quem %} · com {{ p.quem }}{% endif %}</span>
+    <strong>{{ p.texto }}</strong>
+    {% if p.detalhe %}<small>{{ p.detalhe }}</small>{% endif %}
+  </div>
+  {% if p.acao and p.url %}
+  <a class="btn btn-sm ls-etapas-proximo-acao" href="{{ p.url }}"{% if p.alvo %} data-etapa-ir="{{ p.alvo }}"{% endif %}>
+    {{ p.acao }} <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+  </a>
+  {% endif %}
+</div>
+{% endif %}{% endwith %}

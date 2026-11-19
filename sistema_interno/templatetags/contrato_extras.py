@@ -33,3 +33,13 @@ _FORA_DO_RODAPE = re.compile(r"[^0-9A-Za-zÀ-ÿºª/.,:·\- ]")
 @register.filter
 def texto_de_rodape(texto):
     return mark_safe(_FORA_DO_RODAPE.sub("", str(texto or ""))[:120])
+
+
+@register.simple_tag
+def minutos_do_link():
+    """Os minutos que cada link de assinatura vale ("cada um válido por 10
+    minutos"), lidos da regra -- o texto da folha não fica para trás quando
+    o tempo muda."""
+    from sistema_interno.documento_assinatura import minutos_do_link as minutos
+
+    return minutos()

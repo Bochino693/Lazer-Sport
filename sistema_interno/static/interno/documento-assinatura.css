@@ -193,3 +193,28 @@
   .ls-doc-relogio-texto span{font-size:.66rem}
   .ls-doc-link-numero{text-align:left;max-width:170px}
 }
+
+/* ======================================================================
+   O CLIENTE COM O CONTRATO ABERTO E O DIÁRIO DE BORDO
+   Aberto: o QR some (o painel para de girar o link) e fica o aviso; o
+   "Mostrar o QR de novo" troca data-aberto para 0. Só variáveis do tema.
+   ====================================================================== */
+.ls-doc-aberto{display:none;gap:14px;align-items:flex-start;margin:4px 0 14px;padding:14px 16px;border-radius:14px;
+  border:1px solid rgba(var(--green-rgb),.35);background:rgba(var(--green-rgb),.10)}
+.ls-doc-cartao[data-aberto="1"] .ls-doc-aberto{display:flex}
+.ls-doc-cartao[data-aberto="1"] .ls-doc-corpo{display:none}
+.ls-doc-aberto strong{display:block;font-size:.98rem}
+.ls-doc-aberto p{margin:4px 0 10px;color:var(--muted);font-size:.84rem}
+.ls-doc-diario{margin-top:16px;border-top:1px solid var(--line);padding-top:12px}
+.ls-doc-diario summary{cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:800;font-size:.9rem;list-style:none}
+.ls-doc-diario summary::-webkit-details-marker{display:none}
+.ls-doc-diario summary span{margin-left:auto;min-width:24px;padding:1px 8px;border-radius:999px;text-align:center;
+  font-size:.72rem;color:var(--acento-texto);background:rgba(var(--acento-rgb),.12)}
+.ls-doc-diario ol{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px;max-height:260px;overflow:auto}
+.ls-doc-diario li{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:center;font-size:.84rem;
+  padding:6px 8px;border-radius:10px;background:rgba(var(--verniz-rgb),.04)}
+.ls-doc-diario li i{color:var(--acento-texto)}
+.ls-doc-diario li time{color:var(--muted);font-size:.74rem;white-space:nowrap}
+.ls-doc-diario-aberto i{color:var(--green-texto)!important}
+.ls-doc-diario-recusa i{color:var(--yellow-texto)!important}
+.ls-doc-diario-assinado i{color:var(--green-texto)!important}

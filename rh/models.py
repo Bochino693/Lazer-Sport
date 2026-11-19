@@ -983,7 +983,7 @@ class TermoExclusividade(models.Model):
 
     class Canal(models.TextChoices):
         PAINEL = "painel", "No painel, com a conta da pessoa"
-        LINK = "link", "Pelo link de 5 minutos (celular)"
+        LINK = "link", "Pelo link do celular"
 
     colaborador = models.ForeignKey(Colaborador, on_delete=models.PROTECT, related_name="termos")
     versao = models.CharField("versão do texto", max_length=20, db_index=True)

@@ -16,7 +16,7 @@ O que estes testes protegem:
     não refaz e não troca o documento; recusar (ou expirar) o orçamento
     suspende o link; o termo antigo, que declara "quitado", ainda é
     suspenso se o pagamento for desfeito;
-  * o link vale 5 minutos (o relógio do `TimestampSigner` é o que se
+  * o link vale 10 minutos (o relógio do `TimestampSigner` é o que se
     adianta aqui -- não há freezegun no projeto) e é recusado depois, na
     abertura e no envio; o envio fora da janela não grava nada;
   * link fabricado, cortado ou de outro sal é inválido; o link não tem "_"
@@ -363,14 +363,17 @@ class GerarDocumentoTests(BaseDocumento):
 # ======================================================================
 class LinkDeCincoMinutosTests(BaseDocumento):
 
-    def test_vale_dentro_dos_5_minutos_e_expira_depois(self):
+    def test_vale_dentro_dos_10_minutos_e_expira_depois(self):
         documento = self.gerar()
         agora = 1_800_000_000
         with mock.patch("django.core.signing.time.time", return_value=agora):
             token = self.link(documento)
 
-        for passados, esperado in ((0, "valido"), (60, "valido"), (299, "valido"), (300, "valido"),
-                                   (301, "expirado"), (3600, "expirado")):
+        self.assertEqual(svc.VALIDADE_DO_LINK, 10 * 60)  # o pedido: "10 min agora em vez de 5"
+        limite = svc.VALIDADE_DO_LINK
+        for passados, esperado in ((0, "valido"), (60, "valido"), (300, "valido"), (301, "valido"),
+                                   (limite - 1, "valido"), (limite, "valido"),
+                                   (limite + 1, "expirado"), (3600, "expirado")):
             with self.subTest(segundos=passados):
                 with mock.patch("django.core.signing.time.time", return_value=agora + passados):
                     self.assertEqual(svc.ler_link(token).situacao, esperado)
@@ -378,10 +381,13 @@ class LinkDeCincoMinutosTests(BaseDocumento):
         with mock.patch("django.core.signing.time.time", return_value=agora + 120):
             resposta = self.client.get(f"/assinar/{token}/")
         self.assertEqual(resposta.status_code, 200)
-        self.assertContains(resposta, 'data-restante="180"')
+        # quem abriu tem TEMPO_PARA_ASSINAR neste aparelho (sem link novo)
+        self.assertContains(resposta, f'data-restante="{svc.TEMPO_PARA_ASSINAR}"')
 
-        with mock.patch("django.core.signing.time.time", return_value=agora + 301):
-            resposta = self.client.get(f"/assinar/{token}/")
+        with mock.patch("django.core.signing.time.time", return_value=agora + limite + 1):
+            self.assertEqual(self.client.get(f"/assinar/{token}/").status_code, 200)
+            # outro aparelho, com o link vencido, não entra
+            resposta = self.client_class().get(f"/assinar/{token}/")
         self.assertEqual(resposta.status_code, 410)
         self.assertContains(resposta, "Este link expirou", status_code=410)
         self.assertContains(resposta, "Peça um novo ao atendente", status_code=410)
@@ -392,7 +398,7 @@ class LinkDeCincoMinutosTests(BaseDocumento):
         agora = 1_800_000_000
         with mock.patch("django.core.signing.time.time", return_value=agora):
             token = self.link(documento)
-        with mock.patch("django.core.signing.time.time", return_value=agora + 301):
+        with mock.patch("django.core.signing.time.time", return_value=agora + svc.VALIDADE_DO_LINK + 1):
             resposta = self.assinar(token)
         self.assertEqual(resposta.status_code, 410)
         self.assertEqual(resposta.json()["situacao"], "expirado")
@@ -437,10 +443,10 @@ class LinkDeCincoMinutosTests(BaseDocumento):
         corpo = resposta.json()
         self.assertIn("/assinar/", corpo["link"])
         self.assertTrue(corpo["qr"].startswith("<svg"))
-        self.assertEqual(corpo["validade"], 300)
-        self.assertAlmostEqual(corpo["expira_em"] - corpo["agora"], 300_000, delta=2000)
+        self.assertEqual(corpo["validade"], svc.VALIDADE_DO_LINK)
+        self.assertAlmostEqual(corpo["expira_em"] - corpo["agora"], svc.VALIDADE_DO_LINK * 1000, delta=2000)
         self.assertIn("wa.me/5511977776655", corpo["whatsapp"])
-        self.assertIn("5 minutos", corpo["mensagem"])
+        self.assertIn("*10 minutos*", corpo["mensagem"])
         # O termo sai na aprovação: a conversa diz "aprovado", não "pago".
         self.assertIn(f"Seu pedido nº {self.orcamento.numero_documento} foi *aprovado*", corpo["mensagem"])
         self.assertIn("Assine aqui", corpo["mensagem"])
@@ -936,3 +942,89 @@ class HistoricoEViaTests(BaseDocumento):
         self.assertContains(resposta, "Assinado por Maria Alegria da Silva em")
         self.assertContains(resposta, "Baixar PDF")
         self.assertContains(resposta, f"/orcamentos/{self.orcamento.pk}/documento/via/?imprimir=1")
+
+
+# ======================================================================
+# O APARELHO QUE ABRIU NÃO PRECISA DE LINK NOVO + O DIÁRIO DE BORDO
+# ======================================================================
+class AparelhoQueAbriuEDiarioTests(BaseDocumento):
+    """O dono: "quando estiver na mesma tela não deve relogar" e o diário de bordo."""
+
+    IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)"
+
+    def abrir(self, token, client=None):
+        return (client or self.client).get(f"/assinar/{token}/", HTTP_USER_AGENT=self.IPHONE)
+
+    def depois(self, segundos):
+        import time as relogio
+
+        return mock.patch("django.core.signing.time.time", return_value=relogio.time() + segundos)
+
+    def test_o_link_vencido_ainda_assina_no_aparelho_que_abriu(self):
+        documento = self.gerar()
+        token = self.link(documento)
+        self.assertEqual(self.abrir(token).status_code, 200)
+
+        with self.depois(svc.VALIDADE_DO_LINK + 120):  # o link venceu enquanto lia
+            # recarregar a página continua mostrando o contrato
+            self.assertContains(self.abrir(token), 'id="quadroAssinatura"')
+            # outro aparelho com o mesmo link vencido: não
+            outro = self.client_class()
+            self.assertEqual(self.abrir(token, client=outro).status_code, 410)
+            resposta = self.assinar(token, client=outro)
+            self.assertEqual(resposta.status_code, 410)
+            # o aparelho que abriu assina
+            resposta = self.assinar(token)
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        documento.refresh_from_db()
+        self.assertTrue(documento.assinado)
+
+    def test_passado_o_tempo_para_assinar_pede_link_novo(self):
+        documento = self.gerar()
+        token = self.link(documento)
+        self.abrir(token)
+        with self.depois(svc.TEMPO_PARA_ASSINAR + 60):
+            self.assertEqual(self.assinar(token).status_code, 410)
+
+    def test_o_diario_de_bordo_conta_o_que_aconteceu(self):
+        documento = self.gerar()
+        token = self.link(documento)
+        self.link(documento)  # o QR girou: os dois links viram uma linha
+        self.abrir(token)
+        self.assinar(token, documento="111.444.777-35")  # CPF que não confere
+        self.assinar(token, documento="111.444.777-35")
+        self.assinar(token)
+        documento.refresh_from_db()
+
+        tipos = [e["tipo"] for e in documento.diario]
+        self.assertEqual(tipos, ["gerado", "link", "aberto", "recusa", "assinado"])
+        self.assertEqual(documento.diario[1]["ate"], 2)
+        self.assertEqual(documento.diario[2]["aparelho"], "iPhone")
+        self.assertEqual(documento.diario[3]["vezes"], 2)
+        self.assertNotIn("111", str(documento.diario))  # o CPF digitado não vai para o diário
+        linhas = svc.linhas_do_diario(documento)
+        self.assertEqual(linhas[0]["tipo"], "assinado")  # o mais novo primeiro
+        self.assertIn("Links 1 a 2", [l["texto"] for l in linhas][3])
+
+    def test_o_painel_para_de_girar_o_qr_quando_o_cliente_abre(self):
+        documento = self.gerar()
+        token = self.link(documento)
+        self.client.force_login(self.vendedor)
+        tela = self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/", **INTERNO).content.decode()
+        self.assertIn('data-aberto="0"', tela)
+        marca = re.search(r'data-diario="([^"]*)"', tela).group(1)
+        estado = f"/orcamentos/{self.orcamento.pk}/documento/estado/?documento={documento.pk}&situacao=aguardando&diario={marca}"
+        self.assertFalse(self.client.get(estado, **AJAX).json()["mudou"])
+
+        # o QR gira (outro link): o cartão NÃO se refaz por isso
+        self.client.post(f"/orcamentos/{self.orcamento.pk}/documento/link/", {"canal": "whatsapp"}, **AJAX)
+        self.assertFalse(self.client.get(estado, **AJAX).json()["mudou"])
+
+        # o cliente abre no celular: o cartão troca e diz que ele está com o contrato
+        self.abrir(token, client=self.client_class())
+        corpo = self.client.get(estado, **AJAX).json()
+        self.assertTrue(corpo["mudou"])
+        self.assertIn('data-aberto="1"', corpo["html"])
+        self.assertIn("O cliente está com o contrato aberto", corpo["html"])
+        self.assertIn("Diário de bordo", corpo["html"])
+        self.assertIn("WhatsApp", corpo["html"])

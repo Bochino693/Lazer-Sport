@@ -1,4 +1,4 @@
-"""O documento para assinatura do orçamento aprovado, e o link de 5 minutos.
+"""O documento para assinatura do orçamento aprovado, e o link de 10 minutos.
 
 O PEDIDO, nas palavras do cliente: "após o orçamento estar como pago, vc
 deve analisar o seguinte: como já está pago, finalizado, vc deve pôr uma
@@ -39,7 +39,7 @@ COMO FICOU, EM QUATRO PEÇAS:
      com sal próprio, sobre "id do documento + começo do hash". Não há
      tabela de tokens: a assinatura HMAC garante que ninguém fabrica um
      link, o carimbo de tempo dentro dele diz quando ele nasceu, e o
-     servidor recusa o que tiver mais de 5 minutos. Gerar o documento de
+     servidor recusa o que tiver mais de 10 minutos (VALIDADE_DO_LINK). Gerar o documento de
      novo muda o hash (e o id): todos os links velhos morrem juntos.
 
   3. A ASSINATURA (`assinar`). Nome completo, CPF/CNPJ (conferido com o do
@@ -84,10 +84,29 @@ from .validacoes import (
 )
 
 
-#: Quanto tempo um link vale, em segundos. É o número do pedido ("um link
-#: que vai ser gerado a cada 5 minutos"): o painel renova o link nesse
+#: Quanto tempo um link vale, em segundos. Era o número do pedido ("um link
+#: que vai ser gerado a cada 5 minutos"); depois o dono pediu "deixe o tempo
+#: de assinatura 10 min agora em vez de 5". O painel renova o link nesse
 #: ritmo e o servidor recusa o que passar dele -- na abertura E no envio.
-VALIDADE_DO_LINK = 5 * 60
+#: Todo texto que fala do tempo do link lê daqui (`minutos_do_link`).
+VALIDADE_DO_LINK = 10 * 60
+
+#: O APARELHO QUE ABRIU NÃO PRECISA DE LINK NOVO (o dono: "quando estiver na
+#: mesma tela não deve relogar, poupando tempo"). Quem abriu um link válido
+#: tem esse tempo, no mesmo navegador, para ler e assinar -- mesmo que os 10
+#: minutos do link acabem no meio. O link continua valendo 10 minutos para
+#: ABRIR; é a sessão do aparelho que segura a assinatura.
+TEMPO_PARA_ASSINAR = 30 * 60
+
+
+def minutos_do_link():
+    """Os minutos do link, para os textos ("o link vale 10 minutos")."""
+    return VALIDADE_DO_LINK // 60
+
+CHAVE_DA_SESSAO = "assinatura_aberta"
+
+#: Quantas linhas o diário de bordo guarda (as mais novas).
+TAMANHO_DO_DIARIO = 80
 
 #: O sal separa estes links de qualquer outra coisa que o projeto assine
 #: com a mesma SECRET_KEY: um valor assinado para outro fim nunca passa
@@ -453,6 +472,10 @@ def gerar(orcamento, usuario):
             f"integridade {documento.hash_conteudo[:12]}…"
         )
     registrar_no_historico(orcamento, usuario, AtividadeOrcamento.Tipo.DOCUMENTO, resumo)
+    por = ""
+    if getattr(usuario, "is_authenticated", False):
+        por = usuario.get_full_name() or usuario.username
+    anotar(documento, "gerado", por=por or "equipe")
     return documento
 
 
@@ -489,12 +512,13 @@ def _carga(documento) -> str:
     return f"{documento.pk}.{documento.hash_conteudo[:PEDACO_DO_HASH]}"
 
 
-def emitir_link(documento):
-    """Um token novo, que vale 5 minutos a partir de agora.
+def emitir_link(documento, canal="painel"):
+    """Um token novo, que vale VALIDADE_DO_LINK (10 minutos) a partir de agora.
 
     Conta no documento quantos links já saíram (o histórico mostra o
     número, não uma linha por link). `F()` para dois painéis abertos não
-    perderem a conta um do outro.
+    perderem a conta um do outro. No diário de bordo, os links seguidos do
+    mesmo canal viram uma linha só ("links 1 a 6 · QR do balcão").
     """
     token = _assinador().sign(_carga(documento))
     agora = timezone.now()
@@ -503,7 +527,134 @@ def emitir_link(documento):
         ultimo_link_em=agora,
     )
     documento.refresh_from_db(fields=["links_gerados", "ultimo_link_em"])
+    anotar(documento, "link", numero=documento.links_gerados, canal=canal)
     return token, _nasceu_em(token) + VALIDADE_DO_LINK
+
+
+# ======================================================================
+# O DIÁRIO DE BORDO E O APARELHO QUE JÁ ABRIU
+# ======================================================================
+CANAIS_DO_LINK = {
+    "painel": "QR do balcão",
+    "whatsapp": "WhatsApp",
+    "cliente": "Meus pedidos, pelo cliente",
+}
+
+
+def anotar(documento, tipo, **dados):
+    """Uma linha no diário de bordo do documento (nunca derruba quem chama).
+
+    Os links seguidos do mesmo canal se juntam numa linha; a recusa
+    seguida do mesmo campo também (quem erra o CPF três vezes vira "3x").
+    """
+    import logging
+
+    try:
+        agora = timezone.now().isoformat()
+        diario = list(DocumentoAssinatura.objects.filter(pk=documento.pk).values_list("diario", flat=True).first() or [])
+        ultimo = diario[-1] if diario else None
+        if tipo == "link" and ultimo and ultimo.get("tipo") == "link" and ultimo.get("canal") == dados.get("canal"):
+            ultimo["ate"] = dados.get("numero")
+            ultimo["fim"] = agora
+        elif tipo == "recusa" and ultimo and ultimo.get("tipo") == "recusa" and ultimo.get("campo") == dados.get("campo"):
+            ultimo["vezes"] = int(ultimo.get("vezes") or 1) + 1
+            ultimo["fim"] = agora
+        else:
+            diario.append({"quando": agora, "tipo": tipo, **dados})
+        diario = diario[-TAMANHO_DO_DIARIO:]
+        DocumentoAssinatura.objects.filter(pk=documento.pk).update(diario=diario)
+        documento.diario = diario
+    except Exception:  # noqa: BLE001 -- o diário é o rastro, não o trabalho
+        logging.getLogger(__name__).exception("Diário de bordo do documento %s", getattr(documento, "pk", None))
+
+
+def _hora(texto):
+    from datetime import datetime
+
+    try:
+        return timezone.localtime(datetime.fromisoformat(texto))
+    except (TypeError, ValueError):
+        return None
+
+
+def linhas_do_diario(documento) -> list[dict]:
+    """O diário em frases, do mais novo ao mais antigo: [{"quando", "icone", "texto"}]."""
+    linhas = []
+    for evento in reversed(list(documento.diario or [])):
+        tipo = evento.get("tipo")
+        quando = _hora(evento.get("fim") or evento.get("quando"))
+        if tipo == "gerado":
+            icone, texto = "bi-file-earmark-plus", f"Contrato gerado por {evento.get('por') or 'equipe'}"
+        elif tipo == "link":
+            canal = CANAIS_DO_LINK.get(evento.get("canal"), "painel")
+            de, ate = evento.get("numero"), evento.get("ate")
+            numeros = f"links {de} a {ate}" if ate and ate != de else f"link {de}"
+            icone, texto = "bi-qr-code", f"{numeros.capitalize()} · {canal}"
+        elif tipo == "aberto":
+            icone, texto = "bi-phone", f"O cliente abriu o contrato ({evento.get('aparelho') or 'aparelho'})"
+        elif tipo == "recusa":
+            vezes = int(evento.get("vezes") or 1)
+            icone = "bi-exclamation-circle"
+            texto = f"Envio recusado: {evento.get('motivo') or 'campo a corrigir'}" + (f" ({vezes}x)" if vezes > 1 else "")
+        elif tipo == "assinado":
+            icone, texto = "bi-patch-check-fill", f"Assinado por {evento.get('nome') or 'cliente'}"
+        else:
+            continue
+        linhas.append({"quando": quando, "icone": icone, "texto": texto, "tipo": tipo})
+    return linhas
+
+
+def aparelho_de(navegador: str) -> str:
+    texto = (navegador or "").lower()
+    if "iphone" in texto or "ipad" in texto:
+        return "iPhone"
+    if "android" in texto:
+        return "Android"
+    if "mobile" in texto:
+        return "celular"
+    return "computador"
+
+
+def aberto_agora(documento) -> bool:
+    """O cliente está com o contrato aberto (abriu há menos de TEMPO_PARA_ASSINAR)?"""
+    if documento is None or not documento.aguardando or not documento.aberto_em:
+        return False
+    return (timezone.now() - documento.aberto_em).total_seconds() < TEMPO_PARA_ASSINAR
+
+
+def liberar_aparelho(sessao, documento) -> int:
+    """O aparelho que abriu um link válido assina sem link novo. Devolve até quando (s)."""
+    marcas = dict(sessao.get(CHAVE_DA_SESSAO) or {})
+    chave = str(documento.pk)
+    agora = int(time.time())
+    marca = marcas.get(chave)
+    pedaco = documento.hash_conteudo[:PEDACO_DO_HASH]
+    if marca and marca.get("hash") == pedaco and int(marca.get("ate") or 0) > agora:
+        return int(marca["ate"])
+    ate = agora + TEMPO_PARA_ASSINAR
+    marcas = {k: v for k, v in marcas.items() if int((v or {}).get("ate") or 0) > agora}
+    marcas[chave] = {"hash": pedaco, "ate": ate}
+    sessao[CHAVE_DA_SESSAO] = marcas
+    return ate
+
+
+def aparelho_liberado(sessao, documento) -> int:
+    """Até quando (s) este aparelho ainda assina este documento; 0 se não."""
+    marca = (sessao.get(CHAVE_DA_SESSAO) or {}).get(str(documento.pk)) if documento else None
+    if not marca or marca.get("hash") != documento.hash_conteudo[:PEDACO_DO_HASH]:
+        return 0
+    ate = int(marca.get("ate") or 0)
+    return ate if ate > int(time.time()) else 0
+
+
+def registrar_abertura(documento, navegador):
+    """A primeira abertura vira `aberto_em` e uma linha no diário."""
+    agora = timezone.now()
+    primeira = not documento.aberto_em or (agora - documento.aberto_em).total_seconds() >= TEMPO_PARA_ASSINAR
+    DocumentoAssinatura.objects.filter(pk=documento.pk).update(aberto_em=agora)
+    documento.aberto_em = agora
+    if primeira:
+        anotar(documento, "aberto", aparelho=aparelho_de(navegador))
 
 
 def _nasceu_em(token) -> int:
@@ -630,7 +781,7 @@ def qr_svg(texto: str) -> str:
 
 
 def mensagem_whatsapp(documento, link) -> str:
-    """O texto pronto da conversa, com o link de 5 minutos.
+    """O texto pronto da conversa, com o link de 10 minutos.
 
     "Aprovado", e não "pago": o termo sai na aprovação, antes do
     pagamento -- e é verdade também para os termos antigos, que saíram de
@@ -647,7 +798,7 @@ def mensagem_whatsapp(documento, link) -> str:
         f"Agora é só assinar {papel}, direto no seu celular. Assine aqui:",
         link,
         "",
-        "⏱️ O link vale por *5 minutos*. Se passar, é só pedir outro aqui.",
+        f"⏱️ O link vale por *{minutos_do_link()} minutos*. Se passar, é só pedir outro aqui.",
         f"{nome_empresa()} · CNPJ {cnpj_empresa()}",
     ])
 
@@ -759,6 +910,7 @@ def assinar(documento, *, nome, cpf_cnpj, png, ip, navegador):
     documento.assinatura_ip = ip or None
     documento.assinatura_navegador = (navegador or "")[:400]
     documento.hash_assinado = hash_do_retrato(documento.conteudo)
+    anotar(documento, "assinado", nome=nome)
     documento.save(update_fields=[
         "situacao", "assinado_em", "assinante_nome", "assinante_documento",
         "assinatura_png", "assinatura_ip", "assinatura_navegador",

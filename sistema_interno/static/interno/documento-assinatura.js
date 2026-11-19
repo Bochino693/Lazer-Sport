@@ -4,10 +4,10 @@
    assinar, com validações de tempo e tudo". O cartão faz isso sozinho:
 
      * ao abrir, pede um link (POST): o QR, o endereço e o anel do relógio;
-     * o anel esvazia em 5 minutos e, quando zera, pede outro -- só com a
+     * o anel esvazia em 10 minutos e, quando zera, pede outro -- só com a
        tela à vista: aba escondida não gera link que ninguém vai mostrar;
      * "Gerar novo link" pede na hora; "Enviar no WhatsApp" pede um link
-       fresco para o cliente receber os 5 minutos inteiros;
+       fresco para o cliente receber os 10 minutos inteiros;
      * a cada 10 segundos pergunta se o cliente já assinou (GET leve), e
        troca o QR pelo "Assinado por ..." com o PDF -- sem recarregar.
 
@@ -31,7 +31,7 @@
 
   var link = "";
   var expira = 0;           // em ms do relógio DESTE navegador
-  var validade = 300;       // segundos
+  var validade = 600;       // segundos (o servidor manda o número certo)
   var pedindo = null;       // a promessa do link em voo
   var ultimaResposta = null;
   var relogio = null;
@@ -81,19 +81,22 @@
 
   function cartao() { return raiz.querySelector("[data-doc-cartao]"); }
   function situacao() { var c = cartao(); return c ? c.getAttribute("data-situacao") : ""; }
+  /* o cliente já está com o contrato aberto: o QR não gira (seção 109) */
+  function aberto() { var c = cartao(); return !!c && c.getAttribute("data-aberto") === "1"; }
   function noAr() { return document.body.contains(raiz); }
 
   /* ------------------------------------------------------------- o link */
-  function pedirLink() {
+  function pedirLink(canal) {
     if (situacao() !== "aguardando") return Promise.reject(new Error("Sem documento aguardando assinatura."));
     if (pedindo) return pedindo;
     var qr = raiz.querySelector("[data-doc-qr]");
     if (qr) qr.setAttribute("aria-busy", "true");
-    pedindo = postar(URL_LINK).then(function (corpo) {
+    // o canal vai para o diário de bordo ("QR do balcão" ou "WhatsApp")
+    pedindo = postar(URL_LINK, { canal: canal || "painel" }).then(function (corpo) {
       pedindo = null;
       ultimaResposta = corpo;
       link = corpo.link;
-      validade = corpo.validade || 300;
+      validade = corpo.validade || 600;
       // O prazo vem no relógio do servidor; a diferença entre os dois
       // relógios sai da conta aqui.
       expira = Date.now() + (corpo.expira_em - corpo.agora);
@@ -143,8 +146,9 @@
     if (resta === 0) {
       var qr = raiz.querySelector("[data-doc-qr]");
       if (qr) qr.classList.add("velho");
-      // A cada 5 minutos, um link novo -- com a tela à vista.
-      if (document.visibilityState === "visible" && !pedindo && Date.now() >= esperarAte) {
+      // A cada 10 minutos, um link novo -- com a tela à vista e sem o
+      // cliente com o contrato já aberto no aparelho dele.
+      if (document.visibilityState === "visible" && !pedindo && !aberto() && Date.now() >= esperarAte) {
         pedirLink().catch(function () { /* a sondagem conta o que mudou */ });
       }
     }
@@ -156,7 +160,8 @@
     if (!forcar && document.visibilityState !== "visible") return;
     var c = cartao();
     var url = URL_ESTADO + "?documento=" + encodeURIComponent(c ? c.getAttribute("data-documento") : "")
-      + "&situacao=" + encodeURIComponent(situacao());
+      + "&situacao=" + encodeURIComponent(situacao())
+      + "&diario=" + encodeURIComponent(c ? (c.getAttribute("data-diario") || "") : "");
     fetch(url, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" }, cache: "no-store" })
       .then(lerJson)
       .then(function (corpo) {
@@ -174,6 +179,9 @@
       molde.innerHTML = corpo.html.trim();
       atual.replaceWith(molde.firstElementChild);
     }
+    // a régua do pedido (seção 117) anda junto: assinou, o contrato fica feito
+    var regua = document.querySelector("[data-doc-etapas]");
+    if (regua && typeof corpo.etapas === "string") regua.innerHTML = corpo.etapas;
     var resumo = document.getElementById("docAssinaturaResumo");
     if (resumo && corpo.resumo) {
       var outro = document.createElement("div");
@@ -182,7 +190,7 @@
     }
     link = "";
     expira = 0;
-    if (situacao() === "aguardando") pedirLink().catch(function (erro) { aviso(erro.message, "erro"); });
+    if (situacao() === "aguardando" && !aberto()) pedirLink().catch(function (erro) { aviso(erro.message, "erro"); });
   }
 
   /* ------------------------------------------------------- a folha */
@@ -259,10 +267,15 @@
         perigo: true,
         acao: gerar,
       });
+    } else if (acao === "mostrar-qr") {
+      // outro aparelho, ou o cliente fechou a página: o QR volta a girar
+      var c = cartao();
+      if (c) c.setAttribute("data-aberto", "0");
+      pedirLink().catch(function (erro) { aviso(erro.message, "erro"); });
     } else if (acao === "renovar") {
       botao.disabled = true;
       pedirLink().then(function () {
-        aviso("Link novo gerado: vale 5 minutos a partir de agora.", "ok");
+        aviso("Link novo gerado: vale " + Math.round(validade / 60) + " minutos a partir de agora.", "ok");
       }, function (erro) { aviso(erro.message, "erro"); }).then(function () { botao.disabled = false; });
     } else if (acao === "copiar") {
       if (!link) return;
@@ -273,7 +286,7 @@
       // o endereço quando o link fresco chegar.
       var janela = window.open("", "_blank");
       botao.disabled = true;
-      pedirLink().then(function (corpo) {
+      pedirLink("whatsapp").then(function (corpo) {
         var destino = corpo.whatsapp || corpo.whatsapp_sem_numero;
         if (!corpo.whatsapp) aviso("O orçamento não tem WhatsApp do cliente: escolha a conversa.", "ok");
         if (janela && !janela.closed) janela.location.href = destino;
@@ -305,7 +318,7 @@
 
   relogio = setInterval(tique, 1000);
   sondagem = setInterval(consultarEstado, 10000);
-  if (situacao() === "aguardando") {
+  if (situacao() === "aguardando" && !aberto()) {
     pedirLink().catch(function (erro) { aviso(erro.message, "erro"); });
   }
 })();

@@ -7,7 +7,7 @@
   situação e a linha do tempo -- Proposta, Aprovação, Termo assinado,
   Pagamento, Produção, Concluído --, cada fase pelo fato dela
   (`sistema_interno.codigo_orcamento.acompanhamento`). E o que o cliente
-  faz sozinho: responder a proposta, assinar o termo (o link de 5 minutos
+  faz sozinho: responder a proposta, assinar o termo (o link de 10 minutos
   sai na hora), abrir o termo assinado e pagar pelo Pix.
 {% endcomment %}
 {% with o=cartao.orcamento %}
@@ -131,7 +131,7 @@
     {% if cartao.pode_assinar %}
     <p class="oc-dica">
         <i class="fa-solid fa-clock" aria-hidden="true"></i>
-        O link da assinatura vale 5 minutos. Se o tempo acabar, toque de novo em “Assinar o contrato”.
+        O link da assinatura vale 10 minutos. Se o tempo acabar, toque de novo em “Assinar o contrato”.
     </p>
     {% endif %}
     {# O PIX: o mesmo da proposta, enquanto falta pagar (pagamento online fica para depois) #}

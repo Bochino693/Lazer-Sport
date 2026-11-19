@@ -57,9 +57,9 @@
     <span class="kicker"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pedido nº {{ doc.orcamento.numero }} · {% if doc.pagamento.situacao == "Pago" %}pago{% else %}aprovado{% endif %}</span>
     <h1>Olá{% if doc.cliente.nome %}, {{ doc.cliente.nome }}{% endif %}! Falta só assinar.</h1>
     {% if e_contrato %}
-      <p>Leia o contrato de compra e venda abaixo — com as fotos do que você está comprando — e assine com o dedo no fim da página. Este link vale por {{ validade_minutos }} minutos.</p>
+      <p>Leia o contrato de compra e venda abaixo — com as fotos do que você está comprando — e assine com o dedo no fim da página. Neste aparelho você tem {{ validade_minutos }} minutos para assinar, sem precisar de link novo.</p>
     {% else %}
-      <p>Confira o termo de compra abaixo e assine com o dedo. Este link vale por {{ validade_minutos }} minutos.</p>
+      <p>Confira o termo de compra abaixo e assine com o dedo. Neste aparelho você tem {{ validade_minutos }} minutos para assinar, sem precisar de link novo.</p>
     {% endif %}
     <ol class="passos" aria-label="Como assinar">
       <li><span>1</span>{% if e_contrato %}Leia{% else %}Confira{% endif %}</li>
@@ -148,7 +148,7 @@
       <div data-passo="expirou" hidden>
         <span class="icone-grande ambar"><i class="bi bi-hourglass-bottom" aria-hidden="true"></i></span>
         <h2>O tempo do link acabou</h2>
-        <p>Por segurança, cada link vale {{ validade_minutos }} minutos. Nada foi salvo. Peça um link novo ao atendente — seu nome e documento continuam preenchidos neste aparelho.</p>
+        <p>Por segurança, cada link vale {{ minutos_do_link }} minutos. Nada foi salvo. Peça um link novo ao atendente — seu nome e documento continuam preenchidos neste aparelho.</p>
         {% if whatsapp_empresa %}<a class="botao-principal verde" href="https://wa.me/{{ whatsapp_empresa }}?text={% if e_contrato %}{{ 'Olá! O link para assinar o contrato do pedido nº '|urlencode }}{% else %}{{ 'Olá! O link para assinar o termo do pedido nº '|urlencode }}{% endif %}{{ doc.orcamento.numero|urlencode }}{{ ' expirou. Pode me mandar um novo?'|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp" aria-hidden="true"></i> Pedir um novo link</a>{% endif %}
         <button type="button" class="botao-secundario" data-fechar>Fechar</button>
       </div>
@@ -181,7 +181,7 @@
     {% if estado == "expirado" %}
       <span class="icone-grande ambar"><i class="bi bi-hourglass-bottom" aria-hidden="true"></i></span>
       <h1>Este link expirou</h1>
-      <p>Peça um novo ao atendente. Por segurança, cada link de assinatura vale só 5 minutos.</p>
+      <p>Peça um novo ao atendente. Por segurança, cada link de assinatura vale só {{ minutos_do_link }} minutos.</p>
     {% elif estado == "substituido" %}
       <span class="icone-grande ambar"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span>
       <h1>Este link foi trocado</h1>

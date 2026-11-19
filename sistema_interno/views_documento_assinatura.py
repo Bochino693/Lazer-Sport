@@ -3,10 +3,10 @@
 A regra de negócio mora em `documento_assinatura.py`; aqui fica só o que o
 painel mostra e o que ele pede:
 
-  * a tela do documento (o cartão com o QR, o relógio de 5 minutos, o link,
+  * a tela do documento (o cartão com o QR, o relógio de 10 minutos, o link,
     o WhatsApp e, depois, o "Assinado por ..." com o PDF);
   * gerar (e gerar de novo, enquanto ninguém assinou);
-  * um link novo -- o cartão pede sozinho a cada 5 minutos, e no botão;
+  * um link novo -- o cartão pede sozinho a cada 10 minutos, e no botão;
   * o estado, que o cartão consulta a cada 10 segundos enquanto está aberto;
   * a via para imprimir ou salvar em PDF.
 
@@ -32,6 +32,7 @@ from django.views.generic import View
 
 from . import contrato
 from . import documento_assinatura as svc
+from .etapas_do_pedido import etapas as etapas_do_pedido
 from .context_processors import invalidar_avisos
 from .models import DocumentoAssinatura, Orcamento
 from .permissoes import capacidades, limitar_orcamentos
@@ -123,6 +124,11 @@ class _BaseDocumento(OrcamentoInternoRequiredMixin, View):
             "urls": self.urls(orcamento),
             "validade_minutos": svc.VALIDADE_DO_LINK // 60,
             "validade_segundos": svc.VALIDADE_DO_LINK,
+            # o diário de bordo e o cliente com o contrato aberto (seção 109)
+            "diario": svc.linhas_do_diario(documento) if documento else [],
+            "cliente_com_o_contrato": svc.aberto_agora(documento),
+            "marca_do_diario": marca_do_diario(documento),
+            "tempo_para_assinar_min": svc.TEMPO_PARA_ASSINAR // 60,
             "whatsapp_cliente": orcamento.whatsapp_destinatario,
             "assinatura_img": svc.assinatura_data_url(documento) if documento else "",
             "documento_assinante": (
@@ -131,6 +137,8 @@ class _BaseDocumento(OrcamentoInternoRequiredMixin, View):
             ),
             # Sem documento, o resumo mostra o orçamento de agora.
             "itens": [] if documento else list(orcamento.itens.all()),
+            # A régua do pedido (seção 117): as seis fases e o próximo passo.
+            "etapas": etapas_do_pedido(orcamento, request.user, tela="contrato"),
         }
 
     def partes_html(self, request, orcamento, documento):
@@ -139,6 +147,7 @@ class _BaseDocumento(OrcamentoInternoRequiredMixin, View):
         return {
             "html": render_to_string("documento_assinatura/cartao.html", contexto, request=request),
             "resumo": render_to_string("documento_assinatura/resumo.html", contexto, request=request),
+            "etapas": render_to_string("partes/etapas_do_pedido.html", contexto, request=request),
         }
 
 
@@ -174,7 +183,7 @@ class DocumentoAssinaturaInnerView(_BaseDocumento):
 
 
 class LinkDocumentoAssinaturaView(_BaseDocumento):
-    """Um link novo de 5 minutos, com o QR e a conversa do WhatsApp prontos."""
+    """Um link novo de 10 minutos, com o QR e a conversa do WhatsApp prontos."""
 
     def get(self, request, pk):
         # Gerar link conta no histórico do documento: só por POST.
@@ -209,7 +218,8 @@ class LinkDocumentoAssinaturaView(_BaseDocumento):
                 "situacao": "suspenso",
             }, status=409)
 
-        token, expira_em = svc.emitir_link(documento)
+        canal = request.POST.get("canal") if request.POST.get("canal") in ("painel", "whatsapp") else "painel"
+        token, expira_em = svc.emitir_link(documento, canal=canal)
         caminho = reverse("documento_assinatura_publico", args=[token], urlconf=settings.ROOT_URLCONF)
         link = f"{endereco_do_site(request)}{caminho}"
         mensagem = svc.mensagem_whatsapp(documento, link)
@@ -228,6 +238,15 @@ class LinkDocumentoAssinaturaView(_BaseDocumento):
             "whatsapp": _conversa_whatsapp(orcamento.whatsapp_destinatario, mensagem),
             "whatsapp_sem_numero": f"https://wa.me/?text={quote(mensagem, safe='')}",
         })
+
+
+def marca_do_diario(documento) -> str:
+    """O que, no diário, merece refazer o cartão: tudo menos os links girados."""
+    if documento is None:
+        return ""
+    eventos = [e for e in (documento.diario or []) if e.get("tipo") != "link"]
+    vezes = sum(int(e.get("vezes") or 1) for e in eventos)
+    return f"{vezes}-{1 if svc.aberto_agora(documento) else 0}"
 
 
 class EstadoDocumentoAssinaturaView(_BaseDocumento):
@@ -249,9 +268,13 @@ class EstadoDocumentoAssinaturaView(_BaseDocumento):
         }
         visto_doc = request.GET.get("documento", "")
         visto_situacao = request.GET.get("situacao", "")
+        # o diário (abriu, recusou...) e o "aberto" também trocam o cartão;
+        # os links que ESTE painel gira não (senão o cartão se refaria a cada link)
+        corpo["diario"] = marca_do_diario(documento)
         mudou = (
             str(corpo["documento"] or "") != visto_doc
             or corpo["situacao"] != visto_situacao
+            or ("diario" in request.GET and request.GET.get("diario", "") != corpo["diario"])
         )
         corpo["mudou"] = mudou
         if mudou:

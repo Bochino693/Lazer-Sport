@@ -2939,7 +2939,7 @@ class DocumentoAssinatura(Prime):
     orçamento depois não muda uma vírgula do que o cliente assina -- o
     papel é o retrato, e não o orçamento vivo.
 
-    NÃO guarda o link. O link de 5 minutos é uma assinatura de tempo do
+    NÃO guarda o link. O link de 10 minutos é uma assinatura de tempo do
     Django (`TimestampSigner`) presa ao id e ao hash deste documento: ele
     se confere sozinho, e por isso não precisa de tabela -- ver
     `documento_assinatura.py`. Daqui sai só a contagem de quantos links a
@@ -2986,6 +2986,13 @@ class DocumentoAssinatura(Prime):
     )
     links_gerados = models.PositiveIntegerField(default=0)
     ultimo_link_em = models.DateTimeField(null=True, blank=True)
+    # O CLIENTE COM O CONTRATO ABERTO: a primeira vez que um link válido foi
+    # aberto no aparelho dele. Enquanto vale (TEMPO_PARA_ASSINAR), o painel
+    # para de girar o QR e o aparelho dele assina sem pedir link novo.
+    aberto_em = models.DateTimeField("aberto pelo cliente em", null=True, blank=True)
+    # O DIÁRIO DE BORDO do documento: gerado, links (agrupados), aberto pelo
+    # cliente, campo recusado no envio, assinado. [{"quando", "tipo", ...}]
+    diario = models.JSONField("diário de bordo", default=list, blank=True)
 
     # ---------------- a assinatura ----------------
     assinado_em = models.DateTimeField(null=True, blank=True)

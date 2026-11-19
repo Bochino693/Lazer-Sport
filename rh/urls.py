@@ -74,6 +74,6 @@ urlpatterns = [
     path("rh/termo/enviar-todos/", TermoTodosView.as_view(), name="rh_termo_todos"),
     path("rh/termo/<int:pk>/via/", TermoViaView.as_view(), name="rh_termo_via"),
     path("rh/colaboradores/<int:pk>/termo/", TermoColaboradorView.as_view(), name="rh_termo"),
-    # Sem login: o link de 5 minutos, para assinar no celular.
+    # Sem login: o link de 10 minutos, para assinar no celular.
     path("rh/termo/assinar/<str:token>/", TermoPublicoView.as_view(), name="rh_termo_publico"),
 ]

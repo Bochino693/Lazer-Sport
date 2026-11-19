@@ -56,40 +56,19 @@
         <div id="orcamentoContexto" class="ls-refazer-nota" hidden></div>
 
         {% comment %}
-          A RÉGUA DO PEDIDO, NA ORDEM EM QUE ELE ANDA.
+          A RÉGUA DO PEDIDO, NA ORDEM EM QUE ELE ANDA (LEIA-ME-V10, seção 117).
 
-          "Após o orçamento atingir aprovado, que você deve gerar a
-          assinatura, a opção de pagamento deve ser o último estágio,
-          terminando o pagamento 100% deve registrar como venda." São
-          quatro passos, e a régua diz em qual o pedido está: Aprovado ->
-          Assinatura -> Pagamento -> Venda. O passo de agora é o primeiro
-          que falta, aceso; os feitos ganham o visto. Tocar em Assinatura
-          ou Pagamento leva ao quadro dele, logo abaixo dos totais. O
-          script (`desenharEtapas`) monta tudo a partir do orçamento aberto.
+          "Revise todo o sistema e deixe fluido, com as etapas bem definidas
+          e claras para seguir." As mesmas seis fases que o cliente vê em
+          Meus pedidos: Proposta -> Aprovação -> Contrato assinado ->
+          Pagamento -> Produção -> Entregue, e embaixo o PRÓXIMO PASSO (o
+          que fazer agora e com quem está a vez). O servidor desenha
+          (`partes/etapas_do_pedido.html`); o script pede o HTML pronto ao
+          abrir o orçamento e depois de cada mudança (`desenharEtapas`).
         {% endcomment %}
-        <nav class="ls-etapas" id="orcamentoEtapas" hidden aria-label="Etapas do pedido">
-          <ol>
-            <li class="ls-etapa" data-etapa="aprovado">
-              <span class="ls-etapa-marca" aria-hidden="true"><i class="bi bi-patch-check"></i></span>
-              <span class="ls-etapa-texto"><strong>Aprovado</strong><small data-etapa-nota></small></span>
-            </li>
-            <li class="ls-etapa" data-etapa="assinatura">
-              <button type="button" class="ls-etapa-ir" data-etapa-ir="orcamentoDocumentoAssinatura">
-                <span class="ls-etapa-marca" aria-hidden="true"><i class="bi bi-pen"></i></span>
-                <span class="ls-etapa-texto"><strong>Assinatura</strong><small data-etapa-nota></small></span>
-              </button>
-            </li>
-            <li class="ls-etapa" data-etapa="pagamento">
-              <button type="button" class="ls-etapa-ir" data-etapa-ir="orcamentoPagamentoResumo">
-                <span class="ls-etapa-marca" aria-hidden="true"><i class="bi bi-wallet2"></i></span>
-                <span class="ls-etapa-texto"><strong>Pagamento</strong><small data-etapa-nota></small></span>
-              </button>
-            </li>
-            <li class="ls-etapa" data-etapa="venda">
-              <span class="ls-etapa-marca" aria-hidden="true"><i class="bi bi-bag-check"></i></span>
-              <span class="ls-etapa-texto"><strong>Venda</strong><small data-etapa-nota></small></span>
-            </li>
-          </ol>
+        <nav class="ls-etapas" id="orcamentoEtapas" hidden aria-label="Etapas do pedido"
+             data-url-modelo="{% url 'orcamento_etapas' 0 %}" aria-busy="false">
+          <div class="ls-etapas-corpo" data-etapas-corpo></div>
         </nav>
 
         <div class="row g-3">
@@ -2093,7 +2072,7 @@ LSTela.pronto(function () {
     if (painel.hidden) return;
     var textos = {
       gerar: ["Falta gerar", "O orçamento está aprovado: gere o termo de compra para o cliente assinar no telefone. O pagamento vem depois.", "Gerar documento para assinatura"],
-      aguardando: ["Aguardando", "O termo foi gerado e espera a assinatura do cliente (link de 5 minutos).", "Abrir o QR e o link"],
+      aguardando: ["Aguardando", "O termo foi gerado e espera a assinatura do cliente (link de 10 minutos).", "Abrir o QR e o link"],
       assinado: ["Assinado", "O cliente já assinou o termo de compra. Falta só o pagamento, se ainda não entrou.", "Ver e baixar o PDF"],
       suspenso: ["Suspenso", "O orçamento não está mais aprovado: o termo gerado não pode ser assinado.", "Abrir o documento"]
     }[documento.situacao] || ["", "", "Abrir o documento"];
@@ -2106,76 +2085,81 @@ LSTela.pronto(function () {
   }
 
   /* ------------------------------------------------------------------
-     A RÉGUA: APROVADO -> ASSINATURA -> PAGAMENTO -> VENDA
+     A RÉGUA: PROPOSTA -> APROVAÇÃO -> CONTRATO -> PAGAMENTO -> PRODUÇÃO
+     -> ENTREGUE (LEIA-ME-V10, seção 117)
 
-     Cada passo tem a sua situação ("feito", "atual", "alerta" ou nada,
-     que é "ainda não"), e o aceso é o PRIMEIRO que falta: o pagamento
-     registrado antes da assinatura (a tela deixa, perguntando) aparece
-     feito, e a régua continua apontando para a assinatura que faltou.
-     Proposta nova, recusada, expirada ou substituída não tem régua: não
-     há pedido andando.
+     A regra mora no servidor (`etapas_do_pedido.py`, a mesma das fases
+     que o cliente vê): aqui só se pede o HTML pronto e se põe na tela.
+     A "marca" diz se mudou alguma coisa -- sem mudança, nada se redesenha
+     (nem pisca). Proposta nova, ainda sem número, não tem régua.
      ------------------------------------------------------------------ */
-  var SEM_REGUA = ["recusado", "expirado", "substituido"];
-  var ROTULO_DA_SITUACAO = {
-    rascunho: "Rascunho",
-    aguardando_resposta: "Aguardando o cliente",
-    em_negociacao: "Em negociação"
-  };
+  var reguaPedida = null;
 
   function desenharEtapas() {
     var regua = document.getElementById("orcamentoEtapas");
     if (!regua) return;
+    var corpo = regua.querySelector("[data-etapas-corpo]");
     var orcamento = orcamentoEmEdicao;
-    regua.hidden = !(orcamento && orcamento.id && SEM_REGUA.indexOf(orcamento.status) === -1);
-    if (regua.hidden) return;
-
-    var aprovado = orcamento.status === "aprovado";
-    var documento = orcamento.documento_assinatura;
-    var situacaoDoc = documento ? documento.situacao : "";
-    var total = paraNumero(orcamento.total || "0");
-    var recebido = paraNumero(orcamento.valor_pago || "0");
-    var pago = orcamento.status_pagamento === "pago";
-
-    var etapas = {
-      aprovado: aprovado
-        ? ["feito", orcamento.aprovado_em ? "Em " + orcamento.aprovado_em : "Pelo cliente"]
-        : ["", ROTULO_DA_SITUACAO[orcamento.status] || "Falta aprovar"],
-      assinatura: !aprovado ? ["", "Depois da aprovação"]
-        : situacaoDoc === "assinado" ? ["feito", "Termo assinado"]
-        : situacaoDoc === "aguardando" ? ["", "Aguardando o cliente"]
-        : situacaoDoc === "suspenso" ? ["alerta", "Suspenso"]
-        : ["", "Gerar o termo"],
-      pagamento: !aprovado ? ["", "Último passo"]
-        : pago ? ["feito", "Pago 100%"]
-        : recebido > 0 ? ["", "Faltam " + moeda(Math.max(total - recebido, 0))]
-        : ["", "A receber"],
-      venda: orcamento.venda ? ["feito", "Venda #" + orcamento.venda] : ["", "Ao quitar 100%"]
-    };
-
-    var atualMarcado = false;
-    regua.querySelectorAll("[data-etapa]").forEach(function (item) {
-      var etapa = etapas[item.dataset.etapa];
-      var estado = etapa[0];
-      if (!atualMarcado && estado !== "feito") {
-        /* O primeiro que falta é o de agora (o suspenso também: é ali
-           que alguém precisa olhar). */
-        if (estado !== "alerta") estado = "atual";
-        atualMarcado = true;
-        item.setAttribute("aria-current", "step");
-      } else {
-        item.removeAttribute("aria-current");
+    if (!(orcamento && orcamento.id)) {
+      regua.hidden = true;
+      regua.dataset.orcamento = "";
+      regua.dataset.marca = "";
+      regua.dataset.chave = "";
+      if (corpo) corpo.innerHTML = "";
+      return;
+    }
+    var id = String(orcamento.id);
+    /* Os totais chamam isto a cada tecla: só se pede a régua de novo
+       quando o orçamento SALVO mudou (outra revisão, o contrato, o
+       pagamento, a venda) -- digitar um desconto não muda fase nenhuma. */
+    var doc = orcamento.documento_assinatura || {};
+    var chave = [id, orcamento.revisao, orcamento.status, doc.situacao, orcamento.status_pagamento,
+      orcamento.valor_pago, orcamento.venda, (orcamento.producao || {}).previsao].join("|");
+    if (regua.dataset.chave === chave) { marcarAtalhosDaRegua(regua); return; }
+    regua.dataset.chave = chave;
+    if (regua.dataset.orcamento !== id) {
+      /* outro orçamento: a régua do anterior não fica nem um instante */
+      regua.dataset.orcamento = id;
+      regua.dataset.marca = "";
+      if (corpo) corpo.innerHTML = "";
+      regua.hidden = true;
+    }
+    if (reguaPedida) reguaPedida.abort();
+    var pedido = typeof AbortController === "function" ? new AbortController() : null;
+    reguaPedida = pedido;
+    var url = regua.dataset.urlModelo.replace(/\/0\/etapas\/$/, "/" + id + "/etapas/") +
+      "?marca=" + encodeURIComponent(regua.dataset.marca || "");
+    regua.setAttribute("aria-busy", "true");
+    fetch(url, {
+      credentials: "same-origin",
+      headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      signal: pedido ? pedido.signal : undefined
+    }).then(function (r) { return r.ok ? r.json() : null; }).then(function (json) {
+      if (reguaPedida !== pedido) return;  // trocado por um pedido mais novo
+      reguaPedida = null;
+      regua.setAttribute("aria-busy", "false");
+      if (!json) { regua.dataset.chave = ""; return; }
+      if (typeof json.html === "string" && corpo) {
+        corpo.innerHTML = json.html;
+        regua.dataset.marca = json.marca || "";
       }
-      item.className = "ls-etapa" + (estado ? " " + estado : "");
-      item.querySelector("[data-etapa-nota]").textContent = etapa[1];
+      regua.hidden = !corpo || !corpo.firstElementChild;
+      marcarAtalhosDaRegua(regua);
+    }).catch(function () {
+      if (reguaPedida !== pedido) return;  // trocado por um pedido mais novo
+      reguaPedida = null;
+      regua.setAttribute("aria-busy", "false");
+      regua.dataset.chave = "";  // a próxima mudança tenta de novo
+    });
+  }
 
-      /* Tocar no passo leva ao quadro dele -- quando o quadro está na
-         tela para quem abriu (o pagamento é do Financeiro, o termo do
-         Comercial). */
-      var ir = item.querySelector("[data-etapa-ir]");
-      if (ir) {
-        var alvo = document.getElementById(ir.dataset.etapaIr);
-        ir.disabled = !(alvo && !alvo.hidden);
-      }
+  /* O botão do próximo passo leva ao quadro desta janela quando ele está
+     na tela para quem abriu (o pagamento é do Financeiro, o contrato do
+     Comercial); fora disso, segue o link. */
+  function marcarAtalhosDaRegua(regua) {
+    regua.querySelectorAll("[data-etapa-ir]").forEach(function (botao) {
+      var alvo = document.getElementById(botao.dataset.etapaIr);
+      botao.classList.toggle("na-janela", !!(alvo && !alvo.hidden));
     });
   }
 
@@ -2183,7 +2167,8 @@ LSTela.pronto(function () {
     var ir = evento.target.closest("[data-etapa-ir]");
     if (!ir || ir.disabled) return;
     var alvo = document.getElementById(ir.dataset.etapaIr);
-    if (!alvo || alvo.hidden) return;
+    if (!alvo || alvo.hidden) return;  // fora da janela, o link segue
+    evento.preventDefault();
     var semMovimento = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     alvo.scrollIntoView({ behavior: semMovimento ? "auto" : "smooth", block: "center" });
     alvo.classList.remove("ls-etapa-pisca");

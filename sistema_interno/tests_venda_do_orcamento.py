@@ -250,9 +250,13 @@ class AcaoDePagamentoTests(BaseVenda):
         self.client.force_login(gestor)
         html = self.client.get("/orcamentos/", **INTERNO).content.decode()
 
+        # A régua (seção 117) vem pronta do servidor: as seis fases do
+        # cliente, e a venda na nota do pagamento.
         self.assertIn('id="orcamentoEtapas"', html)
-        for etapa in ("aprovado", "assinatura", "pagamento", "venda"):
-            self.assertIn(f'data-etapa="{etapa}"', html)
+        self.assertIn('data-url-modelo="/orcamentos/0/etapas/"', html)
+        regua = self.client.get(f"/orcamentos/{orcamento.pk}/etapas/", **INTERNO).json()["html"]
+        for etapa in ("proposta", "aprovacao", "termo", "pagamento", "producao", "entrega"):
+            self.assertIn(f'data-etapa="{etapa}"', regua)
         # O termo vem antes do pagamento na janela também.
         self.assertLess(html.index('id="orcamentoDocumentoAssinatura"'), html.index('id="orcamentoPagamentoResumo"'))
         self.assertIn("O contrato ainda não foi assinado. Registrar o pagamento mesmo assim?", html)
@@ -268,6 +272,7 @@ class AcaoDePagamentoTests(BaseVenda):
         self.assertTrue(por_id[orcamento.pk]["aprovado_em"])
         self.assertEqual(por_id[orcamento.pk]["documento_assinatura"]["situacao"], "gerar")
         self.assertIn(f"venda #{orcamento.venda_id}", html)
+        self.assertIn(f"venda #{orcamento.venda_id}", regua)
 
 
 # ======================================================================

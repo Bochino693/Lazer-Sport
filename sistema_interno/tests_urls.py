@@ -42,7 +42,7 @@ SO_POST = {
     "campanha_whatsapp": "registra o disparo de WhatsApp",
     "atualizar_etapa_producao": "avança etapa da ordem",
     "logout_inner": "encerra a sessão",
-    "documento_assinatura_link": "gera um link de 5 minutos e conta no documento",
+    "documento_assinatura_link": "gera um link de 10 minutos e conta no documento",
     "prazo_producao": "grava o prazo de produção (tests_funil_vendas.py)",
     "andamento_pedido": "muda a situação do pedido e acerta a venda",
     "envio_pedido": "grava a transportadora e o rastreio (core/tests_fases_do_pedido.py)",
@@ -81,7 +81,7 @@ SO_DE_UM_REGISTRO = {
     "nota_entrada_arquivo": "o arquivo de uma nota guardada",
     # RH: a ficha, o documento, o comprovante, o espelho e o termo de um
     # colaborador que precisa existir (rh/tests_*.py abrem de verdade); o
-    # link do termo é um token de 5 minutos.
+    # link do termo é um token de 10 minutos.
     "rh_ficha": "a ficha de um colaborador cadastrado",
     "rh_colaborador_editar": "a ficha de um colaborador cadastrado",
     "rh_ficha_imprimir": "a ficha de um colaborador cadastrado",
@@ -91,7 +91,7 @@ SO_DE_UM_REGISTRO = {
     "rh_espelho_imprimir": "o espelho de um colaborador cadastrado",
     "rh_termo": "o termo de um colaborador cadastrado",
     "rh_termo_via": "um termo gerado",
-    "rh_termo_publico": "token de 5 minutos inventado",
+    "rh_termo_publico": "token de 10 minutos inventado",
 }
 
 

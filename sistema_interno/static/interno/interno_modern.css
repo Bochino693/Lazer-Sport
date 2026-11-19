@@ -4465,21 +4465,23 @@ body.modal-open .ls-rascunhos{display:none!important}
 .ls-venda-origem.site{color:var(--info-texto);border:1px solid rgba(var(--info-rgb),.26);background:rgba(var(--info-rgb),.09)}
 .ls-venda-origem+a,.ls-venda-origem+strong{display:block;margin-top:5px;font-size:.84rem}
 
-/* A RÉGUA DO PEDIDO: Aprovado -> Assinatura -> Pagamento -> Venda.
+/* A RÉGUA DO PEDIDO (LEIA-ME-V10, seção 117): Proposta -> Aprovação ->
+   Contrato assinado -> Pagamento -> Produção -> Entregue, as mesmas seis
+   fases que o cliente vê em Meus pedidos, e o PRÓXIMO PASSO embaixo.
 
-   Estilo de aplicativo: quatro bolinhas ligadas por um trilho, o passo
-   de agora aceso (anel tangerina), os feitos com o visto verde, o
-   suspenso em âmbar. Cabe inteira na largura do celular: o rótulo fica
-   embaixo da bolinha, e a nota (a data, quanto falta) quebra em duas
-   linhas em vez de empurrar a régua para fora. Só variáveis de tema: lua,
-   sol e eclipse saem certos. */
+   Estilo de aplicativo: seis bolinhas ligadas por um trilho, a fase de
+   agora acesa (anel tangerina), as feitas com o visto verde, a que parou
+   (recusada, vencida) em vermelho. Cabe inteira na largura do celular: lá
+   a nota só aparece na fase de agora -- o próximo passo, embaixo, diz o
+   resto. Só variáveis de tema: lua, sol e eclipse saem certos. */
 .ls-etapas{
   margin:0 0 18px;padding:14px 12px 12px;
   border:1px solid var(--line);border-radius:18px;
   background:linear-gradient(160deg,rgba(var(--acento-rgb),.07),rgba(var(--panel-rgb),.6));
 }
 .ls-etapas[hidden]{display:none!important}
-.ls-etapas ol{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin:0;padding:0;list-style:none}
+.ls-etapas--tela{margin:0 0 16px}
+.ls-etapas-lista{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));margin:0;padding:0;list-style:none}
 .ls-etapa{position:relative;min-width:0;text-align:center}
 /* O trilho: do centro da bolinha anterior ao centro desta. */
 .ls-etapa+.ls-etapa::before{
@@ -4487,21 +4489,16 @@ body.modal-open .ls-rascunhos{display:none!important}
   height:3px;border-radius:3px;background:var(--line);
 }
 .ls-etapa.feito+.ls-etapa::before{background:linear-gradient(90deg,var(--green),rgba(var(--green-rgb),.45))}
-.ls-etapa-ir{
-  display:block;width:100%;padding:0;border:0;background:none;color:inherit;font:inherit;
-  text-align:inherit;cursor:pointer;border-radius:12px;
-}
-.ls-etapa-ir:disabled{cursor:default}
-.ls-etapa-ir:focus-visible{outline:2px solid var(--acento);outline-offset:3px}
 .ls-etapa-marca{
   position:relative;z-index:1;display:grid;place-items:center;width:36px;height:36px;margin:0 auto 7px;
   border:2px solid var(--line);border-radius:50%;background:var(--panel-2);color:var(--muted);
   font-size:1rem;transition:background .2s ease,border-color .2s ease,box-shadow .2s ease;
 }
 .ls-etapa-texto{display:block;min-width:0;padding:0 2px}
-.ls-etapa-texto strong{display:block;color:var(--text-2);font-size:.8rem;font-weight:900;line-height:1.15}
+.ls-etapa-texto strong{display:block;color:var(--text-2);font-size:.78rem;font-weight:900;line-height:1.15}
+.ls-etapa-ordem{color:var(--muted);font-weight:800;margin-right:1px}
 .ls-etapa-texto small{
-  display:block;margin-top:3px;color:var(--muted);font-size:.68rem;font-weight:700;line-height:1.2;
+  display:block;margin-top:3px;color:var(--muted);font-size:.66rem;font-weight:700;line-height:1.2;
   overflow-wrap:anywhere;
 }
 .ls-etapa.feito .ls-etapa-marca{border-color:var(--green);background:var(--green);color:var(--green-tinta)}
@@ -4511,18 +4508,54 @@ body.modal-open .ls-rascunhos{display:none!important}
   border-color:var(--acento);background:var(--acento);color:var(--acento-tinta);
   box-shadow:0 0 0 5px rgba(var(--acento-rgb),.2);
 }
-.ls-etapa.atual .ls-etapa-texto strong{color:var(--text)}
+.ls-etapa.atual .ls-etapa-texto strong,.ls-etapa.atual .ls-etapa-ordem{color:var(--text)}
 .ls-etapa.atual .ls-etapa-texto small{color:var(--acento-claro)}
-.ls-etapa.alerta .ls-etapa-marca{border-color:var(--yellow);background:rgba(var(--yellow-rgb),.18);color:var(--yellow-texto)}
-.ls-etapa.alerta .ls-etapa-texto small{color:var(--yellow-texto)}
-.ls-etapa-ir:not(:disabled):hover .ls-etapa-marca{box-shadow:0 0 0 5px rgba(var(--acento-rgb),.14)}
-.ls-etapa.atual .ls-etapa-ir:not(:disabled):hover .ls-etapa-marca{box-shadow:0 0 0 7px rgba(var(--acento-rgb),.24)}
-@media(max-width:520px){
+.ls-etapa.parada .ls-etapa-marca{border-color:var(--red);background:rgba(var(--red-rgb),.16);color:var(--red-texto)}
+.ls-etapa.parada .ls-etapa-texto strong{color:var(--text)}
+.ls-etapa.parada .ls-etapa-texto small{color:var(--red-texto)}
+
+/* O PRÓXIMO PASSO: o que fazer agora, com quem está a vez e o botão. */
+.ls-etapas-proximo{
+  display:flex;align-items:center;gap:12px;margin-top:12px;padding:11px 12px;
+  border:1px solid rgba(var(--acento-rgb),.3);border-radius:14px;
+  background:rgba(var(--acento-rgb),.08);
+}
+.ls-etapas-proximo-icone{
+  flex:0 0 auto;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;
+  background:rgba(var(--acento-rgb),.16);color:var(--acento-claro);font-size:1.1rem;
+}
+.ls-etapas-proximo-texto{flex:1 1 auto;min-width:0}
+.ls-etapas-proximo-rotulo{
+  display:block;color:var(--acento-claro);font-size:.66rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;
+}
+.ls-etapas-proximo-texto strong{display:block;margin-top:1px;color:var(--text);font-size:.92rem;font-weight:900;line-height:1.25}
+.ls-etapas-proximo-texto small{display:block;margin-top:2px;color:var(--text-2);font-size:.78rem;font-weight:600;line-height:1.35}
+.ls-etapas-proximo-acao{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:2px;white-space:nowrap;
+  border:1px solid rgba(var(--acento-rgb),.45);border-radius:999px;
+  background:var(--acento);color:var(--acento-tinta);font-weight:900;
+}
+.ls-etapas-proximo-acao:hover,.ls-etapas-proximo-acao:focus-visible{background:var(--acento-claro);color:var(--acento-tinta)}
+.ls-etapas-proximo-acao:focus-visible{outline:2px solid var(--acento);outline-offset:3px}
+.ls-etapas-proximo.is-ok{border-color:rgba(var(--green-rgb),.34);background:rgba(var(--green-rgb),.09)}
+.ls-etapas-proximo.is-ok .ls-etapas-proximo-icone{background:rgba(var(--green-rgb),.16);color:var(--green-texto)}
+.ls-etapas-proximo.is-ok .ls-etapas-proximo-rotulo{color:var(--green-texto)}
+.ls-etapas-proximo.is-alerta{border-color:rgba(var(--red-rgb),.34);background:rgba(var(--red-rgb),.08)}
+.ls-etapas-proximo.is-alerta .ls-etapas-proximo-icone{background:rgba(var(--red-rgb),.16);color:var(--red-texto)}
+.ls-etapas-proximo.is-alerta .ls-etapas-proximo-rotulo{color:var(--red-texto)}
+.ls-etapas[aria-busy="true"] .ls-etapas-corpo{opacity:.72;transition:opacity .2s ease}
+@media(max-width:620px){
   .ls-etapas{margin-bottom:14px;padding:12px 6px 10px;border-radius:16px}
-  .ls-etapa-marca{width:32px;height:32px;font-size:.9rem}
-  .ls-etapa+.ls-etapa::before{top:15px;right:calc(50% + 19px);left:calc(-50% + 19px)}
-  .ls-etapa-texto strong{font-size:.72rem}
-  .ls-etapa-texto small{font-size:.62rem}
+  .ls-etapa-marca{width:30px;height:30px;font-size:.86rem}
+  .ls-etapa+.ls-etapa::before{top:14px;right:calc(50% + 17px);left:calc(-50% + 17px)}
+  .ls-etapa-texto strong{font-size:.6rem;letter-spacing:-.01em;hyphens:none;overflow-wrap:normal;word-break:keep-all}
+  .ls-etapa-ordem{display:none}
+  .ls-etapa-texto small{display:none}
+  .ls-etapa.atual .ls-etapa-texto small{display:block;font-size:.6rem}
+  .ls-etapas-proximo{flex-wrap:wrap;align-items:flex-start;gap:10px;margin:10px 4px 0;padding:10px}
+  .ls-etapas-proximo-icone{width:34px;height:34px}
+  .ls-etapas-proximo-texto{flex:1 1 calc(100% - 44px)}
+  .ls-etapas-proximo-acao{width:100%;justify-content:center}
 }
 @media(prefers-reduced-motion:reduce){
   .ls-etapa-marca{transition:none}
@@ -5343,8 +5376,11 @@ body.ls-body{
   content:"";position:absolute;left:0;bottom:-1px;width:84px;height:3px;border-radius:3px;
   background:var(--degrade-fio);
 }
+/* fit-content (e não max-content): no celular a linha quebra em vez de
+   empurrar o topo para fora da tela ("ORÇAMENTO #5 · APROVADO · PAGAMENTO
+   PENDENT..." cortado na borda) */
 .ls-page-kicker,.app-eyebrow{
-  width:max-content;max-width:100%;
+  width:fit-content;max-width:100%;
   background:var(--degrade-texto);-webkit-background-clip:text;background-clip:text;
   color:transparent;-webkit-text-fill-color:transparent;
 }

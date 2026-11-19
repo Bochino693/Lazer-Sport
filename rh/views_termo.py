@@ -7,7 +7,7 @@ Dois jeitos de assinar, o mesmo quadro e a mesma conferência:
     termo é o DELA -- nenhum id viaja no formulário.
   * PELO CELULAR, sem conta: a Gestão abre o termo da pessoa e mostra o QR
     (ou manda o link pelo WhatsApp). O link é o mesmo do termo de compra:
-    vale 5 minutos e o cartão pede outro sozinho. A página do link abre
+    vale 10 minutos e o cartão pede outro sozinho. A página do link abre
     sem login, mostra só aquele termo e exige o CPF da ficha.
 """
 

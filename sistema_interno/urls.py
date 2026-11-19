@@ -53,6 +53,7 @@ from .views_montagem import ListaMontagemView
 from .views_notas_entrada import ArquivoNotaEntradaView, NotaEntradaView, NotasEntradaView
 from .views_transportadoras import TransportadorasInnerView
 from .views_dados_contrato import DadosContratoInnerView
+from .views_etapas import EtapasDoOrcamentoView
 from .views_documento_assinatura import (
     DocumentoAssinaturaInnerView,
     EstadoDocumentoAssinaturaView,
@@ -279,8 +280,15 @@ urlpatterns = [
         name='orcamento_previa_inner',
     ),
     # O documento para assinatura do orçamento pago: o cartão com o QR e o
-    # link de 5 minutos, o link novo, o estado (já assinou?) e a via em PDF.
+    # link de 10 minutos, o link novo, o estado (já assinou?) e a via em PDF.
     # Ver `views_documento_assinatura.py` e LEIA-ME-V10, seção 81.
+    # A régua do pedido (as seis fases e o próximo passo), em HTML pronto,
+    # para a janela do orçamento. Ver `etapas_do_pedido.py` e LEIA-ME-V10, seção 117.
+    path(
+        'orcamentos/<int:pk>/etapas/',
+        EtapasDoOrcamentoView.as_view(),
+        name='orcamento_etapas',
+    ),
     path(
         'orcamentos/<int:pk>/documento/',
         DocumentoAssinaturaInnerView.as_view(),

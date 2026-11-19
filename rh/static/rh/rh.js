@@ -15,7 +15,7 @@
      * FICHA: CPF e PIS conferidos pelos dígitos enquanto se digita; as
        especialidades só aparecem para a Engenharia de produção.
      * TAREFAS: o filtro dos chips de responsável e o "Sugerir pela etapa".
-     * TERMO: o QR e o link de 5 minutos, renovados sozinhos. */
+     * TERMO: o QR e o link de 10 minutos, renovados sozinhos. */
 (function (window, document) {
   "use strict";
 
@@ -278,6 +278,7 @@
     var linkAtual = "";
     var fim = 0;
     var diferenca = 0;
+    var validade = 600;  // segundos; o servidor manda o número certo
     var renovando = false;
 
     function pedir() {
@@ -303,6 +304,7 @@
         whatsapp.setAttribute("href", json.whatsapp);
         diferenca = json.agora - Date.now();
         fim = json.expira_em;
+        validade = json.validade || validade;
       }).catch(function () { renovando = false; });
     }
 
@@ -317,7 +319,7 @@
     caixa.querySelector("[data-rh-novo-link]").addEventListener("click", pedir);
     caixa.querySelector("[data-rh-copiar-link]").addEventListener("click", function () {
       if (!linkAtual) return;
-      var feito = function () { aviso("sucesso", "Link copiado. Ele vale 5 minutos."); };
+      var feito = function () { aviso("sucesso", "Link copiado. Ele vale " + Math.round(validade / 60) + " minutos."); };
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(linkAtual).then(feito, function () { aviso("info", linkAtual, "Copie o link"); });
       } else {
