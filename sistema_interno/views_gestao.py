@@ -62,6 +62,7 @@ from core.models import (
     PecasReposicao,
 )
 
+from .avisos import contar_juntos
 from .busca_local import montar_indice
 from . import clientes as svc_clientes
 from . import etapas_padrao
@@ -437,17 +438,22 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         indice_busca = self.indice_de_busca(orcamentos)
 
         hoje = timezone.localdate()
-        vencendo = list(
-            orcamentos.filter(
-                status__in=Orcamento.EM_ABERTO,
-                validade__gte=hoje,
-                validade__lte=hoje + timedelta(days=3),
-            ).order_by("validade", "pk")[:20]
-        )
+        # SEM PRÉ-CARGA E SEM IR AO BANCO AQUI. O gabarito não desenha esta
+        # lista (o aviso de vencimento mora no sino e no Início); ela fica no
+        # contexto para quem a pede (os testes). Avaliada aqui, com os
+        # endereços, blocos, itens e 3D da lista principal, custava cinco
+        # viagens ao Supabase a cada abertura da tela (LEIA-ME-V10 §120).
+        vencendo = orcamentos.filter(
+            status__in=Orcamento.EM_ABERTO,
+            validade__gte=hoje,
+            validade__lte=hoje + timedelta(days=3),
+        ).select_related(None).prefetch_related(None).order_by("validade", "pk")[:20]
 
-        pagina = Paginator(orcamentos, self.POR_PAGINA).get_page(
-            request.GET.get("page")
-        )
+        paginador = Paginator(orcamentos, self.POR_PAGINA)
+        # O total do paginador é o `quantidade` do resumo (o mesmo filtro,
+        # contado sem repetir proposta): um COUNT a menos.
+        paginador.count = resumo["quantidade"]
+        pagina = paginador.get_page(request.GET.get("page"))
         orcamentos = list(pagina.object_list)
 
         # LINK E CONVERSA JÁ VÊM PRONTOS DO SERVIDOR.
@@ -580,14 +586,13 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             # oferecia ProdutoInterno -- o que a fábrica monta --, e quem
             # orça aluguel de brinquedo tinha de digitar tudo à mão, com
             # nome e preço fora do que está publicado no site.
-            "total_itens_disponiveis": 0 if so_a_lista else (
-                Brinquedos.objects.count()
-                + ProdutoInterno.objects.filter(ativo=True).count()
-                + PecasReposicao.objects.filter(ativo=True).count()
-            ),
-            "categorias": CategoriasBrinquedos.objects.order_by("nome_categoria"),
-            "tags_catalogo": TagsBrinquedos.objects.order_by("nome_tags"),
-            "categorias_peca": CategoriaPeca.objects.order_by("nome_categoria_peca"),
+            "total_itens_disponiveis": 0 if so_a_lista else sum(contar_juntos({
+                # três COUNT numa ida só (avisos.contar_juntos)
+                "brinquedos": Brinquedos.objects.all(),
+                "produtos": ProdutoInterno.objects.filter(ativo=True),
+                "pecas": PecasReposicao.objects.filter(ativo=True),
+            }).values()),
+            **({} if so_a_lista else self.listas_do_catalogo()),
             "hoje": timezone.localdate(),
             "page_obj": pagina,
             "indice_busca": indice_busca,
@@ -610,9 +615,6 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "email_configurado": so_a_lista or smtp_configurado(),
             "email_diagnostico": None if so_a_lista else diagnostico_smtp(),
             "buffets": buffets,
-            "estabelecimentos": Estabelecimentos.objects.order_by(
-                "nome_estabelecimento"
-            ),
             # A página do cliente mora no site principal, não aqui.
             "base_publica": endereco_do_site(request),
             # O AVISO DE VENCIMENTO OLHA O FILTRO INTEIRO, não a página.
@@ -642,6 +644,26 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             request, "orcamentos_inner.html",
             "partes/orcamentos_lista.html", ctx,
         )
+
+    @staticmethod
+    def listas_do_catalogo():
+        """Categorias, tags, categorias de peça e estabelecimentos das janelas de cadastro na hora.
+
+        DO CACHE DO CATÁLOGO (core/home_cache.py). São as mesmas listas de
+        sempre, mas eram quatro viagens ao Supabase em cada abertura da tela
+        -- inclusive na recarga depois de gravar. Os quatro modelos estão
+        entre os que trocam a versão do catálogo quando mudam
+        (core/signals.py, _MODELOS_DA_HOME): categoria ou tag nova aparece
+        na próxima tela, como antes.
+        """
+        from core.home_cache import get_cached_catalog_page
+
+        return get_cached_catalog_page("interno-orcamento-listas", (), lambda: {
+            "categorias": list(CategoriasBrinquedos.objects.order_by("nome_categoria")),
+            "tags_catalogo": list(TagsBrinquedos.objects.order_by("nome_tags")),
+            "categorias_peca": list(CategoriaPeca.objects.order_by("nome_categoria_peca")),
+            "estabelecimentos": list(Estabelecimentos.objects.order_by("nome_estabelecimento")),
+        })
 
     @staticmethod
     def cliente_inicial(numero):
@@ -1197,16 +1219,33 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
     @staticmethod
     def _reabrir_bloco(orcamento, bloco):
-        AvaliacaoBlocoOrcamento.objects.update_or_create(
-            orcamento=orcamento,
-            bloco=bloco,
-            defaults={
-                "status": AvaliacaoBlocoOrcamento.Status.PENDENTE,
-                "observacao": "",
-                "avaliador": None,
-                "avaliado_em": None,
-            },
+        # UM UPDATE, E SÓ CRIA SE NÃO HOUVER. `update_or_create` são quatro
+        # viagens ao Supabase (SAVEPOINT, SELECT ... FOR UPDATE, UPDATE,
+        # RELEASE -- ~0,7 s, LEIA-ME-V10 §120) para gravar um bloco que quase
+        # sempre já existe: a proposta nasce com os dois. O resultado é o
+        # mesmo -- a linha (única por orçamento e bloco) volta a pendente,
+        # sem observação nem avaliador --, e `atualizado` vai junto, como o
+        # `save()` faria. A avaliação não tem sinal que dependa do save.
+        reaberto = AvaliacaoBlocoOrcamento.objects.filter(
+            orcamento=orcamento, bloco=bloco,
+        ).update(
+            status=AvaliacaoBlocoOrcamento.Status.PENDENTE,
+            observacao="",
+            avaliador=None,
+            avaliado_em=None,
+            atualizado=timezone.now(),
         )
+        if not reaberto:
+            AvaliacaoBlocoOrcamento.objects.update_or_create(
+                orcamento=orcamento,
+                bloco=bloco,
+                defaults={
+                    "status": AvaliacaoBlocoOrcamento.Status.PENDENTE,
+                    "observacao": "",
+                    "avaliador": None,
+                    "avaliado_em": None,
+                },
+            )
 
     def _gravar_itens(self, orcamento, bruto):
         """Recebe os itens como JSON e regrava a lista inteira.

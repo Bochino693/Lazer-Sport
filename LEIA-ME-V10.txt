@@ -8143,3 +8143,296 @@ Dependência nova: rjsmin (requirements.txt).
    Testes: core/tests_fundo_liso.py; core/tests_fotos_estudio.py,
    core/tests_capas_catalogo.py e core/tests_capas_em_cena.py (os tamanhos,
    a máquina que não encolhe, a "vida" das fotos).
+
+120) O PAINEL RÁPIDO: CADA AÇÃO COM MENOS IDAS AO BANCO (E O QUE SÓ A INFRA RESOLVE)
+   O dono: "me confirme o por que demora muito no sistema interno para
+   realizar ações, salvar, excluir e etc... e arrume tudo".
+
+   POR QUE DEMORA (A RESPOSTA CURTA). O servidor (Render) e o banco
+   (Supabase) estão em regiões diferentes. Medido no ar em 19/11/2026, pelo
+   cabeçalho Server-Timing: /pronto/ -- um `SELECT 1` só -- leva ~350 ms com
+   a conexão já aberta e ~1,24 s quando precisa abrir uma conexão nova. Ou
+   seja: CADA consulta ao banco custa ~170 ms de viagem, e abrir conexão
+   custa ~1,2 s. A seção 63 já tinha visto isso no site (~0,15 s por
+   consulta). No painel, uma gravação são TRÊS pedidos quase juntos -- a
+   ação (o POST), a tela ou a lista de novo e o sino -- e cada um somava as
+   suas consultas: salvar um orçamento eram 61 viagens (~5,9 s de espera,
+   mais o sino a 4,6 s em paralelo); salvar uma O.S., 106 (~13,5 s). O
+   código não é lento: é o número de viagens vezes 170 ms.
+
+   COMO FOI MEDIDO (e como medir de novo): ferramentas/carga/acoes_do_painel.py
+       DJANGO_SETTINGS_MODULE=lazer.settings_test \
+           python ferramentas/carga/acoes_do_painel.py [--conferencia antes|agora] \
+           [--latencia 170] [--detalhe "Orçamentos: salvar"] [--json saida.json]
+   Cria um banco de teste em memória, povoa como o do ar (300 clientes, 150
+   orçamentos com itens, 80 O.S., 40 materiais, 10 ordens de produção, 12
+   colaboradores, 40 contas de clientes da loja) e, para cada ação, faz o
+   POST e os pedidos que o navegador faz logo depois (conferidos na aba
+   Rede do navegador): a LISTA (orçamento salvo ou com a situação mudada,
+   `partes: true`), a TELA inteira (as outras) e o sino. Conta as viagens
+   como o PostgreSQL conta: cada consulta, SAVEPOINT e RELEASE (todo
+   `atomic()` aninhado são duas), o BEGIN valendo também o COMMIT, e a
+   conferência da conexão (o `SELECT 1`). "Espera" = CPU medida + viagens x
+   170 ms da ação e da tela/lista (o sino corre em paralelo e não segura a
+   tarja "Atualizando a lista…"). O código de antes foi medido com a MESMA
+   ferramenta, sobre uma cópia do commit anterior (`git archive`).
+   `--detalhe` imprime o SQL de cada pedido: é o jeito de achar a próxima.
+
+   AS CAUSAS, DA QUE MAIS PESAVA PARA A QUE MENOS
+     1. O SINO DEPOIS DE CADA GRAVAÇÃO: ~22 consultas. Gravar muda o pulso
+        (seção do sino ao vivo), e a central de avisos era refeita do zero --
+        um COUNT por aviso, cinco consultas de versões de orçamento, uma
+        caminhada pelas cadeias de versões POR aviso. Pior: isso acontece na
+        próxima pergunta de CADA pessoa com o painel aberto. 27 -> 11.
+     2. A LISTA DE TÉCNICOS DA O.S.: uma consulta por CONTA ATIVA do site,
+        inclusive as dos clientes da loja (perguntava as funções de cada
+        uma). Com 40 contas eram 45 viagens só para isso, e cresce com cada
+        cliente que se cadastra -- em toda abertura da O.S. e na recarga
+        depois de cada gravação. Agora duas consultas, para qualquer número.
+     3. "O QUE O SINO JÁ MOSTROU": um `update_or_create` por aviso (quatro
+        viagens cada), a cada número novo: 55 viagens (~9 s de uma thread do
+        servidor presa) -> 8.
+     4. A CONFERÊNCIA DA CONEXÃO (`SELECT 1`) em toda requisição, e a
+        conexão jogada fora a cada 60 s (ver "A CONEXÃO", abaixo).
+     5. AS TELAS QUE VOLTAM DEPOIS DE GRAVAR: Início com nove COUNT
+        separados; Orçamentos montando duas vezes a lista (o "vencendo", com
+        todas as pré-cargas, que o gabarito nem desenha), quatro listas do
+        catálogo e três COUNT para a janela; o COUNT do paginador repetindo
+        um número já contado; a faixa do termo de exclusividade (duas ou
+        três consultas em TODA tela); as funções da pessoa (uma consulta por
+        requisição de quem não é superusuário).
+     6. Nas ações: o bloco reaberto por `update_or_create` (quatro viagens
+        cada, duas por edição de orçamento); os seis `get_or_create` dos
+        grupos ao salvar um acesso; a resposta de salvar cliente relendo o
+        endereço três vezes e a proposta ativa duas; a sincronia da lista de
+        montagem lendo orçamento, itens e produção a cada gravação de
+        proposta que nem está aprovada; o SAVEPOINT inútil de toda exclusão;
+        a régua do orçamento lendo os itens três vezes.
+     7. EM SEGUNDO PLANO, MAS DISPUTANDO COM QUEM ESTÁ NO PAINEL: cada
+        "Salvar" de orçamento apagava o cache público inteiro (home, Arena,
+        Loja...) por causa do mapa de clientes, e quatro segundos depois o
+        servidor refazia todas essas telas (uma centena de consultas e CPU
+        na instância de meia CPU) -- inclusive quando só um item ou um preço
+        tinha mudado, o que não aparece no site.
+
+   O QUE FOI FEITO (as REGRAS são as mesmas; cada mudança tem o teste de
+   que a resposta é a de antes)
+     * O SINO (sistema_interno/avisos.py): `contar_juntos` -- as contagens
+       de cada pessoa num SELECT só, cada uma com a MESMA consulta de antes
+       (`consultas_das_contagens`); `versoes_dos_avisos` -- as versões dos
+       cinco avisos comerciais numa consulta, cada aviso um EXISTS da
+       própria `consulta_do_aviso` (a regra continua num lugar só), com o
+       `orcamento_anterior` junto; `mapa_de_negociacoes(..., pais_conhecidos)`
+       -- UMA caminhada pelas cadeias para todos os avisos, sem perguntar de
+       novo os elos já lidos; a leitura do "lido até" como subconsulta das
+       movimentações. `versao_atividades` carimbada pelo pulso (o pulso de
+       12 s não vai mais ao banco por ela) e o 304 do sino sem ler a memória
+       do sino (ela só viaja no corpo, views_avisos.py).
+     * A MEMÓRIA DO SINO (`guardar_avisos_vistos`): lê as linhas da pessoa
+       numa consulta e apaga, atualiza e cria cada grupo num comando só.
+     * A CONEXÃO (lazer/banco_postgres/, settings.py): ver abaixo.
+     * Início (views.py, HomeInnerView): os nove números numa ida
+       (`contar_juntos`); manutenções e O.S. lidas uma vez (a fila usa as
+       três primeiras das cinco).
+     * Orçamentos (views_gestao.py): o "vencendo" fica no contexto sem ir ao
+       banco; o total do paginador é o `quantidade` do resumo; os três COUNT
+       do catálogo numa ida; categorias, tags, categorias de peça e
+       estabelecimentos das janelas de cadastro na hora vêm do cache do
+       catálogo (core/home_cache.py: os quatro modelos trocam a versão
+       quando mudam -- categoria nova aparece na tela seguinte, como antes).
+     * O.S. (views_ordens_servico.py): a lista de técnicos só com quem pode
+       ser técnico (superusuário, Produção ou Gestão), com os grupos numa
+       consulta; `tem_funcao` continua decidindo. Sem busca, o total do
+       paginador é o número do cartão escolhido.
+     * A faixa do termo (rh/templatetags/rh_extras.py): guardada por pessoa
+       com a versão do RH na chave; ficha ou termo salvo/apagado troca a
+       versão na hora e de novo no commit (rh/sinais.py). Prazo de 60 s só
+       como rede de segurança.
+     * AS FUNÇÕES DE CADA CONTA (permissoes.py): guardadas no cache com uma
+       versão na chave; QUALQUER mudança de grupo (a tela de acessos, o
+       /system/, grupo renomeado ou apagado: m2m_changed e os sinais do
+       Group, ligados em core/signals.py) troca a versão na hora e no
+       commit -- tirar uma função vale na requisição seguinte (testado
+       pelos dois caminhos). Com LocMemCache e WEB_WORKERS>1 (a troca não
+       atravessaria os processos) NADA é guardado: o comportamento de antes.
+       `grupos_de_funcoes` lê os seis grupos numa consulta.
+     * Ações: `_reabrir_bloco` com um UPDATE (cria só se não houver --
+       a linha é única por orçamento e bloco); `exclusoes.remover` com
+       `atomic(savepoint=False)` (o erro que sai do bloco desfaz a gravação
+       inteira de quem chamou; a ProtectedError é pega DENTRO dele, e o
+       `Orcamento.delete` mantém o seu); salvar cliente relê o cliente com
+       parceiro, proposta ativa (`com_publicacao_mapa`) e endereços em duas
+       consultas; `montagem.sincronizar_orcamento` resolve "não aprovada e
+       sem produção" numa consulta; a régua (views_etapas.py) com a O.S., a
+       produção e os itens pré-carregados.
+     * A VITRINE (core/signals.py + Orcamento.from_db): a proposta salva só
+       apaga o cache público quando nasceu, saiu, ou mudou de SITUAÇÃO ou de
+       CLIENTE -- o que pode mexer no mapa. Excluir continua apagando sempre;
+       cliente e endereço, como antes.
+     * NO NAVEGADOR:
+         - a sincronia (ls-sincronia.js) não pede a lista uma segunda vez
+           enquanto a da gravação está a caminho ("ls:atualizacao-a-caminho"
+           em painel.js, "ls:atualizada" em ls-soft-navigation.js). Com o sino
+           mais rápido, ele voltava antes da lista e o relógio pedia a mesma
+           lista de novo;
+         - a etapa da produção (producao_ordem_detalhe.html) era formulário
+           comum: POST, redirecionamento e a PÁGINA INTEIRA de novo, sem nada
+           na tela até ela chegar -- e o segundo toque gravava de novo. Agora
+           o botão trava e diz "Salvando…" no toque, o POST sai uma vez e só
+           a tela troca (navegação suave), com o recado em toast. Sem fetch,
+           o formulário comum continua.
+       O resto já estava certo e ficou: todo `Painel.ligar` trava o botão
+       ("Salvando…"/"Excluindo…") e mostra a tarja até a lista nova chegar.
+
+   A CONEXÃO: `conn_health_checks`, AVALIADO
+     O que ele faz: antes da primeira consulta de cada requisição que
+     reaproveita a conexão, um `SELECT 1` -- se o pooler do Supabase fechou
+     a conexão parada, ela é trocada em vez de a consulta da tela estourar.
+     Isso protege de 500 de verdade e NÃO foi tirado. O que mudou:
+       * lazer/banco_postgres/base.py (o backend do Django com uma diferença):
+         a conexão usada há menos de DB_CONEXAO_RECENTE_S (30 s), fora de
+         transação e com o socket QUIETO dispensa o `SELECT 1`. Quando o
+         servidor ou o pooler fecha a conexão, chega pelo socket o FIN (ou a
+         mensagem FATAL); se o caminho morre calado, o keepalive do TCP
+         (keepalives_idle=30, já no settings) marca erro no socket -- nos
+         dois casos o socket fica legível e a conferência de sempre é feita.
+         É o mesmo teste do urllib3 antes de reaproveitar conexão HTTP. Uma
+         consulta ao sistema operacional (poll, prazo zero), microssegundos.
+         Parada mais de 30 s, em transação ou qualquer dúvida: `SELECT 1`.
+         CONFERIDO num PostgreSQL 16 de verdade, com e sem TLS: requisição
+         seguida de outra sem `SELECT 1`; `pg_terminate_backend` na conexão
+         -> a requisição seguinte percebe pelo socket, confere, reconecta e
+         responde sem erro; parada além da janela -> confere.
+         DB_CONEXAO_RECENTE_S=0 volta ao de antes.
+       * CONN_MAX_AGE de 60 para 600 s (DB_CONN_MAX_AGE). Os 60 s contavam
+         da ABERTURA: com o painel em uso, cada thread do gunicorn descartava
+         uma conexão boa por minuto e pagava ~1,2 s para abrir outra. A
+         conferência acima é o que garante que conexão morta não é usada; o
+         prazo longo só deixa de jogar fora a viva. O número de conexões não
+         muda (já ficavam abertas nas threads paradas; no máximo uma por
+         thread, 8 por worker).
+     Ganho: uma viagem a menos em cada pedido que vem logo atrás de outro
+     (a lista e o sino depois da gravação, a tela depois do clique no menu)
+     e ~1,2 s a menos por thread por minuto de uso.
+
+   OS NÚMEROS (viagens ao banco; "espera" no ar a 170 ms/viagem: a ação e a
+   tela/lista; o sino vai em paralelo). Antes = commit 2eaeb69, o mesmo
+   banco e o mesmo roteiro.
+     ação                                 ação      tela/lista  sino      espera (s)
+     Abrir Início                         24 -> 13              5 -> 3    4,1 -> 2,2
+     Abrir Orçamentos                     30 -> 16              5 -> 3    5,2 -> 2,8
+     Sino a cada 12 s (nada mudou)         6 -> 4                         1,0 -> 0,7
+       (quem não é superusuário)           7 -> 4                         1,2 -> 0,7
+     Sino: guardar o que mostrou          55 -> 8                         9,4 -> 1,4
+     Orçamento: salvar novo               14 -> 14  20 -> 13   27 -> 11   5,9 -> 4,7
+     Orçamento: editar (item a +/a -)     23 -> 18  20 -> 13   27 -> 11   7,4 -> 5,4
+     Orçamento: mudar situação            14 -> 12  20 -> 13   27 -> 11   5,9 -> 4,3
+     Orçamento: aprovar                   39 -> 39  20 -> 13   27 -> 11  10,2 -> 9,1
+     Orçamento: registrar pagamento       15 -> 15  30 -> 19   27 -> 11   7,8 -> 5,9
+     Orçamento: excluir rascunho          26 -> 24  30 -> 19   24 -> 7    9,6 -> 7,4
+     Orçamento: abrir a janela (régua)    10 -> 6                         1,7 -> 1,0
+     Clientes: abrir                      14 -> 12              5 -> 3    2,4 -> 2,1
+     Clientes: salvar novo / editar       23 -> 19  14 -> 11   27 -> 11   6,4 -> 5,2
+     Clientes: excluir                    20 -> 18  14 -> 11   24 -> 7    5,8 -> 5,1
+     O.S.: abrir                          68 -> 23              5 -> 3   11,9 -> 4,0
+     O.S.: salvar nova / editar           11 -> 11  68 -> 22   27 -> 11  13,5 -> 5,8
+     Lista de montagem: abrir             25 -> 22             29 -> 11   4,4 -> 3,9
+     Lista de montagem: marcar etapa      27 -> 26  25 -> 21    6 -> 3    9,0 -> 8,1
+     Produção: avançar etapa              15 -> 14  15 -> 10   13 -> 8    5,1 -> 4,1
+     Produção: minha produção (montador)  10 -> 6               6 -> 3    1,7 -> 1,0
+     Estoque: entrada de material         12 -> 12  10 -> 7    27 -> 11   3,8 -> 3,3
+     Peças: salvar / ativar               9 -> 9    14 -> 11    5 -> 3    3,9 -> 3,4
+     RH: meu ponto (montador)             13 -> 10             12 -> 6    2,2 -> 1,7
+     RH: mudar a tarefa                    5 -> 5    7 -> 5     5 -> 3    2,1 -> 1,7
+     Usuários/funções: salvar             26 -> 21  10 -> 7    23 -> 6    6,1 -> 4,8
+   A O.S. cresce com o site: com N contas ativas na loja, eram ~N+28
+   viagens a cada abertura (e a cada recarga depois de gravar); agora 23
+   para qualquer N. A "espera" de antes também não contava o que o servidor
+   fazia ao mesmo tempo: o sino a 27 viagens por pessoa a cada gravação, e
+   a vitrine refeita em segundo plano.
+   NO NAVEGADOR (Playwright, servidor local com 170 ms em cada consulta,
+   1366 e 390 px, temas sol e lua): salvar o orçamento faz UM POST, a lista
+   e o sino -- nenhum pedido repetido --, o botão vira "Salvando..." e trava
+   no mesmo toque; iniciar a etapa da produção trava o botão ("Salvando…"),
+   faz um POST e troca a tela SEM recarregar o documento, com o toast
+   "Etapa 1: Em andamento" e a etapa marcada; nenhuma tela com rolagem
+   lateral.
+
+   O QUE FICOU DE FORA, DE PROPÓSITO
+     * Aprovar o orçamento continua com ~25 viagens depois do commit: é a
+       lista de montagem nascendo (montagem.criar_producao + distribuir +
+       tarefas do RH), regra de produção da seção 112. Dá para levá-la para
+       uma linha de fundo (como os cliques, core/cliques.py), mas aí a régua
+       e o prazo da proposta apareceriam um instante depois da tela -- é
+       decisão de produto, não de desempenho.
+     * A lista de montagem refaz a rede de segurança (sincronizar_tudo +
+       distribuir + avisos) a CADA abertura (~10 viagens): é a garantia de
+       que nada fica fora da fila. Guardar "já conferi hoje" mudaria essa
+       garantia.
+     * Salvar orçamento (acao_save) e o resto de clientes.py: outras
+       mudanças estão em andamento nesses arquivos; aqui só os ajudantes.
+     * A sessão continua no banco (uma consulta por requisição): no cache
+       ela só pode ir depois do Redis (item 3 da seção 63).
+     * O documento para assinatura (views_documento_assinatura.py e
+       documento_assinatura.py, em outra frente agora): a tela do contrato
+       faz 17 consultas -- os ITENS do orçamento são lidos SETE vezes
+       (o total, o pagamento, a produção, o retrato...). Um
+       `prefetch_related("itens")` e `select_related("ordem_servico",
+       "producao")` no orçamento de `_BaseDocumento.orcamento()` (como na
+       régua, views_etapas.py) devem levar a ~10. A sondagem de 10 s do
+       cartão está boa (4 consultas quando nada mudou).
+
+   O QUE O DONO (A INFRA) DEVE FAZER -- nada disso é código
+     1. PÔR O RENDER E O SUPABASE NA MESMA REGIÃO. É a mudança que mais
+        rende, de longe: na mesma região uma consulta custa 1-5 ms, e TODO
+        número da tabela acima vira dezenas de milissegundos. Passos (os da
+        seção 63): no Supabase, Project Settings > General mostra a região;
+        no Render, Settings > Region a do serviço. O Render não tem São
+        Paulo: escolha Render Virginia (us-east) com Supabase us-east-1, ou
+        Ohio com us-east-2. Mudar o Supabase de região é criar o projeto
+        novo na região certa e migrar os dados (pg_dump/pg_restore, depois
+        trocar SUPABASE_DATABASE_URL); mudar o Render de região é criar o
+        serviço novo na região e apontar o domínio. Teste antes com
+        curl -w '%{time_starttransfer}' em /pronto/: hoje ~0,35 s com a
+        conexão quente.
+     2. CONFERIR AS VARIÁVEIS DO RENDER: se houver DB_CONN_MAX_AGE=60, apague
+        (o padrão agora é 600) ou ponha 600. DB_CONEXAO_RECENTE_S fica vazio
+        (30 s).
+     3. Redis (Render > Key Value) ANTES de subir WEB_WORKERS, como já diz a
+        seção 63. Com ele: mais de um worker sem cache divergente, as funções
+        guardadas valendo entre workers, e então a sessão no cache
+        (SESSION_ENGINE = cached_db), uma viagem a menos em toda requisição.
+
+   COMO MEDIR DE NOVO
+     * No ar: o cabeçalho Server-Timing (aba Rede) de cada pedido; /pronto/
+       quente ~0,35 s hoje (duas viagens: a conferência e o SELECT 1). Com
+       a conferência dispensada logo depois de outro pedido, ~0,17 s.
+     * Aqui: ferramentas/carga/acoes_do_painel.py (acima). Para comparar com
+       um commit antigo: `git archive <commit> | tar -x -C /tmp/antes`,
+       copiar a ferramenta para lá e rodar com `--conferencia antes`.
+     * O servidor local com a latência de verdade:
+       CARGA_LATENCIA_MS=170 com ferramentas/carga/latencia_db.py instalado
+       num settings próprio (como o ls_carga_settings do teste de carga).
+
+   TESTES: sistema_interno/tests_velocidade.py -- os TETOS de idas ao banco
+   do sino (depois de gravar, no pulso parado, ao guardar o que mostrou),
+   do Início, de Orçamentos (inteira e só a lista), da O.S. (que não cresce
+   com as contas da loja), da régua, de salvar/editar/mudar situação de
+   orçamento, de salvar cliente e de salvar acesso; e as provas de que a
+   resposta é a mesma: `contar_juntos` == cada COUNT, `versoes_dos_avisos`
+   == `consulta_do_aviso` aviso a aviso, a central inteira igual pelos dois
+   caminhos, o bloco reaberto, a faixa do termo que volta a contar quando o
+   RH muda, a função retirada que vale na requisição seguinte (pela tela e
+   pelo /system/), o "não guarda" com dois workers sem Redis, a vitrine
+   refeita só quando a situação muda, a conferência da conexão (socket
+   quieto, servidor que fechou, mensagem chegando, janela vencida,
+   transação aberta, janela zero) e os combinados do navegador.
+   Arquivos: lazer/banco_postgres/ (novo), lazer/settings.py,
+   sistema_interno/avisos.py, views_avisos.py, views.py, views_gestao.py,
+   views_ordens_servico.py, views_clientes.py, views_etapas.py,
+   permissoes.py, exclusoes.py, montagem.py, models.py (Orcamento.from_db),
+   templates/producao_ordem_detalhe.html, static/interno/painel.js,
+   ls-soft-navigation.js e ls-sincronia.js; core/signals.py;
+   rh/templatetags/rh_extras.py e rh/sinais.py;
+   ferramentas/carga/acoes_do_painel.py (novo); docs/RENDER_502.md.
+   SEM MIGRAÇÃO.

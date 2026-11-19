@@ -904,7 +904,11 @@
      atual, preservando a recuperação de conexão da navegação suave. */
   window.LSAtualizarTela = function (opcoes) {
     limpar();
-    return navegar(window.location.href, "replace", { inteira: !(opcoes && opcoes.partes) });
+    /* "ls:atualizada": a tela (ou a lista) depois de gravar chegou -- ou
+       desistiu. O relógio da sincronia espera por isto (ls-sincronia.js). */
+    function avisar() { document.dispatchEvent(new CustomEvent("ls:atualizada")); }
+    return navegar(window.location.href, "replace", { inteira: !(opcoes && opcoes.partes) })
+      .then(avisar, function (erro) { avisar(); throw erro; });
   };
 
   function linkNavegavel(link, evento) {

@@ -330,17 +330,28 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         if salvo.orcamentos.filter(status=Orcamento.Status.APROVADO).exists():
             svc.publicar_no_mapa(salvo)
 
-        salvo.refresh_from_db()
+        # RELIDO UMA VEZ, COM O QUE A RESPOSTA USA. `refresh_from_db()` e
+        # depois `no_mapa` duas vezes e `opcao_de_busca` liam o endereço três
+        # vezes e a proposta ativa duas: seis viagens ao Supabase (~1 s,
+        # LEIA-ME-V10 §120) para montar a mesma resposta. O parceiro e a
+        # proposta ativa (`com_publicacao_mapa`, a mesma regra de
+        # `publicacao_mapa`) vêm no mesmo SELECT, os endereços numa consulta.
+        salvo = (
+            svc.com_publicacao_mapa(
+                Cliente.objects.select_related("parceiro").prefetch_related("enderecos")
+            ).get(pk=salvo.pk)
+        )
+        no_mapa = salvo.no_mapa
         return self.sucesso(
             request,
             (
                 f"Cliente “{salvo.nome_cliente}” salvo e no mapa do site."
-                if salvo.no_mapa
+                if no_mapa
                 else f"Cliente “{salvo.nome_cliente}” salvo."
             ),
             id=salvo.id,
             cliente=svc.opcao_de_busca(salvo),
-            mapa_publicado=salvo.no_mapa,
+            mapa_publicado=no_mapa,
         )
 
     def acao_completar(self, request):

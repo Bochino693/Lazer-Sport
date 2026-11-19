@@ -84,7 +84,13 @@ def remover(
     """
     arrastados = []
 
-    with transaction.atomic():
+    # `savepoint=False`: apagar e registrar continuam na MESMA transação (a
+    # da view, ou uma nova quando não há). O ponto de salvamento não servia
+    # para nada aqui -- o erro que sai deste bloco desfaz a gravação inteira
+    # de quem chamou -- e custava duas viagens ao banco (SAVEPOINT e
+    # RELEASE, ~340 ms no Supabase, LEIA-ME-V10 §120). A ProtectedError é
+    # pega DENTRO do bloco, e o `delete()` que a levanta tem o seu.
+    with transaction.atomic(savepoint=False):
         try:
             objeto.delete()
         except ProtectedError as erro:

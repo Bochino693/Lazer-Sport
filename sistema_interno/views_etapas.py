@@ -20,8 +20,17 @@ class EtapasDoOrcamentoView(OrcamentoInternoRequiredMixin, View):
     """GET: {"marca", "html"} -- só o HTML quando a marca mudou (`?marca=`)."""
 
     def get(self, request, pk):
+        # A O.S. e a produção (as duas do outro lado de um um-para-um) no
+        # mesmo SELECT, e os itens numa consulta só: a régua lia os itens três
+        # vezes (o total, o pagamento, a produção) -- cada leitura uma viagem
+        # ao Supabase (~170 ms, LEIA-ME-V10 §120), e esta rota é pedida a
+        # cada janela de orçamento aberta.
         orcamento = get_object_or_404(
-            limitar_orcamentos(request.user, Orcamento.objects.select_related("cliente")),
+            limitar_orcamentos(
+                request.user,
+                Orcamento.objects.select_related("cliente", "ordem_servico", "producao")
+                .prefetch_related("itens"),
+            ),
             pk=pk,
         )
         regua = etapas(orcamento, request.user)

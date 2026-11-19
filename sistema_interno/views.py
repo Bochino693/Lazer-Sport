@@ -633,12 +633,6 @@ class HomeInnerView(InternoRequiredMixin, View):
             .filter(validade__lte=hoje + timezone.timedelta(days=3))
             .select_related("cliente")[:20]
         )
-        total_orcamentos_abertos = orcamentos_base.count()
-        total_orcamentos_vencendo = (
-            orcamentos_base
-            .filter(validade__lte=hoje + timezone.timedelta(days=3))
-            .count()
-        )
         pedidos_abertos = (
             Pedido.objects.exclude(status__in=["finalizado", "cancelado"])
             .select_related("cliente").order_by("-criacao")
@@ -675,6 +669,32 @@ class HomeInnerView(InternoRequiredMixin, View):
         # Onde não há caminho óbvio (uma produção bloqueada precisa de
         # decisão humana), o item continua levando para onde se decide.
         # ====================================================================
+        # AS LISTAS CURTAS UMA VEZ SÓ. A fila de cima usa as três primeiras
+        # manutenções e O.S., e os quadros de baixo as cinco primeiras, da
+        # MESMA consulta e na MESMA ordem: eram duas idas ao banco para cada
+        # uma (LEIA-ME-V10, seção 120).
+        manutencoes_lista = list(manutencoes_abertas[:5])
+        ordens_servico_lista = list(ordens_servico_abertas[:5])
+
+        # OS NÚMEROS DO TOPO NUMA IDA SÓ. Eram nove COUNT, cada um uma
+        # viagem ao Supabase (~170 ms). As consultas são as mesmas de antes;
+        # só viajam juntas (avisos.contar_juntos).
+        from .avisos import contar_juntos
+
+        totais = contar_juntos({
+            "materiais": Material.objects.filter(ativo=True),
+            "criticos": criticos,
+            "orcamentos_abertos": orcamentos_base,
+            "orcamentos_vencendo": orcamentos_base.filter(
+                validade__lte=hoje + timezone.timedelta(days=3)
+            ),
+            "pedidos": pedidos_abertos,
+            "manutencoes": manutencoes_abertas,
+            "ordens_servico": ordens_servico_abertas,
+            "producao": producao_aberta,
+            "vendas": Venda.objects.filter(confirmado=False),
+        })
+
         fila_trabalho = []
         for orcamento in orcamentos_vencendo[:3]:
             dias = orcamento.dias_para_vencer
@@ -705,7 +725,7 @@ class HomeInnerView(InternoRequiredMixin, View):
                     if dias >= 0 and tem_email else None
                 ),
             })
-        for manutencao in manutencoes_abertas[:3]:
+        for manutencao in manutencoes_lista[:3]:
             fila_trabalho.append({
                 "nivel": "atencao" if manutencao.status == "P" else "info",
                 "icone": "bi-wrench-adjustable",
@@ -714,7 +734,7 @@ class HomeInnerView(InternoRequiredMixin, View):
                 "url": reverse("manutencao_inner", urlconf="sistema_interno.urls"),
                 "acao": "Ver manutenção",
             })
-        for ordem_servico in ordens_servico_abertas[:3]:
+        for ordem_servico in ordens_servico_lista[:3]:
             fila_trabalho.append({
                 "nivel": (
                     "critico"
@@ -746,29 +766,29 @@ class HomeInnerView(InternoRequiredMixin, View):
         ctx = {
             "hoje": hoje,
             "materiais": Material.objects.filter(ativo=True),
-            "total_materiais": Material.objects.filter(ativo=True).count(),
+            "total_materiais": totais["materiais"],
             "total_locais": resumo["locais"],
             "total_pecas": resumo["pecas"],
             "valor_investido": resumo["investido"],
             "criticos": criticos[:8],
-            "total_criticos": criticos.count(),
+            "total_criticos": totais["criticos"],
             "ultimos_movimentos": (
                 MovimentoEstoque.objects
                 .select_related("estoque__material", "responsavel")[:8]
             ),
             "fila_trabalho": fila_trabalho[:7],
             "orcamentos_abertos": orcamentos_abertos,
-            "total_orcamentos_abertos": total_orcamentos_abertos,
-            "total_orcamentos_vencendo": total_orcamentos_vencendo,
+            "total_orcamentos_abertos": totais["orcamentos_abertos"],
+            "total_orcamentos_vencendo": totais["orcamentos_vencendo"],
             "pedidos_abertos": pedidos_abertos[:5],
-            "total_pedidos_abertos": pedidos_abertos.count(),
-            "manutencoes_abertas": manutencoes_abertas[:5],
-            "total_manutencoes_abertas": manutencoes_abertas.count(),
-            "ordens_servico_abertas": ordens_servico_abertas[:5],
-            "total_ordens_servico_abertas": ordens_servico_abertas.count(),
+            "total_pedidos_abertos": totais["pedidos"],
+            "manutencoes_abertas": manutencoes_lista,
+            "total_manutencoes_abertas": totais["manutencoes"],
+            "ordens_servico_abertas": ordens_servico_lista,
+            "total_ordens_servico_abertas": totais["ordens_servico"],
             "producao_aberta": producao_aberta[:5],
-            "total_producao_aberta": producao_aberta.count(),
-            "vendas_a_confirmar": Venda.objects.filter(confirmado=False).count(),
+            "total_producao_aberta": totais["producao"],
+            "vendas_a_confirmar": totais["vendas"],
         }
         return render(request, "home_inner.html", ctx)
 

@@ -114,6 +114,16 @@ class EstadoAvisosView(View):
         }
         corpo["assinatura"] = assinatura_do_estado(corpo)
 
+        etag = '"' + corpo['assinatura'] + '"'
+        if request.headers.get('If-None-Match') == etag:
+            # NADA MUDOU: 304 sem corpo -- e sem ler a memória do sino, que
+            # só viaja no corpo. Era uma ida ao banco (~170 ms, LEIA-ME-V10
+            # §120) em cada pulso de 12 s de cada aba, para nada.
+            resposta = HttpResponse(status=304)
+            resposta['ETag'] = etag
+            resposta["Cache-Control"] = "no-store, private"
+            return resposta
+
         # FORA DA ASSINATURA DE PROPÓSITO.
         #
         # `vistos` é o que o sino JÁ anunciou a esta pessoa -- a memória
@@ -126,11 +136,7 @@ class EstadoAvisosView(View):
         # com o que ele mesmo já tem na tela.
         corpo["vistos"] = avisos_ja_vistos(usuario)
 
-        etag = '"' + corpo['assinatura'] + '"'
-        if request.headers.get('If-None-Match') == etag:
-            resposta = HttpResponse(status=304)
-        else:
-            resposta = JsonResponse(corpo)
+        resposta = JsonResponse(corpo)
         resposta['ETag'] = etag
         # Resposta de usuário, curta e pessoal: nenhum intermediário pode
         # guardá-la e servir o painel de um colega.

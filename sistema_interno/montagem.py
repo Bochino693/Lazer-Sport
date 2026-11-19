@@ -1089,12 +1089,32 @@ def sincronizar_pedido(pedido_id, *, silencioso=False):
 
 
 def sincronizar_orcamento(orcamento_id, *, silencioso=False):
+    from django.db.models import Exists, OuterRef
+
     from .models import Orcamento, ProducaoOrigem
+
+    # O CASO COMUM SAI COM UMA CONSULTA. Toda gravação de orçamento passa por
+    # aqui depois do commit (signals_montagem), e quase todas são de proposta
+    # que não está aprovada e nunca foi para a lista: não há nada a fazer.
+    # Antes isso custava três viagens ao Supabase (o orçamento, os itens e a
+    # produção, ~0,5 s -- LEIA-ME-V10 §120). Agora a situação e "tem
+    # produção?" vêm juntas; só o que pede trabalho segue o caminho de sempre.
+    estado = (
+        Orcamento.objects.filter(pk=orcamento_id)
+        .annotate(_tem_producao=Exists(ProducaoOrigem.objects.filter(orcamento_id=OuterRef("pk"))))
+        .values_list("status", "_tem_producao")
+        .first()
+    )
+    if estado is None:
+        return None
+    if estado[0] != Orcamento.Status.APROVADO and not estado[1]:
+        return None
 
     orcamento = Orcamento.objects.prefetch_related("itens").filter(pk=orcamento_id).first()
     if orcamento is None:
         return None
-    producao = ProducaoOrigem.objects.filter(orcamento=orcamento).first()
+    # "Tem produção?" acabou de ser respondido: sem ela, nada a buscar.
+    producao = ProducaoOrigem.objects.filter(orcamento=orcamento).first() if estado[1] else None
     if orcamento.status == Orcamento.Status.APROVADO:
         if producao is None:
             return criar_producao(orcamento=orcamento, silencioso=silencioso)
