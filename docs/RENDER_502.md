@@ -171,8 +171,10 @@ Se abrir o aplicativo e trocar de tela continua levando minutos:
    alguns minutos em `/healthz/`.
 2. **`DB_CONN_MAX_AGE` está valendo?** Sem reaproveitar conexão, cada
    requisição abre TLS novo com o Supabase antes da primeira consulta. O
-   padrão agora é 60 segundos em produção; confirme que `ENVIRONMENT` está
-   como `production` ou que `RENDER` vale `true`.
+   padrão agora é 600 segundos em produção (era 60: cada thread reabria a
+   conexão a cada minuto, ~1,2 s cada vez -- LEIA-ME-V10, seção 120);
+   confirme que `ENVIRONMENT` está como `production` ou que `RENDER` vale
+   `true`, e que não sobrou um `DB_CONN_MAX_AGE=60` nas variáveis do Render.
 3. **`Server-Timing` na resposta.** Toda resposta traz `app;dur=<ms>`, que
    é o tempo gasto DENTRO do Django. Se ele for pequeno e a espera for
    grande, o tempo está na rede ou na partida da instância, não no código.

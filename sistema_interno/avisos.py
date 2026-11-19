@@ -20,8 +20,9 @@ inteira para filtrar na memória. A mesma regra escrita como
 from dataclasses import dataclass
 from datetime import timedelta
 
-from django.db import DatabaseError, transaction
-from django.db.models import Count, Exists, Max, OuterRef
+from django.db import DatabaseError, connection, transaction
+from django.db.models import Count, Exists, IntegerField, Max, OuterRef, Q, Subquery, Value
+from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils import timezone
 
@@ -127,20 +128,46 @@ def guardar_avisos_vistos(user, mapa):
         if numero:
             limpo[chave] = numero
 
+    # POUCAS IDAS AO BANCO (LEIA-ME-V10, seção 120). Era um
+    # `update_or_create` por aviso -- SAVEPOINT, SELECT, UPDATE ou INSERT e
+    # RELEASE: quatro viagens ao Supabase cada, ~30 para uma central de oito
+    # avisos (~5 s de uma thread do servidor presa, a cada número novo no
+    # sino). Agora: as linhas desta pessoa numa leitura (travadas, como o
+    # `update_or_create` travava), e as que saem, as que mudam e as que
+    # nascem, cada grupo num comando só. O resultado gravado é o mesmo.
     try:
         with transaction.atomic():
-            EstadoNotificacao.objects.filter(
-                usuario=user,
-                chave__startswith=PREFIXO_VISTO,
-            ).exclude(
-                chave__in=[PREFIXO_VISTO + chave for chave in limpo]
-            ).delete()
-            for chave, numero in limpo.items():
-                EstadoNotificacao.objects.update_or_create(
+            existentes = {
+                estado.chave: estado
+                for estado in EstadoNotificacao.objects.select_for_update().filter(
                     usuario=user,
-                    chave=PREFIXO_VISTO + chave,
-                    defaults={"quantidade": numero},
+                    chave__startswith=PREFIXO_VISTO,
                 )
+            }
+            desejadas = {PREFIXO_VISTO + chave: numero for chave, numero in limpo.items()}
+            sobrando = [estado.pk for chave, estado in existentes.items() if chave not in desejadas]
+            if sobrando:
+                EstadoNotificacao.objects.filter(pk__in=sobrando).delete()
+            agora = timezone.now()
+            mudaram = []
+            for chave, numero in desejadas.items():
+                estado = existentes.get(chave)
+                if estado is not None and estado.quantidade != numero:
+                    estado.quantidade = numero
+                    estado.atualizado = agora
+                    mudaram.append(estado)
+            if mudaram:
+                EstadoNotificacao.objects.bulk_update(mudaram, ["quantidade", "atualizado"])
+            novas = [
+                EstadoNotificacao(usuario=user, chave=chave, quantidade=numero)
+                for chave, numero in desejadas.items()
+                if chave not in existentes
+            ]
+            if novas:
+                # Outra aba da mesma pessoa pode ter criado a linha agora
+                # mesmo: o índice único (usuário, chave) segura, e a
+                # repetida simplesmente não entra.
+                EstadoNotificacao.objects.bulk_create(novas, ignore_conflicts=True)
     except DatabaseError:
         return {}
     return limpo
@@ -229,53 +256,74 @@ def eh_gestor(user):
     return tem_funcao(user, GESTAO)
 
 
-def _grupos_de_versoes(orcamento_ids):
+def _grupos_de_versoes(orcamento_ids, negociacao=None):
     """Transforma ids de versões em ids de negociações distintas.
 
     Não se pode usar apenas ``distinct(orcamento_id)`` nas atividades:
     refazer cria outro orçamento no banco. O elo ``orcamento_anterior``
     diz que os dois registros são versões do mesmo documento. A busca dos
     pais é feita em lotes por nível, evitando uma consulta para cada evento.
+
+    `negociacao` é o mapa já pronto (`mapa_de_negociacoes`) de quem chamou
+    com todos os ids de uma vez -- a central do sino faz UMA caminhada pelas
+    cadeias para os sete avisos de orçamento, e não uma por aviso.
     """
+    if negociacao is not None:
+        ids = {int(pk) for pk in orcamento_ids if pk}
+        if ids <= negociacao.keys():
+            return frozenset(negociacao[pk] for pk in ids)
     return frozenset(mapa_de_negociacoes(orcamento_ids).values())
 
 
-def mapa_de_negociacoes(orcamento_ids):
+def mapa_de_negociacoes(orcamento_ids, pais_conhecidos=None):
     """Cada versão -> a primeira versão da cadeia (a negociação).
 
     É o mesmo cálculo de `_grupos_de_versoes`, devolvendo de qual
     negociação cada id veio. A folha de propostas (seção 116) usa para
     mostrar UMA linha por negociação -- o mesmo número que o sino conta.
+
+    `pais_conhecidos` ({versão: versão anterior}) são elos que quem chamou
+    ACABOU de ler do banco na mesma requisição (a central lê o
+    `orcamento_anterior` junto com as versões de cada aviso): não se
+    pergunta de novo por eles. A caminhada só vai ao banco pelos elos que
+    faltam, um nível por consulta -- o resultado é o mesmo de ler tudo.
     """
     originais = {int(pk) for pk in orcamento_ids if pk}
     if not originais:
         return {}
 
-    pais = {}
-    fronteira = set(originais)
-    # Cinquenta também é o limite defensivo usado por cadeia_de_versoes.
-    for _ in range(50):
-        if not fronteira:
-            break
-        pares = Orcamento.objects.filter(pk__in=fronteira).values_list(
-            "pk", "orcamento_anterior_id",
-        )
-        proxima = set()
-        for pk, pai in pares:
-            pais[pk] = pai
-            if pai and pai not in pais:
-                proxima.add(pai)
-        fronteira = proxima
+    pais = dict(pais_conhecidos or {})
+    sumidos = set()
 
-    grupos = {}
-    for original in originais:
-        atual = original
+    def ponta(versao):
+        """Até onde os elos já sabidos levam (com a mesma trava de ciclo)."""
+        atual = versao
         vistos = set()
         while pais.get(atual) and atual not in vistos and len(vistos) < 50:
             vistos.add(atual)
             atual = pais[atual]
-        grupos[original] = atual
-    return grupos
+        return atual
+
+    # Cinquenta também é o limite defensivo usado por cadeia_de_versoes.
+    for _ in range(50):
+        fronteira = {
+            fim for fim in (ponta(original) for original in originais)
+            if fim not in pais and fim not in sumidos
+        }
+        if not fronteira:
+            break
+        pares = dict(
+            Orcamento.objects.filter(pk__in=fronteira).values_list(
+                "pk", "orcamento_anterior_id",
+            )
+        )
+        for pk in fronteira:
+            if pk in pares:
+                pais[pk] = pares[pk]
+            else:
+                sumidos.add(pk)
+
+    return {original: ponta(original) for original in originais}
 
 
 def _sem_contrato():
@@ -337,7 +385,71 @@ def consulta_do_aviso(user, chave, hoje=None, agora=None):
     raise KeyError(chave)
 
 
-def _orcamentos(user, hoje):
+#: Os avisos comerciais que saem das versões de orçamento, na ordem das
+#: colunas de `versoes_dos_avisos`.
+CHAVES_COMERCIAIS = (
+    "orcamentos_em_aberto",
+    "orcamentos_vencidos",
+    "orcamentos_vencendo",
+    "orcamentos_aprovados",
+    "orcamentos_recusados",
+)
+
+
+@dataclass(frozen=True)
+class VersoesDosAvisos:
+    """As versões de cada aviso comercial, lidas numa ida só ao banco."""
+
+    por_chave: dict  # chave -> {versão: situação}
+    pais: dict  # versão -> versão anterior (o elo da negociação)
+
+
+def versoes_dos_avisos(user, hoje=None, agora=None):
+    """As versões de TODOS os avisos comerciais, numa consulta só.
+
+    ERAM CINCO CONSULTAS (mais uma caminhada pelas cadeias de versões para
+    cada uma): em aberto, vencidos, a vencer, aprovados e recusados -- e
+    cada consulta é uma viagem ao Supabase (~170 ms, LEIA-ME-V10 §120).
+    Agora a REGRA continua sendo `consulta_do_aviso`, intocada: cada aviso
+    vira um EXISTS(...) da própria consulta dele, e uma linha volta para
+    cada versão que cai em pelo menos um aviso, com uma coluna por aviso e
+    o `orcamento_anterior` junto (os elos da negociação, sem perguntar de
+    novo). O pré-filtro (em aberto OU respondido na janela de novidade)
+    só corta o que nenhum aviso comercial pode conter; os EXISTS decidem.
+    """
+    hoje = hoje or timezone.localdate()
+    agora = agora or timezone.now()
+    marcas = {
+        f"_ls_aviso_{indice}": Exists(
+            consulta_do_aviso(user, chave, hoje, agora).filter(pk=OuterRef("pk"))
+        )
+        for indice, chave in enumerate(CHAVES_COMERCIAIS)
+    }
+    alguma = Q()
+    for nome in marcas:
+        alguma |= Q(**{nome: True})
+    linhas = (
+        Orcamento.objects
+        .filter(
+            Q(status__in=Orcamento.EM_ABERTO)
+            | Q(respondido_em__gte=agora - timedelta(days=DIAS_DE_NOVIDADE))
+        )
+        .annotate(**marcas)
+        .filter(alguma)
+        .order_by()
+        .values_list("pk", "status", "orcamento_anterior_id", *marcas)
+    )
+    por_chave = {chave: {} for chave in CHAVES_COMERCIAIS}
+    pais = {}
+    for pk, situacao, anterior, *dentro in linhas:
+        pais[pk] = anterior
+        for chave, esta in zip(CHAVES_COMERCIAIS, dentro):
+            if esta:
+                por_chave[chave][pk] = situacao
+    return VersoesDosAvisos(por_chave=por_chave, pais=pais)
+
+
+def _orcamentos(user, hoje, versoes=None, negociacao=None):
     """Pendências comerciais, vencidas e a vencer.
 
     A bolinha de Orçamentos representa a fila inteira ainda não finalizada:
@@ -348,23 +460,24 @@ def _orcamentos(user, hoje):
     Vencido é perda; a vencer ainda dá para salvar com um telefonema. Esses
     dois motivos continuam separados na central, mas a mesma negociação
     ocupa uma única unidade no total, inclusive quando já foi refeita.
-    """
-    abertos = consulta_do_aviso(user, "orcamentos_em_aberto", hoje)
 
-    # Uma ida ao banco traz a situação de cada versão aberta: é dela que
-    # sai o "1 rascunho e 1 esperando o cliente" do detalhe, contado por
-    # negociação, como o número.
-    situacao_por_versao = dict(abertos.values_list("pk", "status"))
-    negociacao = mapa_de_negociacoes(situacao_por_versao)
-    em_aberto = frozenset(negociacao.values())
-    vencidos = _grupos_de_versoes(
-        consulta_do_aviso(user, "orcamentos_vencidos", hoje)
-        .values_list("pk", flat=True)
-    )
-    a_vencer = _grupos_de_versoes(
-        consulta_do_aviso(user, "orcamentos_vencendo", hoje)
-        .values_list("pk", flat=True)
-    )
+    `versoes` e `negociacao` chegam prontos de `coletar` (uma consulta para
+    todos os avisos comerciais); chamada sozinha, lê o que precisa.
+    """
+    if versoes is None:
+        versoes = versoes_dos_avisos(user, hoje)
+
+    # A situação de cada versão aberta: é dela que sai o "1 rascunho e 1
+    # esperando o cliente" do detalhe, contado por negociação, como o número.
+    situacao_por_versao = versoes.por_chave["orcamentos_em_aberto"]
+    if negociacao is None:
+        negociacao = mapa_de_negociacoes(
+            set().union(*(versoes.por_chave[chave] for chave in CHAVES_COMERCIAIS[:3])),
+            pais_conhecidos=versoes.pais,
+        )
+    em_aberto = _grupos_de_versoes(situacao_por_versao, negociacao)
+    vencidos = _grupos_de_versoes(versoes.por_chave["orcamentos_vencidos"], negociacao)
+    a_vencer = _grupos_de_versoes(versoes.por_chave["orcamentos_vencendo"], negociacao)
 
     avisos = []
 
@@ -436,20 +549,22 @@ def _orcamentos(user, hoje):
     return avisos
 
 
-def _respostas_de_cliente(user, agora):
+def _respostas_de_cliente(user, agora, versoes=None, negociacao=None):
     """Cliente respondeu pela página pública e ninguém viu ainda.
 
     É o aviso mais importante da lista em termos de dinheiro: uma proposta
     aprovada que fica parada é uma venda esfriando.
     """
-    aprovados = _grupos_de_versoes(
-        consulta_do_aviso(user, "orcamentos_aprovados", agora=agora)
-        .values_list("pk", flat=True)
-    )
-    recusados = _grupos_de_versoes(
-        consulta_do_aviso(user, "orcamentos_recusados", agora=agora)
-        .values_list("pk", flat=True)
-    )
+    if versoes is None:
+        versoes = versoes_dos_avisos(user, agora=agora)
+    if negociacao is None:
+        negociacao = mapa_de_negociacoes(
+            set(versoes.por_chave["orcamentos_aprovados"])
+            | set(versoes.por_chave["orcamentos_recusados"]),
+            pais_conhecidos=versoes.pais,
+        )
+    aprovados = _grupos_de_versoes(versoes.por_chave["orcamentos_aprovados"], negociacao)
+    recusados = _grupos_de_versoes(versoes.por_chave["orcamentos_recusados"], negociacao)
 
     avisos = []
 
@@ -488,9 +603,28 @@ def _respostas_de_cliente(user, agora):
 
 
 def versao_atividades():
-    """Último evento global; uma consulta mínima invalida caches entre workers."""
+    """Último evento global; uma consulta mínima invalida caches entre workers.
+
+    CARIMBADA PELO PULSO (LEIA-ME-V10, seção 120). O sino pergunta isto a
+    cada 12 s em cada aba aberta -- uma viagem ao Supabase (~170 ms) para
+    responder, quase sempre, o mesmo número. O pulso (`pulso.py`) já lê a
+    contagem e o último `atualizado` das movimentações: movimentação nova
+    muda o pulso, para todos os workers. Enquanto ele não muda, este número
+    também não tem como mudar, e sai do cache. Sem pulso (banco fora do ar,
+    tabela por migrar), lê na hora, como antes.
+    """
+    from django.core.cache import cache
+
+    from .pulso import agora as pulso_agora
+
+    carimbo = pulso_agora()
+    chave = f"interno:versao_atividades:v1:{carimbo}" if carimbo else ""
+    if chave:
+        guardada = cache.get(chave)
+        if guardada is not None:
+            return guardada
     try:
-        return (
+        versao = (
             AtividadeOrcamento.objects.order_by("-id")
             .values_list("id", flat=True)
             .first()
@@ -500,6 +634,9 @@ def versao_atividades():
         # Implantação entre o reinício e o migrate: o sino antigo continua
         # funcionando, e uma tabela nova nunca derruba o painel com 502.
         return 0
+    if chave:
+        cache.set(chave, versao, 120)
+    return versao
 
 
 def versao_ordens_servico():
@@ -521,15 +658,24 @@ def versao_ordens_servico():
         return "0-0"
 
 
-def _atividades_orcamento(user):
-    """O que OUTRA pessoa fez e este usuário ainda não abriu no sino."""
-    try:
-        estado = EstadoNotificacao.objects.filter(
-            usuario=user,
-            chave=CHAVE_ATIVIDADE_LIDA,
-        ).only("quantidade").first()
-        ultimo_lido = estado.quantidade if estado else 0
+def _atividades_pendentes(user):
+    """As movimentações de colegas depois da última leitura -- e de quais versões.
 
+    A leitura (EstadoNotificacao) entra como subconsulta, e não como uma
+    ida ao banco à parte. Devolve (consulta, ids das versões) ou None se a
+    tabela ainda não existe (implantação entre o reinício e o migrate).
+    """
+    try:
+        lido = Coalesce(
+            Subquery(
+                EstadoNotificacao.objects.filter(
+                    usuario=user,
+                    chave=CHAVE_ATIVIDADE_LIDA,
+                ).order_by("pk").values("quantidade")[:1],
+                output_field=IntegerField(),
+            ),
+            Value(0),
+        )
         # A permissão da lista também limita a notificação. Um vendedor não
         # descobre pelo sino uma proposta que a própria tela esconderia dele.
         visiveis = limitar_orcamentos(
@@ -538,12 +684,26 @@ def _atividades_orcamento(user):
         ).values("pk")
         pendentes = (
             AtividadeOrcamento.objects
-            .filter(pk__gt=ultimo_lido, orcamento_id__in=visiveis)
+            .filter(pk__gt=lido, orcamento_id__in=visiveis)
             .exclude(autor=user)
         )
-        grupos = _grupos_de_versoes(
-            pendentes.values_list("orcamento_id", flat=True).distinct()
+        versoes = set(
+            pendentes.order_by().values_list("orcamento_id", flat=True).distinct()
         )
+    except DatabaseError:
+        return None
+    return pendentes, versoes
+
+
+def _atividades_orcamento(user, pendencias=None, negociacao=None):
+    """O que OUTRA pessoa fez e este usuário ainda não abriu no sino."""
+    try:
+        if pendencias is None:
+            pendencias = _atividades_pendentes(user)
+        if pendencias is None:
+            return []
+        pendentes, versoes = pendencias
+        grupos = _grupos_de_versoes(versoes, negociacao)
         total = len(grupos)
     except DatabaseError:
         return []
@@ -621,14 +781,82 @@ def marcar_atividades_lidas(user, ate=None):
         return 0
 
 
-def _operacao(acesso):
+def contar_juntos(consultas):
+    """{nome: QuerySet} -> {nome: quantas linhas distintas}, numa ida só ao banco.
+
+    Cada contagem da central era um `COUNT` com a sua viagem ao Supabase
+    (~170 ms cada, LEIA-ME-V10 §120): pedidos, vendas, manutenções, O.S.,
+    estoque, produção, projetos 3D e as quatro partes dos clientes
+    incompletos. A consulta de cada uma continua sendo a MESMA (o QuerySet
+    de sempre, com os filtros e junções dele); aqui elas só viajam juntas,
+    cada uma como `(SELECT COUNT(*) FROM (<a consulta>))` num SELECT só.
+    `values("pk").distinct()` é o `Count("pk", distinct=True)` de antes --
+    e, nas que não têm junção, o mesmo número do `.count()`.
+    """
+    if not consultas:
+        return {}
+    partes = []
+    parametros = []
+    for indice, consulta in enumerate(consultas.values()):
+        sql, valores = consulta.order_by().values("pk").distinct().query.sql_with_params()
+        partes.append(f"(SELECT COUNT(*) FROM ({sql}) ls_contagem_{indice})")
+        parametros.extend(valores)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT " + ", ".join(partes), parametros)
+        linha = cursor.fetchone()
+    return {nome: int(valor or 0) for nome, valor in zip(consultas, linha)}
+
+
+def consultas_das_contagens(acesso):
+    """As contagens da central que ESTA pessoa recebe, por nome (ver `coletar`)."""
+    from core.models import PedidoProjeto3D
+    from core.objetos_3d import tabela_pronta
+
+    consultas = {}
+    if acesso["clientes"]:
+        sem_contato, sem_documento, sem_endereco = partes_incompletas()
+        ativos = Cliente.objects.filter(ativo=True)
+        consultas["clientes_total"] = ativos.filter(filtro_incompletos())
+        consultas["clientes_contato"] = ativos.filter(sem_contato)
+        consultas["clientes_documento"] = ativos.filter(sem_documento)
+        consultas["clientes_endereco"] = ativos.filter(sem_endereco)
+    if (acesso["vendas"] or acesso["gestao"]) and tabela_pronta(PedidoProjeto3D):
+        consultas["projetos_3d"] = PedidoProjeto3D.objects.filter(status="novo")
+    if acesso["operacao"]:
+        if acesso["pedidos"]:
+            consultas["pedidos"] = Pedido.objects.exclude(status__in=["finalizado", "cancelado"])
+        if acesso["vendas_financeiro"]:
+            consultas["vendas"] = Venda.objects.filter(confirmado=False)
+        if acesso["manutencoes"]:
+            consultas["manutencoes"] = Manutencao.objects.filter(status__in=["P", "A"])
+        if acesso["ordens_servico"]:
+            consultas["ordens_servico"] = OrdemServico.objects.filter(
+                status__in=OrdemServico.PENDENTES,
+                # Se houver dado legado inconsistente, somente a ponta atual da
+                # cadeia ocupa a bolinha; v1/v2/v3 nunca viram três serviços.
+                ordem_refeita__isnull=True,
+            )
+    if acesso["estoque"]:
+        consultas["estoque"] = EstoqueMaterial.objects.criticos()
+    if acesso["producao"]:
+        consultas["producao"] = OrdemProducao.objects.exclude(
+            status__in=[OrdemProducao.Status.CONCLUIDA, OrdemProducao.Status.CANCELADA]
+        )
+    return consultas
+
+
+def _operacao(acesso, contagens=None):
     """Pendências operacionais sem revelar módulos fora da função."""
     avisos = []
+    if contagens is None:
+        contagens = contar_juntos({
+            nome: consulta
+            for nome, consulta in consultas_das_contagens(acesso).items()
+            if nome in ("pedidos", "vendas", "manutencoes", "ordens_servico")
+        })
 
     if acesso["pedidos"]:
-        pedidos = Pedido.objects.exclude(
-            status__in=["finalizado", "cancelado"]
-        ).count()
+        pedidos = contagens.get("pedidos", 0)
         if pedidos:
             avisos.append(Aviso(
                 chave="pedidos",
@@ -645,7 +873,7 @@ def _operacao(acesso):
             ))
 
     if acesso["vendas_financeiro"]:
-        vendas = Venda.objects.filter(confirmado=False).count()
+        vendas = contagens.get("vendas", 0)
         if vendas:
             avisos.append(Aviso(
                 chave="vendas",
@@ -659,7 +887,7 @@ def _operacao(acesso):
             ))
 
     if acesso["manutencoes"]:
-        manutencoes = Manutencao.objects.filter(status__in=["P", "A"]).count()
+        manutencoes = contagens.get("manutencoes", 0)
         if manutencoes:
             avisos.append(Aviso(
                 chave="manutencoes",
@@ -673,12 +901,7 @@ def _operacao(acesso):
             ))
 
     if acesso["ordens_servico"]:
-        ordens = OrdemServico.objects.filter(
-            status__in=OrdemServico.PENDENTES,
-            # Se houver dado legado inconsistente, somente a ponta atual da
-            # cadeia ocupa a bolinha; v1/v2/v3 nunca viram três serviços.
-            ordem_refeita__isnull=True,
-        ).count()
+        ordens = contagens.get("ordens_servico", 0)
         if ordens:
             avisos.append(Aviso(
                 chave="ordens_servico",
@@ -697,14 +920,15 @@ def _operacao(acesso):
     return avisos
 
 
-def _estoque():
+def _estoque(criticos=None):
     """Material no mínimo ou abaixo dele.
 
     A regra mora em `EstoqueMaterialQuerySet.criticos()`, junto do
     modelo, para este módulo e as telas de estoque não terem cada um a
     sua versão do que é "no mínimo".
     """
-    criticos = EstoqueMaterial.objects.criticos().count()
+    if criticos is None:
+        criticos = EstoqueMaterial.objects.criticos().count()
 
     if not criticos:
         return []
@@ -721,7 +945,7 @@ def _estoque():
     )]
 
 
-def _clientes_incompletos():
+def _clientes_incompletos(numeros=None):
     """Cadastros que ainda não sustentam orçamento, contato e deslocamento.
 
     UMA consulta, com o total e o que falta em cada parte: o detalhe diz
@@ -730,17 +954,18 @@ def _clientes_incompletos():
     As três partes são as mesmas de `filtro_incompletos`, e um cliente
     pode faltar em mais de uma (por isso as partes somam mais que o total).
     """
-    sem_contato, sem_documento, sem_endereco = partes_incompletas()
-    numeros = (
-        Cliente.objects
-        .filter(ativo=True)
-        .aggregate(
-            total=Count("pk", filter=filtro_incompletos(), distinct=True),
-            contato=Count("pk", filter=sem_contato, distinct=True),
-            documento=Count("pk", filter=sem_documento, distinct=True),
-            endereco=Count("pk", filter=sem_endereco, distinct=True),
+    if numeros is None:
+        sem_contato, sem_documento, sem_endereco = partes_incompletas()
+        numeros = (
+            Cliente.objects
+            .filter(ativo=True)
+            .aggregate(
+                total=Count("pk", filter=filtro_incompletos(), distinct=True),
+                contato=Count("pk", filter=sem_contato, distinct=True),
+                documento=Count("pk", filter=sem_documento, distinct=True),
+                endereco=Count("pk", filter=sem_endereco, distinct=True),
+            )
         )
-    )
     total = numeros["total"] or 0
     if not total:
         return []
@@ -769,12 +994,11 @@ def _clientes_incompletos():
     )]
 
 
-def _producao(user, gestor):
-    producoes = OrdemProducao.objects.exclude(
-        status__in=[OrdemProducao.Status.CONCLUIDA, OrdemProducao.Status.CANCELADA]
-    )
-
-    total = producoes.count()
+def _producao(user, gestor, total=None):
+    if total is None:
+        total = OrdemProducao.objects.exclude(
+            status__in=[OrdemProducao.Status.CONCLUIDA, OrdemProducao.Status.CANCELADA]
+        ).count()
     if not total:
         return []
 
@@ -790,7 +1014,7 @@ def _producao(user, gestor):
     )]
 
 
-def _projetos_3d():
+def _projetos_3d(novos=None):
     """Os projetos que clientes montaram no site (/monte-seu-projeto/) e ninguém abriu ainda.
 
     Sem a tabela (a migração ainda não rodou), não avisa nada -- e não
@@ -801,7 +1025,8 @@ def _projetos_3d():
 
     if not tabela_pronta(PedidoProjeto3D):
         return []
-    novos = PedidoProjeto3D.objects.filter(status="novo").count()
+    if novos is None:
+        novos = PedidoProjeto3D.objects.filter(status="novo").count()
     if not novos:
         return []
     return [Aviso(
@@ -832,30 +1057,52 @@ def coletar(user):
         return []
 
     hoje = timezone.localdate()
+    agora = timezone.now()
     avisos = []
 
+    # POUCAS IDAS AO BANCO, AS MESMAS REGRAS (LEIA-ME-V10, seção 120). Eram
+    # ~22 consultas cada vez que o pulso mudava -- ou seja, depois de TODA
+    # gravação, para cada pessoa com o painel aberto: ~3,7 s de Supabase.
+    # Agora: as contagens numa consulta (`contar_juntos`), as versões dos
+    # cinco avisos comerciais noutra (`versoes_dos_avisos`), as
+    # movimentações de colegas noutra, e UMA caminhada pelas cadeias de
+    # versões para todos os avisos de orçamento. Cada aviso continua
+    # montado pela função dele, com a regra dele.
+    contagens = contar_juntos(consultas_das_contagens(acesso))
+
     if acesso["orcamentos"]:
-        avisos += _atividades_orcamento(user)
-        avisos += _orcamentos(user, hoje)
-        avisos += _respostas_de_cliente(user, timezone.now())
+        versoes = versoes_dos_avisos(user, hoje, agora)
+        pendencias = _atividades_pendentes(user)
+        todas = set(versoes.pais)
+        if pendencias is not None:
+            todas |= pendencias[1]
+        negociacao = mapa_de_negociacoes(todas, pais_conhecidos=versoes.pais)
+        avisos += _atividades_orcamento(user, pendencias, negociacao)
+        avisos += _orcamentos(user, hoje, versoes, negociacao)
+        avisos += _respostas_de_cliente(user, agora, versoes, negociacao)
 
     if acesso["clientes"]:
-        avisos += _clientes_incompletos()
+        avisos += _clientes_incompletos({
+            "total": contagens.get("clientes_total", 0),
+            "contato": contagens.get("clientes_contato", 0),
+            "documento": contagens.get("clientes_documento", 0),
+            "endereco": contagens.get("clientes_endereco", 0),
+        })
 
     if acesso["vendas"] or acesso["gestao"]:
-        avisos += _projetos_3d()
+        avisos += _projetos_3d(contagens.get("projetos_3d", 0))
 
     if acesso["operacao"]:
-        avisos += _operacao(acesso)
+        avisos += _operacao(acesso, contagens)
 
     if acesso["estoque"]:
-        avisos += _estoque()
+        avisos += _estoque(contagens.get("estoque", 0))
 
     if acesso["producao"]:
         # A função é engenharia/acompanhamento de produção, portanto vê a
         # fábrica inteira. A atribuição individual continua destacada nas
         # próprias ordens.
-        avisos += _producao(user, True)
+        avisos += _producao(user, True, contagens.get("producao", 0))
 
     avisos.sort(key=lambda a: (PESO.get(a.nivel, 9), -a.quantidade))
     return avisos

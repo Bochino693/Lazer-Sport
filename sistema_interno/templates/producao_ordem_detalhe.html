@@ -57,6 +57,51 @@
 
 {% block scripts %}
 <script>
+{# A etapa grava sem recarregar a página inteira: LEIA-ME-V10, seção 120. #}
+LSTela.pronto(function () {
+  "use strict";
+  /* INICIAR, CONCLUIR, PAUSAR: O TOQUE RESPONDE NA HORA E NÃO SE REPETE.
+     Era um formulário comum: o POST, o redirecionamento e a PÁGINA INTEIRA
+     de novo (menu, estilos, scripts, o sino do zero) -- e, até ela chegar,
+     nada na tela dizia que o toque tinha pegado. Com luva, na bancada, o
+     segundo toque saía, e a etapa recebia dois "iniciar". Agora o botão
+     trava e diz "Salvando…" no mesmo instante, o POST sai uma vez só e só
+     a tela é trocada (a navegação suave), com o recado do servidor em
+     toast. Sem fetch (navegador antigo), o formulário comum continua. */
+  document.querySelectorAll("form.flow-action").forEach(function (form) {
+    form.addEventListener("submit", function (evento) {
+      if (!window.fetch || typeof window.LSAtualizarTela !== "function" || !window.Painel || !Painel.rede) return;
+      evento.preventDefault();
+      if (form.dataset.enviando === "1") return;
+      var botao = evento.submitter || null;
+      var dados = new FormData(form);
+      if (botao && botao.name) dados.set(botao.name, botao.value);
+      var botoes = Array.prototype.slice.call(form.querySelectorAll("button"));
+      var rotulo = botao ? botao.innerHTML : "";
+      form.dataset.enviando = "1";
+      botoes.forEach(function (b) { b.disabled = true; });
+      if (botao) botao.textContent = "Salvando…";
+      Painel.ocupado("Salvando…");
+      Painel.rede.post(form.getAttribute("action"), {
+        method: "POST", body: dados, credentials: "same-origin", redirect: "manual",
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      }).then(function (resposta) {
+        /* A view responde com o redirecionamento para esta mesma tela; o
+           recado (feito ou o motivo da recusa) vem nela, em toast. */
+        if (resposta.type !== "opaqueredirect" && !resposta.ok) throw new Error("http-" + resposta.status);
+        Painel.confirmarGravacao();
+        return window.LSAtualizarTela();
+      }).catch(function () {
+        form.dataset.enviando = "";
+        botoes.forEach(function (b) { b.disabled = false; });
+        if (botao) botao.innerHTML = rotulo;
+        Painel.aviso("A etapa não foi registrada: a conexão falhou. Toque de novo.", "erro");
+      }).finally(function () {
+        Painel.pronto();
+      });
+    });
+  });
+});
 (function(){const box=document.getElementById("imageLightbox"),foto=box.querySelector("img");function fechar(){box.classList.remove("open");box.setAttribute("aria-hidden","true");foto.src=""}document.querySelectorAll("[data-guia-imagem]").forEach(img=>img.addEventListener("click",()=>{foto.src=img.src;foto.alt=img.alt;box.classList.add("open");box.setAttribute("aria-hidden","false")}));box.querySelector("button").addEventListener("click",fechar);box.addEventListener("click",e=>{if(e.target===box)fechar()});document.addEventListener("keydown",e=>{if(e.key==="Escape")fechar()})})();
 </script>
 {% endblock %}

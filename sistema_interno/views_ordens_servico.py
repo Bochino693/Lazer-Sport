@@ -373,7 +373,14 @@ class OrdensServicoInnerView(
         # seguinte" em vez de responder "nada encontrado".
         indice_busca = self.indice_de_busca(consulta)
 
-        pagina = Paginator(consulta, self.POR_PAGINA).get_page(request.GET.get("page"))
+        paginador = Paginator(consulta, self.POR_PAGINA)
+        if not busca:
+            # O total da página é o número do cartão escolhido: o mesmo
+            # filtro, já contado logo acima. Um COUNT a menos (~170 ms no
+            # Supabase, LEIA-ME-V10 §120). Com busca o paginador conta, como
+            # antes: a busca por item junta linhas, e é ele quem as separa.
+            paginador.count = contagens[filtro]
+        pagina = paginador.get_page(request.GET.get("page"))
         ordens = list(pagina.object_list)
 
         base_publica = endereco_do_site(request)
@@ -667,13 +674,29 @@ class OrdensServicoInnerView(
 
     @staticmethod
     def _tecnicos():
-        from django.contrib.auth.models import User
-        from .permissoes import PRODUCAO, GESTAO, tem_funcao
+        from django.contrib.auth.models import Group, User
+        from django.db.models import Prefetch, Q
 
+        from .permissoes import GESTAO, NOMES_DOS_GRUPOS, PRODUCAO, tem_funcao
+
+        # UMA CONSULTA POR CONTA ATIVA -- inclusive as dos clientes da loja.
+        # A lista andava por TODAS as contas ativas do site e perguntava as
+        # funções de cada uma: uma viagem ao Supabase por conta (~170 ms
+        # cada, LEIA-ME-V10 §120), em toda abertura da tela de O.S. e na
+        # recarga depois de cada gravação. Agora o banco já entrega só quem
+        # pode ser técnico (superusuário, Produção ou Gestão), com os grupos
+        # numa segunda consulta; `tem_funcao` continua sendo quem decide.
+        candidatos = (
+            User.objects.filter(is_active=True)
+            .filter(Q(is_superuser=True) | Q(groups__name__in=(PRODUCAO, GESTAO)))
+            .distinct()
+            .order_by("first_name", "username")
+            .prefetch_related(Prefetch(
+                "groups", queryset=Group.objects.filter(name__in=NOMES_DOS_GRUPOS),
+            ))
+        )
         return [
-            usuario for usuario in User.objects.filter(is_active=True).order_by(
-                "first_name", "username"
-            )
+            usuario for usuario in candidatos
             if tem_funcao(usuario, PRODUCAO) or tem_funcao(usuario, GESTAO)
         ]
 

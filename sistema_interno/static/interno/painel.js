@@ -1411,6 +1411,13 @@
             var modal = form.closest(".modal");
             textoOcupado = "Atualizando a lista…";
             pintarOcupado("");
+            /* A tela (ou a lista) nova JÁ ESTÁ A CAMINHO. O sino, pedido
+               agora mesmo por `confirmarGravacao`, costuma voltar antes
+               dela com a revisão nova -- e o relógio da sincronia
+               (ls-sincronia.js) pedia a MESMA lista uma segunda vez, uma
+               ida inteira ao servidor e ao banco à toa (LEIA-ME-V10, §120).
+               O aviso diz a ele para esperar a que vem. */
+            document.dispatchEvent(new CustomEvent("ls:atualizacao-a-caminho"));
             /* A janela fecha porque a tela vai ser trocada: se ela é filha
                de outra (`abrirFilho`), a mãe não volta -- a tela nova traz
                a dela, e a velha seria descartada no meio da abertura. */

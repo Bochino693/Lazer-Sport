@@ -80,11 +80,129 @@ NOMES_DOS_GRUPOS = tuple(funcao.grupo for funcao in FUNCOES)
 
 
 def grupos_de_funcoes():
-    """Garante e devolve os grupos, sem depender de cadastro manual."""
-    return {
-        nome: Group.objects.get_or_create(name=nome)[0]
-        for nome in NOMES_DOS_GRUPOS
+    """Garante e devolve os grupos, sem depender de cadastro manual.
+
+    Os seis numa consulta; só o que faltar é criado. Eram seis
+    `get_or_create` seguidos -- seis viagens ao Supabase (~1 s, LEIA-ME-V10
+    §120) em cada "Salvar" da tela de acessos, para grupos que existem
+    desde o primeiro dia.
+    """
+    existentes = {
+        grupo.name: grupo
+        for grupo in Group.objects.filter(name__in=NOMES_DOS_GRUPOS)
     }
+    for nome in NOMES_DOS_GRUPOS:
+        if nome not in existentes:
+            existentes[nome] = Group.objects.get_or_create(name=nome)[0]
+    return {nome: existentes[nome] for nome in NOMES_DOS_GRUPOS}
+
+
+# ----------------------------------------------------------------------
+# AS FUNÇÕES DE CADA CONTA, GUARDADAS ENTRE UMA REQUISIÇÃO E OUTRA
+# (LEIA-ME-V10, seção 120)
+#
+# Toda requisição de quem não é superusuário perguntava ao banco "de que
+# grupos esta conta é?" -- uma viagem ao Supabase (~170 ms) em cada tela,
+# cada gravação e cada pulso do sino, para uma resposta que muda uma vez
+# por mês. Agora a resposta fica no cache, com uma VERSÃO na chave: QUALQUER
+# mudança de grupo (a tela de acessos, o /system/, um grupo renomeado ou
+# apagado -- os sinais em `ligar_ouvintes`) troca a versão, e a próxima
+# requisição de todo mundo pergunta de novo. A REGRA não muda: o que se
+# guarda é o mesmo conjunto de nomes que a consulta devolveria.
+#
+# SÓ ONDE O CACHE É UM SÓ. Com o cache na memória do processo
+# (`LocMemCache`) e mais de um worker, a troca de versão feita num worker
+# não chegaria ao outro, e uma função retirada continuaria valendo lá até o
+# prazo. Nesse caso nada é guardado (`_cache_das_funcoes` devolve um cache
+# que não guarda nada) -- o comportamento de antes. Com um worker (o do
+# Render hoje) ou com Redis, guarda.
+# ----------------------------------------------------------------------
+CHAVE_VERSAO_DAS_FUNCOES = "interno:funcoes:versao"
+PRAZO_DAS_FUNCOES = 300
+
+
+class _SemCache:
+    def get(self, chave, padrao=None):
+        return padrao
+
+    def set(self, *args, **kwargs):
+        return None
+
+
+def _cache_das_funcoes():
+    import os
+
+    from django.conf import settings
+    from django.core.cache import cache
+
+    backend = str(settings.CACHES.get("default", {}).get("BACKEND", ""))
+    try:
+        workers = int(os.getenv("WEB_WORKERS", "1") or 1)
+    except ValueError:
+        workers = 2
+    if backend.endswith("LocMemCache") and workers > 1:
+        return _SemCache()
+    return cache
+
+
+def _versao_das_funcoes():
+    versao = _cache_das_funcoes().get(CHAVE_VERSAO_DAS_FUNCOES)
+    if versao is None:
+        _trocar_versao_das_funcoes()
+        versao = _cache_das_funcoes().get(CHAVE_VERSAO_DAS_FUNCOES) or 0
+    return versao
+
+
+def _trocar_versao_das_funcoes():
+    import time
+
+    try:
+        _cache_das_funcoes().set(CHAVE_VERSAO_DAS_FUNCOES, time.time_ns(), None)
+    except Exception:  # noqa: BLE001 -- sem cache, cada requisição pergunta ao banco
+        pass
+
+
+def esquecer_funcoes(**kwargs):
+    """Algum grupo mudou: as funções guardadas de TODAS as contas perdem a validade.
+
+    NA HORA E DEPOIS DO COMMIT, como o cache do catálogo (core/signals.py):
+    uma requisição de outra thread pode ler a função antiga entre a troca e
+    o commit e guardá-la com a versão nova; a segunda troca apaga essa cópia.
+    """
+    from django.db import transaction
+
+    _trocar_versao_das_funcoes()
+    try:
+        transaction.on_commit(_trocar_versao_das_funcoes)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _chave_das_funcoes(user):
+    """A conta, o instante em que ela nasceu (um id reaproveitado não herda) e a versão."""
+    if not getattr(user, "pk", None):
+        return ""
+    criada = getattr(user, "date_joined", None)
+    try:
+        nascimento = int(criada.timestamp() * 1_000_000) if criada else 0
+        return f"interno:funcoes:v1:{user.pk}:{nascimento}:{_versao_das_funcoes()}"
+    except Exception:  # noqa: BLE001 -- sem cache, pergunta ao banco
+        return ""
+
+
+def ligar_ouvintes():
+    """Qualquer mudança de grupo troca a versão (chamado uma vez, de core/signals.py)."""
+    from django.contrib.auth import get_user_model
+    from django.db.models.signals import m2m_changed, post_delete, post_save
+
+    # `m2m_changed` cobre add/remove/clear/set por qualquer caminho (a tela
+    # de acessos, o /system/, os dois lados da relação). Nada é ligado ao
+    # post_save/post_delete da tabela de ligação: isso tiraria do Django a
+    # exclusão rápida dela, e uma viagem a mais em cada "Salvar" de acesso.
+    Usuario = get_user_model()
+    m2m_changed.connect(esquecer_funcoes, sender=Usuario.groups.through, dispatch_uid="interno.funcoes.m2m")
+    post_save.connect(esquecer_funcoes, sender=Group, dispatch_uid="interno.funcoes.save.Group")
+    post_delete.connect(esquecer_funcoes, sender=Group, dispatch_uid="interno.funcoes.delete.Group")
 
 
 def nomes_das_funcoes(user) -> set[str]:
@@ -104,10 +222,17 @@ def nomes_das_funcoes(user) -> set[str]:
             if grupo.name in NOMES_DOS_GRUPOS
         }
     else:
-        nomes = set(
-            user.groups.filter(name__in=NOMES_DOS_GRUPOS)
-            .values_list("name", flat=True)
-        )
+        chave = _chave_das_funcoes(user)
+        guardadas = _cache_das_funcoes().get(chave) if chave else None
+        if guardadas is not None:
+            nomes = set(guardadas)
+        else:
+            nomes = set(
+                user.groups.filter(name__in=NOMES_DOS_GRUPOS)
+                .values_list("name", flat=True)
+            )
+            if chave:
+                _cache_das_funcoes().set(chave, frozenset(nomes), PRAZO_DAS_FUNCOES)
 
     user._funcoes_interno_cache = frozenset(nomes)
     return nomes
@@ -274,7 +399,9 @@ def atribuir_funcoes(user, codigos) -> list[Funcao]:
     ]
     grupos = grupos_de_funcoes()
 
-    user.groups.remove(*Group.objects.filter(name__in=NOMES_DOS_GRUPOS))
+    # Os mesmos grupos que a consulta acima acabou de trazer (todos os das
+    # funções): tirar por eles poupa reler a tabela.
+    user.groups.remove(*grupos.values())
     if escolhidas:
         user.groups.add(*(grupos[funcao.grupo] for funcao in escolhidas))
     user._funcoes_interno_cache = frozenset(

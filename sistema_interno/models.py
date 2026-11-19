@@ -2212,6 +2212,21 @@ class Orcamento(Prime):
                     self.vinculado_em = anterior["vinculado_em"]
         super().save(*args, **kwargs)
 
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        """Guarda a situação e o cliente lidos do banco (core/signals.py, o mapa do site).
+
+        A vitrine só precisa ser refeita quando a proposta pode ter tirado
+        ou posto um cliente no mapa: nasceu, saiu, mudou de situação ou de
+        cliente. Editar itens e preços não mexe no mapa (LEIA-ME-V10, §120).
+        """
+        instancia = super().from_db(db, field_names, values)
+        instancia._mapa_lido = (
+            instancia.__dict__.get("status", None),
+            instancia.__dict__.get("cliente_id", None),
+        )
+        return instancia
+
     @property
     def destinatario(self):
         if self.cliente:

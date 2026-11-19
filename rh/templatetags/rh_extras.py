@@ -21,6 +21,74 @@ from django.urls import reverse
 
 register = template.Library()
 
+# ----------------------------------------------------------------------
+# A FAIXA SAI DO CACHE (LEIA-ME-V10, seção 120)
+#
+# Ela está em TODA tela do painel, inclusive na que o painel recarrega
+# depois de cada gravação, e custava duas ou três viagens ao Supabase
+# (~170 ms cada) para responder, quase sempre, o mesmo: a contagem de quem
+# não assinou e a ficha (e o termo) de quem está olhando. Agora a resposta
+# fica guardada por pessoa, com a VERSÃO do RH na chave: salvar ou apagar
+# uma ficha ou um termo (assinar, enviar, substituir -- rh/sinais.py) troca
+# a versão, e a próxima tela de qualquer pessoa lê de novo. O prazo curto
+# é só a rede de segurança para mais de um worker sem cache compartilhado
+# (o mesmo aviso de gunicorn.conf.py).
+# ----------------------------------------------------------------------
+CHAVE_VERSAO_DA_FAIXA = "rh:faixa:versao"
+PRAZO_DA_FAIXA = 60
+
+
+def versao_da_faixa():
+    from django.core.cache import cache
+
+    versao = cache.get(CHAVE_VERSAO_DA_FAIXA)
+    if versao is None:
+        _trocar_versao_da_faixa()
+        versao = cache.get(CHAVE_VERSAO_DA_FAIXA) or 0
+    return versao
+
+
+def _trocar_versao_da_faixa():
+    import time
+
+    from django.core.cache import cache
+
+    try:
+        cache.set(CHAVE_VERSAO_DA_FAIXA, time.time_ns(), None)
+    except Exception:  # noqa: BLE001 -- sem cache, a faixa vence sozinha
+        pass
+
+
+def esquecer_faixa(**kwargs):
+    """Uma ficha ou um termo mudou: toda faixa guardada perde a validade.
+
+    Na hora e de novo depois do commit: uma tela montada por outra thread no
+    meio da gravação não fica com a contagem velha guardada na versão nova.
+    """
+    from django.db import transaction
+
+    _trocar_versao_da_faixa()
+    try:
+        transaction.on_commit(_trocar_versao_da_faixa)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _dados_da_faixa(usuario, acesso, termo):
+    """O que a faixa mostra para esta pessoa -- só dados, sem endereço."""
+    if acesso.gere(usuario):
+        pendentes = termo.pendentes().count()
+        if pendentes:
+            return {
+                "mostrar": True,
+                "tipo": "gestao",
+                "quantos": pendentes,
+                "proprio": _proprio_pendente(usuario, acesso, termo),
+            }
+    if _proprio_pendente(usuario, acesso, termo):
+        return {"mostrar": True, "tipo": "proprio"}
+    return {"mostrar": False}
+
 
 @register.inclusion_tag("rh/partes/faixa_termo.html", takes_context=True)
 def faixa_do_termo(context):
@@ -39,18 +107,22 @@ def faixa_do_termo(context):
         return vazio
 
     try:
-        if acesso.gere(usuario):
-            pendentes = termo.pendentes().count()
-            if pendentes:
-                return {
-                    "mostrar": True,
-                    "tipo": "gestao",
-                    "quantos": pendentes,
-                    "url": reverse("rh_colaboradores") + "?termo=pendente",
-                    "proprio": _proprio_pendente(usuario, acesso, termo),
-                }
-        if _proprio_pendente(usuario, acesso, termo):
-            return {"mostrar": True, "tipo": "proprio", "url": reverse("rh_meu_termo")}
+        from django.core.cache import cache
+
+        # Quem gere vê a faixa da equipe; mudar a função muda a chave.
+        chave = f"rh:faixa:v1:{usuario.pk}:{int(acesso.gere(usuario))}:{versao_da_faixa()}"
+        dados = cache.get(chave)
+        if dados is None:
+            dados = _dados_da_faixa(usuario, acesso, termo)
+            cache.set(chave, dados, PRAZO_DA_FAIXA)
+        if not dados.get("mostrar"):
+            return vazio
+        dados = dict(dados)
+        if dados["tipo"] == "gestao":
+            dados["url"] = reverse("rh_colaboradores") + "?termo=pendente"
+        else:
+            dados["url"] = reverse("rh_meu_termo")
+        return dados
     except Exception:  # noqa: BLE001 -- a faixa nunca derruba a tela
         import logging
 

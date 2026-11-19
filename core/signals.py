@@ -254,8 +254,39 @@ def adotar_partidas_dos_jogos(sender, request, user, **kwargs):
 from sistema_interno.models import EnderecoCliente as _EnderecoDoCliente, Orcamento as _PropostaDoCliente
 for _modelo in (_ClienteDoPainel, _EnderecoDoCliente, _PropostaDoCliente):
     for _sinal, _evento in ((post_save, "save"), (post_delete, "delete")):
+        if _modelo is _PropostaDoCliente and _sinal is post_save:
+            continue  # a proposta salva tem regra própria, logo abaixo
         _sinal.connect(_invalidar_home, sender=_modelo, weak=False,
                        dispatch_uid=f"core.mapa.{_evento}.{_modelo._meta.label_lower}")
+
+
+def _proposta_salva(sender, instance, created=False, update_fields=None, raw=False, **kwargs):
+    """A proposta só refaz a vitrine quando pode ter mexido no mapa (LEIA-ME-V10, §120).
+
+    O mapa mostra o cliente com proposta aguardando, em negociação ou
+    aprovada: quem decide é a SITUAÇÃO e o CLIENTE da proposta. Cada
+    "Salvar" de orçamento apagava o cache público inteiro (a home, a Arena,
+    a Loja...) e, segundos depois, o servidor refazia todas essas telas em
+    segundo plano -- uma centena de consultas ao Supabase e CPU disputando
+    com quem estava usando o painel -- por uma mudança de item ou de preço,
+    que não aparece no site. Agora: nasceu, ou a situação ou o cliente
+    mudou (ou não dá para saber), refaz como antes; o resto, não.
+    """
+    if raw:
+        return
+    if not created:
+        if update_fields is not None and not ({"status", "cliente"} & set(update_fields)):
+            return
+        lido = getattr(instance, "_mapa_lido", None)
+        if lido is not None and lido == (instance.status, instance.cliente_id):
+            return
+    # A próxima gravação do mesmo objeto compara com o que acabou de ir.
+    instance._mapa_lido = (instance.status, instance.cliente_id)
+    _invalidar_home(sender, **kwargs)
+
+
+post_save.connect(_proposta_salva, sender=_PropostaDoCliente, weak=False,
+                  dispatch_uid="core.mapa.save.sistema_interno.orcamento")
 
 
 
@@ -308,3 +339,15 @@ def _ligar_recorte_das_pecas():
 
 
 _ligar_recorte_das_pecas()
+
+
+# As funções de cada conta ficam guardadas entre uma requisição e outra
+# (sistema_interno/permissoes.py, LEIA-ME-V10 seção 120): qualquer mudança de
+# grupo, por qualquer caminho, troca a versão e todo mundo pergunta de novo.
+def _ligar_funcoes_da_equipe():
+    from sistema_interno.permissoes import ligar_ouvintes
+
+    ligar_ouvintes()
+
+
+_ligar_funcoes_da_equipe()

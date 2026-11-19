@@ -2,6 +2,12 @@
 (function (window, document) {
   "use strict";
   var estado = null, emVoo = false, pendente = false, caminho = "", timer = null;
+  /* Depois de GRAVAR, a própria gravação já pede a tela (ou a lista) nova
+     (painel.js, "ls:atualizacao-a-caminho"). Enquanto ela não chega, a
+     revisão do sino é mais nova que a da tela -- e pedir a lista aqui seria
+     buscar duas vezes a mesma coisa. Espera a que vem ("ls:atualizada");
+     o prazo é a rede de segurança se ela nunca avisar. */
+  var aCaminhoDesde = 0, PRAZO_DA_TELA_A_CAMINHO = 15000;
 
   function ocupado() {
     var foco = document.activeElement;
@@ -14,6 +20,7 @@
 
   function conferir() {
     if (document.visibilityState !== "visible" || emVoo || !window.LSNavigation) return;
+    if (aCaminhoDesde && Date.now() - aCaminhoDesde < PRAZO_DA_TELA_A_CAMINHO) return;
     var marcador = document.querySelector("[data-ls-sincronia]");
     if (!marcador) return;
     if (caminho !== window.location.href) { caminho = window.location.href; pendente = false; }
@@ -34,6 +41,8 @@
   }
   document.addEventListener("ls:estado", function (evento) { estado = evento.detail; agendar(); });
   document.addEventListener("ls:tela", function () { pendente = false; agendar(); });
+  document.addEventListener("ls:atualizacao-a-caminho", function () { aCaminhoDesde = Date.now(); });
+  document.addEventListener("ls:atualizada", function () { aCaminhoDesde = 0; agendar(); });
   document.addEventListener("hidden.bs.modal", agendar);
   document.addEventListener("focusout", agendar);
   document.addEventListener("click", function () { if (pendente) agendar(); });

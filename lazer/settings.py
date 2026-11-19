@@ -270,7 +270,15 @@ if not SUPABASE_DATABASE_URL:
 # sintoma é só "o sistema está lento". Agora quem decide é o ambiente:
 # produção reaproveita, desenvolvimento não (para o `runserver` não
 # segurar conexão entre reinícios).
-_CONN_MAX_AGE_PADRAO = "60" if (IS_RENDER or ENVIRONMENT == "production") else "0"
+#
+# QUANTO TEMPO. Eram 60 segundos -- contados da ABERTURA, não do último uso:
+# a cada minuto de painel em uso, cada thread do gunicorn jogava fora uma
+# conexão boa e abria outra, e abrir conexão com o Supabase em outra região
+# custa ~1,2 s (TCP + TLS + autenticação, medido em 11/2026). Dez minutos
+# (LEIA-ME-V10, seção 120). Conexão que morreu nesse meio-tempo é pega pela
+# conferência abaixo (conn_health_checks + lazer/banco_postgres), que
+# continua valendo -- o prazo longo não deixa conexão morta ser usada.
+_CONN_MAX_AGE_PADRAO = "600" if (IS_RENDER or ENVIRONMENT == "production") else "0"
 try:
     DB_CONN_MAX_AGE = max(0, int(os.getenv("DB_CONN_MAX_AGE", _CONN_MAX_AGE_PADRAO)))
 except ValueError:
@@ -290,6 +298,13 @@ DATABASES = {
 # permite rodar a suíte local com um banco SQLite descartável, sem mudar o banco
 # usado em produção.
 if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+    # O mesmo backend do Django, com a conferência da conexão reaproveitada
+    # (o `SELECT 1` do conn_health_checks) dispensada quando a conexão foi
+    # usada há menos de DB_CONEXAO_RECENTE_S segundos e o socket dela está
+    # quieto -- nada chegou do servidor, nem o aviso de que a fechou. Uma
+    # viagem a menos (~170 ms) em cada requisição de um clique. Ver
+    # lazer/banco_postgres/base.py e LEIA-ME-V10, seção 120. 0 = conferir sempre.
+    DATABASES["default"]["ENGINE"] = "lazer.banco_postgres"
     try:
         DB_STATEMENT_TIMEOUT_MS = max(
             3000,
@@ -315,6 +330,14 @@ if DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
             "-c idle_in_transaction_session_timeout=15000"
         ),
     })
+
+# Segundos depois do último uso em que a conexão quieta dispensa o SELECT 1
+# (lazer/banco_postgres). Curto de propósito: o pooler encerra conexão
+# PARADA há minutos, e a parada há mais que isso confere como sempre.
+try:
+    DB_CONEXAO_RECENTE_S = max(0.0, float(os.getenv("DB_CONEXAO_RECENTE_S", "30")))
+except ValueError:
+    DB_CONEXAO_RECENTE_S = 30.0
 
 
 # ============================================================
