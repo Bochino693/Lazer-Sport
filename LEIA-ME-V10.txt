@@ -7964,3 +7964,182 @@ Dependência nova: rjsmin (requirements.txt).
        função, a rota com a marca, a régua na tela do contrato andando
        quando o cliente assina) e os do link (tests_documento_assinatura:
        vale até VALIDADE_DO_LINK, expira 1 s depois).
+
+118) AS FOTOS DE ESTÚDIO NO SHOWROOM: NENHUMA FOTO DE PRODUTO NUM FUNDO LISO
+   O PEDIDO (o dono, com o print do catálogo /brinquedos/: o card do Air
+   Game Kids no adesivo Alienígenas -- a arte "HOCKEY KIDS" -- e os cards
+   dos basquetes no fundo AZUL liso do estúdio da seção 96): "esses
+   brinquedos com o fundo azul devem ser de ambiente como falei, nada de
+   fundos singulares." Toda foto de produto mostra a máquina num LUGAR -- o
+   showroom da Lazer & Sport, como o card do Air Game Home (seção 64) --,
+   nunca num fundo de cor única, num degradê ou no fundo infinito de
+   estúdio.
+   O QUE ESTAVA NO AR NUM FUNDO LISO (a borda de todas as fotos dos cards
+   medida: a capa e as que giram por adesivo): só as fotos de estúdio da
+   seção 96 --
+     * Air Game Kids: a capa / Astronautas (estudio-catalogo-air-game-kids-
+       a91e26b785) e a Alienígenas (estudio-air-game-kids-alienigenas-capa-
+       87566492e4);
+     * Basquete Home: a capa / Azul (estudio-catalogo-basquete-home-
+       54c0a61606) e a Quadrinhos (estudio-basquete-street-quadrinhos-capa-
+       ccba4a0590);
+     * Strike Kids: a capa (estudio-strike-kids-capa-c2abecd83e);
+     e as vistas da galeria que a seção 96 fez (a frente em 3/4, os lados,
+     o verso, o tampo, o jogador, o de cima), no mesmo azul. Ficaram de
+     fora, como pedido: os Kits (as artes informativas, à espera das fotos
+     de verdade), o Espaço Esportivo Modelo 1 e o Brinquedão Modelo 5 (já
+     estão em ambientes).
+   O SHOWROOM DENTRO DO BLENDER (ferramentas/fotos3d/showroom.py). Nada de
+   voltar ao three.js colado no fundo (o chefe, na seção 96: "apagadas, sem
+   vida; os fundos parecem muito falsos"): é o MESMO estúdio da seção 96 --
+   o Cycles, a mesma luz de produto (o softbox, o rebatedor, o teto e as
+   luzes de recorte da marca, que agora só a máquina recebe: o light
+   linking do Cycles, as plantas e as paredes não ficam azuis nem
+   vermelhas), a mesma nitidez, o OpenImageDenoise -- com a LOJA montada em
+   volta da máquina, fiel à foto de verdade do Boliche Virtual:
+     * o NICHO: o painel preto texturizado (as placas irregulares em
+       relevo) entre as duas colunas de moldura branca, com a PLACA DO LOGO
+       acesa (o logo oficial, core/static/images/logoofi.png, pela placa
+       do ferramentas/categorias/placa.py: é a loja da empresa); a SANCA
+       PRETA com os dois perfis de LED e os spots que lavam a parede; o
+       CANTEIRO BRANCO com o friso de LED, a terra com os seixos e as
+       plantas tropicais MODELADAS ali, procedurais (bromélias, espadas-de-
+       são-jorge e palmeiras areca com os folíolos; a nervura, o tom que
+       muda de folha em folha e a luz de baixo que atravessa a folha) --
+       nada baixado da internet;
+     * à esquerda do nicho, a parede com os adesivos de fliperama
+       GENÉRICOS em pixel (estrela, coração, moeda, raio, controle, seta e a
+       trilha de pontinhos, a textura feita pelo próprio script): nada de
+       personagem, arte ou marca de ninguém;
+     * à direita, a VITRINE de vidro fumê (o reflexo pela lei de Fresnel
+       e, lá dentro, desfocadas, as prateleiras acesas com caixas e bolas
+       coloridas, genéricas), os montantes e os frisos de LED azul;
+     * o PORCELANATO claro polido de 60 cm (o rejunte fosco e afundado, o
+       tom de cada placa, os veios leves), que reflete a máquina e as
+       luzes, com a sombra de contato;
+     * o teto escuro com os perfis de LED e os spots, e as luzes gerais da
+       loja, mais fracas que as do produto (o lugar mais escuro que a
+       máquina, como na seção 64); a lente f/5,6 (era f/9 no estúdio): a
+       máquina inteira nítida e o fundo um tanto desfocado.
+     Nenhuma pessoa.
+   UM ENQUADRAMENTO POR MÁQUINA (como na seção 96): a câmera e a lente de
+   cada tomada saem do adesivo de referência e valem para todos os
+   adesivos -- a máquina não encolhe de um para o outro. Agora é a LOJA que
+   anda e gira em volta da máquina, e o lugar de cada tomada também vale
+   para todos os adesivos (produtos.py, a `sala` de cada tomada): o
+   CENÁRIO atrás da máquina -- "plantas" (o canteiro e o painel preto),
+   "logo" (a placa ao lado), "fliperama", "vitrine" ou "canto" (a coluna
+   branca entre o nicho e a vitrine) -- e o ÂNGULO da parede, um diferente
+   do outro em cada foto, para não repetir. No "logo", a sala anda até a
+   placa cair INTEIRA ao lado da máquina (na fração da foto pedida, à
+   esquerda ou à direita, onde a máquina deixa o canto livre) e a placa
+   desce, se for preciso, até o alto dela ficar dentro da foto -- na CAPA,
+   abaixo da faixa de cima do card (15% da foto), onde moram os selos
+   "Projeto sob consulta" / "À venda" (seção 107): o selo nunca cobre o
+   logo (conferido no print do card); sem descer para dentro das plantas, e
+   menor nas máquinas grandes (a câmera longe). Nos outros cenários, quando
+   a placa aparece, aparece inteira: a sala anda o mínimo (de 10 em 10 cm)
+   até ela ficar inteira ou de fora -- nada de logo cortado na borda (o
+   renderizar.py avisa se sobrar algum). O Basquete Home azul
+   (a foto da fábrica: não tem 3D) continua no cartão de pé, no MESMO quadro
+   e no MESMO tamanho do Quadrinhos, agora com a loja, a sombra e o reflexo
+   no porcelanato; a franja clara da base do recorte (o chão branco da foto
+   da fábrica, que no porcelanato virava um fio branco embaixo da máquina)
+   sai na colagem (acabamento.limpar_franja: só embaixo e só o claro sem
+   cor junto da borda; o branco da arte fica).
+   AS FOTOS (os MESMOS arquivos, caminhos e tamanhos da seção 96: o cadastro
+   não quebra; a capa 1600 x 1600 com a máquina inteira, grande, com a
+   folga de ~7,5%):
+     * Basquete Home (o Quadrinhos em arena/modelos/basquete-street-
+       quadrinhos/ e o Azul em capas_catalogo/basquete-home.webp): a capa
+       com a placa do logo à esquerda, o 3/4 na vitrine, o lado esquerdo na
+       parede de fliperama, o lado direito no canto (a placa e a vitrine
+       atrás), o verso no canteiro, o jogador (de quem joga, do alto) no
+       canteiro;
+     * Air Game Kids, os dois adesivos (air-game-kids-astronautas/ e
+       air-game-kids-alienigenas/; a capa do produto, capas_catalogo/air-
+       game-kids.webp, é a dos Astronautas): a capa no canteiro, a frente
+       em 3/4 no fliperama, o lado direito na vitrine, o lado esquerdo no
+       canto, a cabeceira no canteiro (o outro lado), o tampo do alto (a
+       parede mais perto: o canteiro entra no alto da foto);
+     * Strike Kids (strike-kids/): a capa com a placa do logo à esquerda,
+       no alto (a pista desce para a esquerda e deixa o canto livre), o 3/4
+       pelo lado esquerdo com a LOJA APAGADA (os LEDs, a tela e o neon
+       acesos, a parede de fliperama e o reflexo no porcelanato:
+       tres_quartos_esquerda.webp), a frente na vitrine, o lado direito no
+       canto, o lado esquerdo no canteiro, o verso no fliperama e o de cima
+       no canteiro.
+     Ficaram como estavam: o recorte sem fundo do Strike Kids (foto.webp,
+     para as artes), as cores dele (cor_*.webp) e as "capa_noite" (só
+     mestre, para as artes e o Instagram; o renderizar.py as faz, na loja
+     apagada, quando pedido).
+   O RENDER (a máquina tem 4 núcleos e 15 GB): 3200 px na capa (--fator 2,
+   o padrão), até 12 amostras adaptativas e o OpenImageDenoise; ~4 min por
+   capa e ~2 a 3 min por vista; as capas primeiro. A cor, o acabamento e o
+   .webp são os da seção 96 (o Khronos PBR Neutral, a vinheta, a curva, a
+   vibração, a capa até 250 KB e a vista até 200 KB). Os mestres ficam fora
+   do repositório.
+   NO SITE: a migração de DADOS 0215_fotos_de_estudio_no_showroom (depois
+   da 0214; só RunPython) chama o MESMO core.fotos_estudio.no_deploy da
+   0197: SÓ NO RENDER (o Cloudinary só está lá); cada posição com a foto de
+   estúdio azul (estudio-<pasta>-<vista>-<assinatura>) recebe a de hoje na
+   MESMA linha -- a assinatura nova no nome: só a que mudou sobe, rodar de
+   novo não sobe nada --; a capa do adesivo padrão continua a capa do
+   produto; a foto que a equipe pôs no painel fica; o cache é limpo. Os
+   nomes cabem no campo (o ImageField guarda até 100 caracteres, com a
+   pasta e o sufixo do Cloudinary). Se a subida falhar, o deploy segue e o
+   aviso diz o comando:
+       python manage.py fotos_de_estudio [--simular] [--so "Strike Kids"]
+   A volta da 0215 não faz nada (as azuis saíram do repositório).
+   A GUARDA PARA NÃO VOLTAR (core/fundo_liso.py, só o Pillow):
+     * A RÉGUA: a foto reduzida a 320 px e a MOLDURA (16 px de cada lado, em
+       blocos de 8 x 8) medida em duas coisas -- a TEXTURA (o desvio da luz
+       dentro dos blocos; vale o 3º quartil) e a COR QUASE ÚNICA (a fração
+       da moldura numa família de cor só: o matiz e os vizinhos, de 30 em
+       30 graus; no cinza/preto/branco, a faixa de luz e a vizinha). FUNDO
+       LISO = cor quase única (0,75 ou mais) E pouca textura (3,0 ou menos).
+       Uma só não basta: o galpão claro do Espaço Esportivo é quase todo de
+       um tom (0,79), mas tem as treliças (textura 4,1); a vitrine preta do
+       Top Racer é lisa (1,2), mas tem o piso claro (cor 0,50). Calibrada
+       nas fotos do repositório: as azuis da seção 96 deram cor de 0,78 a
+       1,00 e textura até 2,4 (todas reprovadas); as do showroom, cor até
+       0,70 ou textura de 4,1 para cima (todas aprovadas).
+     * O TESTE (core/tests_fundo_liso.py) mede TODA foto de produto que o
+       repositório controla: as capas do catálogo (capas_catalogo/: as do
+       showroom e as da Black Friday), as capas e as vistas dos nossos 3D
+       (arena/modelos/<chave>/), as de estúdio (agora no showroom) e as da
+       Black Friday que sobem (os produtos sem a capa em cena: o Brinquedão
+       Modelo 5). De fora, cada uma pelo seu motivo: as plantas baixas (o
+       desenho do projeto), os recortes para as artes (foto.webp e as cores
+       do Strike Kids) e os recortes do cartaz da Black Friday dos produtos
+       com a capa em cena (não sobem: seção 78). A mensagem da falha diz a
+       cor e a textura medidas.
+     * O AVISO DO PAINEL (não bloqueia), como o do formato quadrado (seção
+       80): a capa do produto, a frente de um adesivo novo ou a frente
+       trocada de um adesivo, enviada num fundo liso, grava e ganha "A foto
+       do card deve mostrar o brinquedo num ambiente (o showroom), não num
+       fundo liso." A foto de outra posição não ganha (não é a do card); a
+       sem fundo (branca ou transparente) também não: ela já vira o recorte
+       para as artes, e o painel diz isso.
+   CONFERIDO: as folhas antes/depois (ferramentas/fotos3d/folhas.py --antes
+   HEAD) e o /brinquedos/ local com os produtos como estão no ar (as fotos
+   azuis de antes, com os mesmos nomes do Cloudinary) e depois da subida
+   (o fotos_estudio.rodar, como a 0215 faz): os três cards na loja, nos
+   dois adesivos do giro, no computador e no celular.
+   REFAZER (o Blender como módulo do Python, seção 96):
+       python3.11 -m venv ~/blender-venv
+       ~/blender-venv/bin/pip install bpy==5.0.1 numpy Pillow
+       ~/blender-venv/bin/python ferramentas/fotos3d/renderizar.py --previa 600 --produto strike-kids --tomada capa   (para conferir)
+       ~/blender-venv/bin/python ferramentas/fotos3d/renderizar.py --mestres /tmp/fotos3d --site --tomada capa       (as capas primeiro)
+       ~/blender-venv/bin/python ferramentas/fotos3d/renderizar.py --mestres /tmp/fotos3d --site --tomada frente lado_direito lado_esquerdo verso tampo jogador tres_quartos_esquerda de_cima
+       python3 ferramentas/fotos3d/folhas.py --antes HEAD --saida /tmp/fotos3d/folhas
+   e, no servidor, a migração nova chamando core.fotos_estudio.no_deploy
+   (ou `python manage.py fotos_de_estudio`).
+   Código: ferramentas/fotos3d/ (showroom.py novo; renderizar.py: a sala de
+   cada tomada, o light linking das luzes de recorte, f/5,6; produtos.py:
+   a `sala`; estudio.py: sem o fundo infinito; acabamento.py:
+   limpar_franja), core/fundo_liso.py, core/views.py (o aviso),
+   core/fotos_estudio.py, core/migrations/0215_fotos_de_estudio_no_showroom.py.
+   Testes: core/tests_fundo_liso.py; core/tests_fotos_estudio.py,
+   core/tests_capas_catalogo.py e core/tests_capas_em_cena.py (os tamanhos,
+   a máquina que não encolhe, a "vida" das fotos).

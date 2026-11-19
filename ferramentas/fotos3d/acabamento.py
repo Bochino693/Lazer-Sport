@@ -80,12 +80,34 @@ def gravar_webp(img, destino, qualidade=90, limite=LIMITE, minima=72):
         q -= 2
 
 
+def limpar_franja(img, largura=4, de_baixo=0.7):
+    """Tira a franja clara da base do recorte (o chão branco da foto da fábrica que ficou no contorno).
+
+    No porcelanato do showroom ela virava um fio branco embaixo da máquina. Só na parte de baixo
+    (`de_baixo`: dali para baixo, em fração da altura) e só o claro sem cor a até `largura` px da borda
+    do recorte: o branco de verdade da arte, por dentro, fica.
+    """
+    a = np.asarray(img.getchannel("A"), dtype=np.uint8)
+    dentro = np.asarray(img.getchannel("A").filter(ImageFilter.MinFilter(2 * largura + 1)), dtype=np.uint8)
+    rgb = np.asarray(img.convert("RGB"), dtype=np.int16)
+    claro = (rgb.min(axis=2) > 165) & ((rgb.max(axis=2) - rgb.min(axis=2)) < 32)
+    perto_da_borda = (a > 0) & (dentro < 255)
+    embaixo = np.zeros_like(claro)
+    embaixo[int(a.shape[0] * de_baixo):] = True
+    novo = a.copy()
+    novo[claro & perto_da_borda & embaixo] = 0
+    saida = img.copy()
+    saida.putalpha(Image.fromarray(novo))
+    return saida
+
+
 def colar_foto(render, foto, caixa, contraste=1.06, cor=1.08, nitidez=True):
     """Cola a foto recortada (RGBA) na `caixa` (frações x0, y0, x1, y1) do render (PIL RGB)."""
     w, h = render.size
     x0, y0, x1, y1 = caixa
     largura, altura = round((x1 - x0) * w), round((y1 - y0) * h)
     img = Image.open(foto).convert("RGBA") if isinstance(foto, (str, Path)) else foto.convert("RGBA")
+    img = limpar_franja(img)
     alfa = img.getchannel("A")
     rgb = img.convert("RGB")
     rgb = ImageEnhance.Contrast(rgb).enhance(contraste)

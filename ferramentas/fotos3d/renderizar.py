@@ -13,8 +13,9 @@
     # só uma máquina, um adesivo ou uma tomada; --previa 960 renderiza pequeno (para conferir)
     ~/blender-venv/bin/python ferramentas/fotos3d/renderizar.py --produto strike-kids --tomada capa --previa 960
 
-O que cada máquina fotografa está em produtos.py; o estúdio (a luz, o fundo, os materiais, a
-câmera) em estudio.py; o acabamento (a vinheta, a redução, o realce, o .webp) em
+O que cada máquina fotografa está em produtos.py; o estúdio (a luz, os materiais, a câmera) em
+estudio.py; o lugar -- o showroom da Lazer & Sport, montado em volta da máquina (seção 118) -- em
+showroom.py; o acabamento (a vinheta, a redução, o realce, o .webp) em
 acabamento.py. Melhorou o .glb? É só rodar de novo: o enquadramento sai das medidas de
 verdade, o mesmo para todos os adesivos da máquina. Sem --site, as fotos do site vão para
 <mestres>/<produto>/<adesivo>/site/ (para conferir antes). Com --site, também anota a caixa
@@ -39,12 +40,13 @@ import bpy  # noqa: E402
 
 import acabamento  # noqa: E402
 import estudio  # noqa: E402
+import showroom  # noqa: E402
 from produtos import PRODUTOS, RAIZ  # noqa: E402
 
-#: Os dois modos de luz: o estúdio e o estúdio apagado (os LEDs acesos).
+#: Os dois modos de luz: a loja acesa com a luz de produto e a loja apagada (os LEDs acesos).
 LUZ = {
-    "estudio": {"brancas": 1.0, "cor": 1.0, "fundo": 1.0, "led": 1.0, "exposicao": -0.3, "brilho": 0.18},
-    "noite": {"brancas": 0.045, "cor": 0.3, "fundo": 0.22, "led": 2.2, "exposicao": 0.0, "brilho": 0.4},
+    "estudio": {"brancas": 1.0, "cor": 1.0, "led": 1.0, "exposicao": -0.3, "brilho": 0.18},
+    "noite": {"brancas": 0.045, "cor": 0.3, "led": 2.2, "exposicao": 0.0, "brilho": 0.4},
 }
 LADO_4K = 3840
 AREAS = RAIZ / "ferramentas" / "categorias" / "areas-dos-produtos.json"
@@ -74,14 +76,20 @@ class Estudio:
             self.relatorio = estudio.aplicar_materiais(self.malhas, emissao=produto.get("emissao"), artes=artes)
         else:
             self.giro = None
-        self.fundo = estudio.criar_fundo(escala=self.escala, centro_brilho=altura * 0.55,
-                                         raio_brilho=1.6 * max(altura, largura, profundidade) + 0.8,
-                                         brilho_fundo=1.5 * produto.get("fundo", 1.0))
+        # o showroom da Lazer & Sport em volta da máquina (showroom.py): o lugar de cada tomada é
+        # posto em `posicionar`, antes do render
+        self.showroom = showroom.Showroom(semente=produto.get("semente", 19), altura_da_maquina=altura)
         self.luzes = estudio.criar_luzes(escala=self.escala, centro=(0, 0, altura * 0.5))
         self.energias = {luz.name: luz.data.energy * produto.get("luzes", {}).get(luz.name, 1.0) for luz in self.luzes}
-        arvore = self.fundo.data.materials[0].node_tree
-        self.fundo_brilho = next(n for n in arvore.nodes if n.type == "MATH")
-        self.fundo_forca = self.fundo_brilho.inputs[1].default_value
+        # as luzes de recorte nas cores da marca desenham o contorno da MÁQUINA: só ela as recebe (as plantas e
+        # as paredes da loja não ficam azuis nem vermelhas)
+        if self.malhas:
+            so_a_maquina = bpy.data.collections.new("recebe-o-recorte")
+            for obj in self.malhas:
+                so_a_maquina.objects.link(obj)
+            for luz in self.luzes:
+                if luz.name.startswith("recorte"):
+                    luz.light_linking.receiver_collection = so_a_maquina
         self.leds = []
         for obj in self.malhas:
             for slot in obj.material_slots:
@@ -91,7 +99,8 @@ class Estudio:
                     if b is not None and b.inputs["Emission Strength"].default_value > 0 and \
                             all(b is not x[0] for x in self.leds):
                         self.leds.append((b, b.inputs["Emission Strength"].default_value))
-        self.camera = estudio.criar_camera()
+        # f/5,6: a máquina inteira nítida e o fundo da loja um tanto desfocado (a profundidade de campo leve)
+        self.camera = estudio.criar_camera(f_stop=produto.get("f", 5.6))
         self.cartao = None
 
     def girar(self, graus):
@@ -107,7 +116,7 @@ class Estudio:
         for luz in self.luzes:
             fator = cfg["cor"] if luz.name.startswith("recorte") else cfg["brancas"]
             luz.data.energy = self.energias[luz.name] * fator
-        self.fundo_brilho.inputs[1].default_value = self.fundo_forca * cfg["fundo"]
+        self.showroom.modo(modo, fator_loja=self.produto.get("loja", 1.0))
         for b, forca in self.leds:
             b.inputs["Emission Strength"].default_value = forca * cfg["led"]
         self.cena.view_settings.exposure = cfg["exposicao"] + self.produto.get("exposicao", 0.0)
@@ -119,7 +128,7 @@ class Estudio:
         self.cena.render.resolution_percentage = 100
         self.cena.render.film_transparent = transparente
         self.cena.render.image_settings.color_mode = "RGBA" if transparente else "RGB"
-        self.fundo.hide_render = transparente
+        self.showroom.esconder(transparente)
         self.cena.render.filepath = str(destino)
         Path(destino).parent.mkdir(parents=True, exist_ok=True)
         inicio = time.time()
@@ -158,6 +167,17 @@ def enquadramentos(produto, est):
             caixa = estudio.projetar_no_quadro(est.pontos(), quadros[nome])
             quadros[nome]["caixa_maquina"] = tuple(min(max(c, 0.0), 1.0) for c in caixa)
     return quadros
+
+
+def sala_da_tomada(produto, tomada):
+    """O lugar da tomada no showroom: {"cenario", "angulo", "fundo", "deslocar"} (produtos.py, `sala`)."""
+    altura, largura, profundidade = produto["medidas"]
+    # a parede a uma distância que deixa a máquina girar sem encostar no canteiro e nas plantas
+    raio = math.hypot(largura, profundidade) / 2
+    sala = {"cenario": "plantas", "angulo": 0.0, "fundo": round(raio + 1.35, 2), "deslocar": 0.0}
+    sala.update(produto.get("sala", {}))
+    sala.update(tomada.get("sala", {}))
+    return sala
 
 
 def destinos(variante, tomada, dados=None):
@@ -215,6 +235,14 @@ def fotografar(chave, args, relatorio):
                     bpy.data.objects.remove(est.cartao, do_unlink=True)
                 est.cartao, caixa, est.cartao_png = estudio.cartao_da_foto(RAIZ / variante["foto"], quadro, quadro["caixa"])
                 est.cartao_tomada = nome
+            # o lugar: o cenário atrás da máquina, a parede de frente ou de lado (o mesmo para todos os
+            # adesivos da máquina, como a câmera)
+            caixa_da_placa = est.showroom.posicionar(quadro=quadro, **sala_da_tomada(produto, tomada))
+            if sala_da_tomada(produto, tomada)["cenario"] == "logo" and caixa_da_placa and (
+                    min(caixa_da_placa[:2]) < 0.01 or max(caixa_da_placa[2:]) > 0.99):
+                aviso = f"{variante['chave']}/{nome}: a placa do logo sai cortada ({[round(c, 2) for c in caixa_da_placa]})"
+                print("AVISO:", aviso)
+                relatorio[chave]["avisos"].append(aviso)
             est.luz(tomada.get("luz", "estudio"))
             # a principal do lado em que a face grande da máquina (as laterais, x do .glb) aparece
             estudio.espelhar_luzes(est.luzes, tomada.get("principal", lado_da_lateral(tomada["giro"] + produto.get("frente", 0))))

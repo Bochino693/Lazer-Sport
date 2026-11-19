@@ -16,14 +16,24 @@ Uma TOMADA:
   * camera: a altura da câmera (m), a de quem fotografa em pé (~1,6 m) ou mais alta;
   * saida: (largura, altura) da foto do site (o 4K de dentro tem a mesma proporção);
   * margem: a folga de cada lado no lado que limita (fração; a máquina inteira, nunca cortada);
-  * luz: "estudio" (o padrão) ou "noite" (o estúdio apagado: os LEDs, o neon e a tela acesos);
+  * luz: "estudio" (o padrão: a loja acesa e a luz de produto) ou "noite" (a loja apagada: os
+    LEDs, o neon, a tela, a placa e o canteiro acesos);
+  * sala: o lugar no SHOWROOM da Lazer & Sport (showroom.py, seção 118 do LEIA-ME V10) -- o
+    `cenario` atrás da máquina ("plantas": o canteiro e o painel preto; "logo": a placa do logo
+    ao lado, inteira, na fração `placa` da largura da foto, no `tamanho_placa` e com o alto a
+    `topo_da_placa` do alto da foto -- na capa, 0,15: abaixo dos selos do card; "fliperama": a
+    parede de adesivos em pixel; "vitrine": o vidro fumê com as prateleiras acesas; "canto": a
+    coluna branca entre o nicho e a vitrine), o `angulo` da parede (graus) e o `fundo` (a
+    distância da máquina à parede, em m; sem ele, a que deixa a máquina girar longe das plantas).
+    Vale para todos os adesivos da máquina, como a câmera. Cada tomada muda o que fica atrás e o
+    lado, para não repetir;
   * detalhe: regex dos objetos/materiais que a câmera enquadra (o detalhe de perto: aí a
     máquina não aparece inteira, de propósito);
   * transparente: o recorte sem fundo (o "recorte para artes": só o painel o mostra);
   * so_mestre: só o mestre 4K (não vai para o site: para as artes e o Instagram).
 Uma MÁQUINA ainda pode ter `luzes` ({luz: fator}: a mesa clara pede menos luz de cima),
-`exposicao` (em pontos de exposição, somada à do modo de luz) e `fundo` (o fator do brilho
-azul do fundo).
+`exposicao` (em pontos de exposição, somada à do modo de luz), `loja` (o fator das luzes da
+loja), `f` (a abertura da lente; 5,6 sem nada) e `sala` (o padrão das tomadas).
 """
 
 from pathlib import Path
@@ -48,10 +58,9 @@ PRODUTOS = {
         # altura: na dúvida, vale o banco (e o .glb tem 2,70 m)
         "medidas": (2.70, 1.00, 2.40),
         "frente": 0,
-        # a máquina preta: o fotógrafo abre um pouco e clareia o fundo (a arte escura não some
-        # nele, e a capa não fica escura demais: o card pede brilho médio acima de 70)
+        # a máquina preta: o fotógrafo abre um pouco (a arte escura não some na loja, e a capa não
+        # fica escura demais: o card pede brilho médio acima de 70)
         "exposicao": 0.4,
-        "fundo": 1.4,
         "variantes": (
             {"chave": "quadrinhos", "nome": "Quadrinhos", "glb": f"{MODELOS}/basquete-street-quadrinhos.glb",
              "pasta": f"{MODELOS}/basquete-street-quadrinhos",
@@ -63,17 +72,23 @@ PRODUTOS = {
         ),
         "tomadas": {
             # a capa: de 3/4 pela direita e do alto (o ponto de vista da foto da fábrica do azul)
-            "capa": {"giro": -30, "camera": 2.35, "saida": CAPA},
-            "frente": {"giro": 33, "camera": 2.0, "saida": VISTA},
-            "lado_esquerdo": {"giro": 74, "camera": 1.6, "saida": VISTA},
+            # (a placa à esquerda, no alto: o topo da máquina vai para a direita)
+            "capa": {"giro": -30, "camera": 2.35, "saida": CAPA,
+                     "sala": {"cenario": "logo", "angulo": -12, "placa": 0.17, "tamanho_placa": 0.8,
+                              "topo_da_placa": 0.15}},
+            "frente": {"giro": 33, "camera": 2.0, "saida": VISTA, "sala": {"cenario": "vitrine", "angulo": 16}},
+            "lado_esquerdo": {"giro": 74, "camera": 1.6, "saida": VISTA, "sala": {"cenario": "fliperama", "angulo": -10}},
             # (de trás e pela direita: a mesma arte espelhada do lado esquerdo, de outro ponto)
-            "lado_direito": {"giro": -104, "camera": 1.5, "saida": VISTA},
-            "verso": {"giro": 148, "camera": 1.9, "saida": VISTA},
+            "lado_direito": {"giro": -104, "camera": 1.5, "saida": VISTA, "sala": {"cenario": "canto", "angulo": 20}},
+            "verso": {"giro": 148, "camera": 1.9, "saida": VISTA, "sala": {"cenario": "plantas", "angulo": -18}},
             # o detalhe: de quem joga, do alto -- a quadra, as bolas, a cesta, o BOOM! e o placar
             "jogador": {"giro": 0, "camera": 2.45, "saida": VISTA, "margem": 0.03,
-                        "detalhe": r"prancha|aro|fundo-cesta|placar|bolas|rede|chapa-de-parada|botao|teto-interno"},
-            # a capa com o estúdio apagado (o neon, o placar e a testeira acesos)
-            "capa_noite": {"giro": -30, "camera": 2.35, "saida": CAPA, "luz": "noite", "so_mestre": True},
+                        "detalhe": r"prancha|aro|fundo-cesta|placar|bolas|rede|chapa-de-parada|botao|teto-interno",
+                        "sala": {"cenario": "plantas", "angulo": 8}},
+            # a capa com a loja apagada (o neon, o placar e a testeira acesos)
+            "capa_noite": {"giro": -30, "camera": 2.35, "saida": CAPA, "luz": "noite", "so_mestre": True,
+                           "sala": {"cenario": "logo", "angulo": -12, "placa": 0.17, "tamanho_placa": 0.8,
+                                    "topo_da_placa": 0.15}},
         },
     },
     # ------------------------------------------------------------------
@@ -98,15 +113,18 @@ PRODUTOS = {
              "extras": {"capa": (f"{CAPAS}/air-game-kids.webp",)}},
         ),
         "tomadas": {
-            "capa": {"giro": -32, "camera": 1.55, "saida": CAPA},
-            "frente": {"giro": 30, "camera": 1.7, "saida": VISTA},
-            "lado_direito": {"giro": -8, "camera": 1.25, "saida": VISTA},
+            "capa": {"giro": -32, "camera": 1.55, "saida": CAPA, "sala": {"cenario": "plantas", "angulo": 12}},
+            "frente": {"giro": 30, "camera": 1.7, "saida": VISTA, "sala": {"cenario": "fliperama", "angulo": -15}},
+            "lado_direito": {"giro": -8, "camera": 1.25, "saida": VISTA, "sala": {"cenario": "vitrine", "angulo": 10}},
             # na altura das crianças
-            "lado_esquerdo": {"giro": 150, "camera": 1.0, "saida": VISTA},
-            "verso": {"giro": 72, "camera": 1.35, "saida": VISTA},
+            "lado_esquerdo": {"giro": 150, "camera": 1.0, "saida": VISTA, "sala": {"cenario": "canto", "angulo": -20}},
+            "verso": {"giro": 72, "camera": 1.35, "saida": VISTA, "sala": {"cenario": "plantas", "angulo": -25}},
             # o tampo, do alto: o campo, os rebatedores e o logotipo (de pé: pelo lado de lá)
-            "tampo": {"giro": 180, "camera": 3.1, "saida": VISTA, "margem": 0.05},
-            "capa_noite": {"giro": -32, "camera": 1.55, "saida": CAPA, "luz": "noite", "so_mestre": True},
+            # (a parede mais perto: o canteiro e as plantas entram no alto da foto, que é quase toda o tampo)
+            "tampo": {"giro": 180, "camera": 3.1, "saida": VISTA, "margem": 0.05,
+                      "sala": {"cenario": "plantas", "angulo": 6, "fundo": 1.75}},
+            "capa_noite": {"giro": -32, "camera": 1.55, "saida": CAPA, "luz": "noite", "so_mestre": True,
+                           "sala": {"cenario": "plantas", "angulo": 12}},
         },
     },
     # ------------------------------------------------------------------
@@ -122,22 +140,28 @@ PRODUTOS = {
              "artes": "ferramentas/modelos3d/strike-kids/adesivos"},
         ),
         "tomadas": {
-            "capa": {"giro": -36, "camera": 1.6, "saida": CAPA},
-            # a capa espelhada (pelo lado esquerdo) com o estúdio apagado: os LEDs, a tela e o neon acesos
-            "tres_quartos_esquerda": {"giro": 36, "camera": 1.6, "saida": QUADRADA, "luz": "noite"},
-            "frente": {"giro": 0, "camera": 1.55, "saida": QUADRADA},
+            # (a placa à esquerda, no alto: a pista desce para a esquerda e deixa o canto livre)
+            "capa": {"giro": -36, "camera": 1.6, "saida": CAPA,
+                     "sala": {"cenario": "logo", "angulo": -10, "placa": 0.2, "tamanho_placa": 0.6,
+                              "topo_da_placa": 0.15}},
+            # a capa espelhada (pelo lado esquerdo) com a loja apagada: os LEDs, a tela e o neon acesos
+            "tres_quartos_esquerda": {"giro": 36, "camera": 1.6, "saida": QUADRADA, "luz": "noite",
+                                      "sala": {"cenario": "fliperama", "angulo": 12}},
+            "frente": {"giro": 0, "camera": 1.55, "saida": QUADRADA, "sala": {"cenario": "vitrine", "angulo": -12}},
             # os dois lados são a mesma arte espelhada: de pontos diferentes (o direito puxando para
             # a frente, o esquerdo para trás e mais baixo), senão um é o espelho do outro -- e o site
             # recusa a vista repetida (core.conferir_fotos)
-            "lado_direito": {"giro": -66, "camera": 1.5, "saida": QUADRADA},
-            "lado_esquerdo": {"giro": 112, "camera": 1.2, "saida": QUADRADA},
-            "verso": {"giro": 146, "camera": 1.7, "saida": QUADRADA},
+            "lado_direito": {"giro": -66, "camera": 1.5, "saida": QUADRADA, "sala": {"cenario": "canto", "angulo": 15}},
+            "lado_esquerdo": {"giro": 112, "camera": 1.2, "saida": QUADRADA, "sala": {"cenario": "plantas", "angulo": -15}},
+            "verso": {"giro": 146, "camera": 1.7, "saida": QUADRADA, "sala": {"cenario": "fliperama", "angulo": 20}},
             # de frente e do alto: a pista inteira até a tela
-            "de_cima": {"giro": -18, "camera": 3.7, "saida": QUADRADA},
+            "de_cima": {"giro": -18, "camera": 3.7, "saida": QUADRADA, "sala": {"cenario": "plantas", "angulo": 0}},
             # o recorte sem fundo (para as artes; só o painel mostra)
             "foto": {"giro": -36, "camera": 1.6, "saida": QUADRADA, "transparente": True},
-            # a própria capa com o estúdio apagado
-            "capa_noite": {"giro": -36, "camera": 1.6, "saida": CAPA, "luz": "noite", "so_mestre": True},
+            # a própria capa com a loja apagada
+            "capa_noite": {"giro": -36, "camera": 1.6, "saida": CAPA, "luz": "noite", "so_mestre": True,
+                           "sala": {"cenario": "logo", "angulo": -10, "placa": 0.2, "tamanho_placa": 0.6,
+                                    "topo_da_placa": 0.15}},
         },
     },
 }

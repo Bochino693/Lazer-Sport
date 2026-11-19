@@ -4043,12 +4043,13 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             mensagem += f" {recortes} foto(s) sem fundo ficaram guardadas como recorte para artes (fora do site)."
         frente = request.FILES.get("adesivo_perfil")
         if frente:
-            # a frente é a capa do adesivo no card: quadrada (LEIA-ME 80); fora disso, só o aviso
-            from . import capas_quadradas
+            # a frente é a capa do adesivo no card: quadrada (LEIA-ME 80) e num ambiente, nunca num
+            # fundo liso (LEIA-ME 118); fora disso, só o aviso
+            from . import capas_quadradas, fundo_liso
 
-            aviso_do_formato = capas_quadradas.aviso_de_formato(frente)
-            if aviso_do_formato:
-                mensagem += f" {aviso_do_formato}"
+            for aviso in (capas_quadradas.aviso_de_formato(frente), fundo_liso.aviso_de_fundo(frente)):
+                if aviso:
+                    mensagem += f" {aviso}"
         return self._responder_adesivos(request, brinquedo, mensagem)
 
     def _adesivo_posicao(self, request):
@@ -4067,10 +4068,12 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             raise ErroDeFormulario("Adesivo: escolha a posição e a foto.")
         aviso_do_formato = ""
         if tipo == "perfil":
-            # a frente é a capa do adesivo no card: quadrada (LEIA-ME 80); fora disso, só o aviso
-            from . import capas_quadradas
+            # a frente é a capa do adesivo no card: quadrada (LEIA-ME 80) e num ambiente, nunca num
+            # fundo liso (LEIA-ME 118); fora disso, só o aviso
+            from . import capas_quadradas, fundo_liso
 
-            aviso_do_formato = capas_quadradas.aviso_de_formato(arquivo)
+            aviso_do_formato = " ".join(a for a in (capas_quadradas.aviso_de_formato(arquivo),
+                                                     fundo_liso.aviso_de_fundo(arquivo)) if a)
         if self._gravar_posicao(brinquedo, variante, tipo, arquivo) == "recorte":
             return self._responder_adesivos(
                 request, brinquedo,
@@ -4612,12 +4615,14 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         brancas = self._fotos_sem_fundo(arquivos)
 
         perfil_novo = arquivos.get("perfil")
-        # a capa do card é quadrada (LEIA-ME 80): a fora do formato só ganha o aviso (grava assim mesmo)
+        # a capa do card é quadrada (LEIA-ME 80) e mostra o brinquedo num ambiente, nunca num fundo
+        # liso (LEIA-ME 118): a que foge só ganha o aviso (grava assim mesmo)
         aviso_do_formato = ""
         if perfil_novo:
-            from . import capas_quadradas
+            from . import capas_quadradas, fundo_liso
 
-            aviso_do_formato = capas_quadradas.aviso_de_formato(perfil_novo)
+            aviso_do_formato = " ".join(a for a in (capas_quadradas.aviso_de_formato(perfil_novo),
+                                                     fundo_liso.aviso_de_fundo(perfil_novo)) if a)
         if perfil_novo:
             brinquedo.imagem_brinquedo = perfil_novo
             brinquedo.capa_sem_fundo = ""  # a capa nova: a conferência começa de novo

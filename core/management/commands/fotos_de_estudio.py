@@ -5,8 +5,9 @@
     python manage.py fotos_de_estudio --so "Strike Kids"    (o produto, o adesivo ou "produto (adesivo)")
     python manage.py fotos_de_estudio --desfazer            (as fotos de antes voltam)
 
-Normalmente nem é preciso: a migração 0197 faz isso no deploy. Refez as fotos
-(ferramentas/fotos3d/renderizar.py --site)? Rode de novo: só as que mudaram sobem.
+Normalmente nem é preciso: as migrações 0197 e 0215 (as fotos no showroom, LEIA-ME 118) fazem
+isso no deploy. Refez as fotos (ferramentas/fotos3d/renderizar.py --site)? Rode de novo: só as
+que mudaram sobem.
 """
 
 from django.core.management.base import BaseCommand

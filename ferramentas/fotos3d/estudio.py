@@ -6,21 +6,22 @@ câmera 4K". E: "o Basquete Home normal e o preto: a máquina encolheu". Daqui s
 dos nossos 3D como num estúdio de verdade (ver renderizar.py, que roda tudo, e produtos.py,
 o que cada máquina fotografa):
 
-  * O FUNDO INFINITO (o "cove"): o chão que sobe em curva até a parede, sem canto, em azul
-    marinho profundo, com o brilho azul royal atrás da máquina (a luz de fundo com gelatina
-    azul). O chão é brilhante (acrílico): o reflexo macio da máquina e a sombra de contato.
+  * O LUGAR: o SHOWROOM da Lazer & Sport montado em volta da máquina (showroom.py, seção 118
+    do LEIA-ME V10). O fundo infinito azul de antes (o "cove" marinho com o brilho royal) saiu:
+    o dono não quer "fundos singulares" -- toda foto de produto num ambiente.
   * A LUZ: o softbox grande de cima, à esquerda (a principal), o rebatedor do outro lado, o
     softbox de teto (o brilho no alto das peças) e as duas luzes de recorte atrás, nas cores
     da marca -- azul #007BFF à esquerda e vermelho #E63946 à direita --, que desenham o
-    contorno da máquina. A luz gira com a câmera: a máquina é que gira (a mesa giratória do
-    fotógrafo), então todas as vistas têm a mesma luz e o mesmo fundo.
+    contorno da máquina (só a máquina as recebe: o light linking do Cycles). A luz gira com a
+    câmera: a máquina é que gira (a mesa giratória do fotógrafo); a loja anda e gira em volta
+    dela para cada tomada (o que fica atrás, o lado).
   * OS MATERIAIS (pelos nomes do .glb, `classe_do_material`): o adesivo vira vinil laminado
     brilhante (verniz por cima: o reflexo nítido do softbox), a estrutura preta vira pintura
     eletrostática acetinada, o metal é metal, a borracha é fosca, o acrílico deixa passar a
     luz, e o LED, o neon e a tela ACENDEM (emissão forte, com o brilho do Glare no
     compositor: iluminam a máquina e o chão, como na foto de verdade).
-  * A CÂMERA: a de um fotógrafo (lente de 60 mm equivalente, f/9, um tico de profundidade de
-    campo), na altura dos olhos. O ENQUADRAMENTO É UM SÓ POR MÁQUINA (`enquadrar`): a câmera
+  * A CÂMERA: a de um fotógrafo (lente de 60 mm equivalente; f/5,6 na loja: a máquina nítida e
+    o fundo um tanto desfocado), na altura dos olhos. O ENQUADRAMENTO É UM SÓ POR MÁQUINA (`enquadrar`): a câmera
     se acha pelas medidas de verdade do adesivo de referência, e os outros adesivos da mesma
     máquina usam a MESMA câmera -- a mesma distância, a mesma lente: o mesmo tamanho na foto.
   * AS CORES: AgX com o "Punchy" (contraste e saturação de foto), a exposição acertada para o
@@ -44,8 +45,7 @@ import re
 import tempfile
 from pathlib import Path
 
-import bpy  # (o bpy antes: ele é que põe o bmesh e o mathutils no caminho)
-import bmesh
+import bpy  # (o bpy antes: ele é que põe o mathutils no caminho)
 import mathutils
 import numpy as np
 
@@ -66,10 +66,6 @@ def linear(hexa):
 
 AZUL_MARCA = "#007BFF"
 VERMELHO_MARCA = "#E63946"
-#: O fundo: o marinho das bordas e o azul royal do brilho atrás da máquina.
-MARINHO = "#040A26"
-MARINHO_CHAO = "#0A1440"
-ROYAL = "#1D4BFF"
 
 # ----------------------------------------------------------------------
 # A cena e o render
@@ -161,119 +157,6 @@ def compositor(cena, brilho=0.18, limiar=2.5, tamanho=0.42):
     grupo.links.new(glare.outputs["Image"], saida.inputs[0])
     cena.render.use_compositing = True
     return glare
-
-
-# ----------------------------------------------------------------------
-# O fundo infinito
-# ----------------------------------------------------------------------
-
-
-def criar_fundo(escala=1.0, brilho_fundo=1.5, centro_brilho=1.2, raio_brilho=3.2):
-    """O fundo infinito: o chão (brilhante, acrílico) que sobe em curva até a parede (fosca).
-
-    `escala`: o tamanho da máquina (1 = ~2,5 m). O brilho azul royal fica na parede, atrás da
-    máquina, na altura `centro_brilho` (m), com o raio `raio_brilho` (m).
-    """
-    fundo_y = 4.2 * escala + 1.2
-    raio = 2.6 * escala + 0.6
-    frente_y = -30.0
-    altura = 30.0
-    largura = 60.0
-    perfil = [(frente_y, 0.0)]
-    passos = 32
-    for i in range(passos + 1):
-        t = (math.pi / 2) * i / passos
-        perfil.append((fundo_y - raio + raio * math.sin(t), raio - raio * math.cos(t)))
-    perfil.append((fundo_y, altura))
-    malha = bpy.data.meshes.new("fundo-infinito")
-    bm = bmesh.new()
-    linhas = []
-    for x in (-largura / 2, largura / 2):
-        linhas.append([bm.verts.new((x, y, z)) for y, z in perfil])
-    for i in range(len(perfil) - 1):
-        face = bm.faces.new((linhas[0][i], linhas[1][i], linhas[1][i + 1], linhas[0][i + 1]))
-        face.smooth = True
-    bm.normal_update()
-    bm.to_mesh(malha)
-    bm.free()
-    objeto = bpy.data.objects.new("fundo-infinito", malha)
-    bpy.context.scene.collection.objects.link(objeto)
-    # a normal do chão tem de apontar para cima
-    if malha.polygons[0].normal.z < 0:
-        bm = bmesh.new()
-        bm.from_mesh(malha)
-        bmesh.ops.reverse_faces(bm, faces=bm.faces)
-        bm.to_mesh(malha)
-        bm.free()
-    objeto.data.materials.append(material_do_fundo(fundo_y, centro_brilho, raio_brilho * max(escala, 0.6), brilho_fundo))
-    return objeto
-
-
-def material_do_fundo(fundo_y, centro_z, raio, forca):
-    """O marinho com o brilho royal atrás da máquina; o chão envernizado (o reflexo) e a parede fosca."""
-    mat = bpy.data.materials.new("fundo-infinito")
-    # o brilho do fundo não é luz que se mira (o fundo é enorme): só o que bate nele o vê. Bem
-    # mais rápido, e a máquina continua com o azul nas bordas pelos reflexos
-    mat.cycles.emission_sampling = "NONE"
-    nos = mat.node_tree.nodes
-    ln = mat.node_tree.links
-    bsdf = nos.get("Principled BSDF")
-    coord = nos.new("ShaderNodeTexCoord")
-    xyz = nos.new("ShaderNodeSeparateXYZ")
-    ln.new(coord.outputs["Object"], xyz.inputs[0])
-    # o brilho: um gradiente esférico em volta de um ponto na parede, atrás da máquina
-    mapa = nos.new("ShaderNodeMapping")
-    mapa.inputs["Location"].default_value = (0.0, -fundo_y / raio, -centro_z / raio)
-    mapa.inputs["Scale"].default_value = (1 / raio, 1 / raio, 1 / (raio * 0.8))
-    ln.new(coord.outputs["Object"], mapa.inputs["Vector"])
-    # (o Mapping aplica escala e depois soma a posição: o ponto (0, fundo_y, centro_z) vai para a origem)
-    grad = nos.new("ShaderNodeTexGradient")
-    grad.gradient_type = "SPHERICAL"
-    ln.new(mapa.outputs["Vector"], grad.inputs["Vector"])
-    rampa = nos.new("ShaderNodeValToRGB")
-    els = rampa.color_ramp.elements
-    els[0].position = 0.0
-    els[0].color = (*linear(MARINHO), 1)
-    els[1].position = 1.0
-    els[1].color = (*linear(ROYAL), 1)
-    meio = els.new(0.45)
-    meio.color = (*linear("#0D2280"), 1)
-    rampa.color_ramp.interpolation = "B_SPLINE"
-    ln.new(grad.outputs["Fac"], rampa.inputs["Fac"])
-    ln.new(rampa.outputs["Color"], bsdf.inputs["Emission Color"])
-    # o brilho só para a câmera (e para o reflexo no chão): nos adesivos brilhantes, o fundo é
-    # escuro, como o estúdio de verdade com as bandeiras pretas em volta -- a arte reflete só os
-    # softboxes e fica com as cores cheias, sem o véu azul
-    caminho = nos.new("ShaderNodeLightPath")
-    so_camera = nos.new("ShaderNodeMath")
-    so_camera.operation = "MULTIPLY"
-    so_camera.inputs[1].default_value = forca
-    ln.new(caminho.outputs["Is Camera Ray"], so_camera.inputs[0])
-    ln.new(so_camera.outputs["Value"], bsdf.inputs["Emission Strength"])
-    mat["forca_do_brilho"] = forca
-    # a cor de base: o marinho (a luz das máquinas e dos softboxes cai nele)
-    bsdf.inputs["Base Color"].default_value = (*linear(MARINHO_CHAO), 1)
-    # o chão (z ~ 0) envernizado; a parede, fosca: a passagem é suave (sem emenda)
-    passagem = nos.new("ShaderNodeMapRange")
-    passagem.inputs["From Min"].default_value = 0.02
-    passagem.inputs["From Max"].default_value = 0.9
-    passagem.inputs["To Min"].default_value = 1.0
-    passagem.inputs["To Max"].default_value = 0.0
-    passagem.interpolation_type = "SMOOTHSTEP"
-    ln.new(xyz.outputs["Z"], passagem.inputs["Value"])
-    ln.new(passagem.outputs["Result"], bsdf.inputs["Coat Weight"])
-    bsdf.inputs["Coat Roughness"].default_value = 0.1
-    bsdf.inputs["Coat IOR"].default_value = 1.5
-    aspereza = nos.new("ShaderNodeMapRange")
-    aspereza.inputs["From Min"].default_value = 0.02
-    aspereza.inputs["From Max"].default_value = 0.9
-    aspereza.inputs["To Min"].default_value = 0.35
-    aspereza.inputs["To Max"].default_value = 0.8
-    aspereza.interpolation_type = "SMOOTHSTEP"
-    ln.new(xyz.outputs["Z"], aspereza.inputs["Value"])
-    ln.new(aspereza.outputs["Result"], bsdf.inputs["Roughness"])
-    bsdf.inputs["Specular IOR Level"].default_value = 0.4
-    return mat
 
 
 # ----------------------------------------------------------------------

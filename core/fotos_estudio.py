@@ -5,12 +5,18 @@ Alienígenas: "como o McDonald's: você olha a foto do lanche e quer comer, porq
 nitidez. As nossas estão apagadas, sem vida; os fundos parecem muito falsos, não uma foto
 de câmera 4K". E: "o Basquete Home normal e o preto: a máquina encolheu".
 
-As fotos foram refeitas no estúdio do Blender (ferramentas/fotos3d/: o Cycles, o fundo
-infinito azul, o softbox, as luzes de recorte da marca, os adesivos de vinil brilhante e os
-LEDs acesos), com UM enquadramento por máquina -- o azul e o preto do Basquete Home, os
-Astronautas e os Alienígenas do Air Game Kids saem do mesmo tamanho na mesma foto. Os
-arquivos do site são os mesmos de antes (core/static/site/arena/modelos/<pasta>/*.webp e as
-capas do catálogo, core/static/site/capas_catalogo/), com a foto nova.
+As fotos foram refeitas no estúdio do Blender (ferramentas/fotos3d/: o Cycles, o softbox, as
+luzes de recorte da marca, os adesivos de vinil brilhante e os LEDs acesos), com UM
+enquadramento por máquina -- o azul e o preto do Basquete Home, os Astronautas e os
+Alienígenas do Air Game Kids saem do mesmo tamanho na mesma foto. Os arquivos do site são os
+mesmos de antes (core/static/site/arena/modelos/<pasta>/*.webp e as capas do catálogo,
+core/static/site/capas_catalogo/), com a foto nova.
+
+SEÇÃO 118: o dono, com o print do catálogo -- "esses brinquedos com o fundo azul devem ser de
+ambiente como falei, nada de fundos singulares." O fundo infinito azul saiu: as mesmas fotos
+foram refeitas com o SHOWROOM da Lazer & Sport montado no Blender em volta da máquina
+(ferramentas/fotos3d/showroom.py). A 0215 sobe as de hoje pelo mesmo `no_deploy` (só as que
+mudaram: a assinatura no nome).
 
 O site mostra as fotos do Cloudinary (ImagemBrinquedo). Para cada foto de ITENS, `aplicar`:
   * a posição (a frente/capa, em 3/4, os lados, o verso, de cima) do adesivo que está com a
@@ -26,8 +32,8 @@ O site mostra as fotos do Cloudinary (ImagemBrinquedo). Para cada foto de ITENS,
 `desfazer` volta tudo: a foto de estúdio sai do cadastro (o arquivo fica no Cloudinary) e a
 de antes volta para a posição (a capa, com o papel "cena" e de volta no produto).
 
-SÓ NO RENDER (o Cloudinary só está lá; a migração 0197). Se uma subida falhar, o deploy
-segue e o aviso diz o comando:
+SÓ NO RENDER (o Cloudinary só está lá; as migrações 0197 e 0215). Se uma subida falhar, o
+deploy segue e o aviso diz o comando:
     python manage.py fotos_de_estudio [--simular] [--so "Strike Kids"] [--desfazer]
 """
 
@@ -257,7 +263,7 @@ def aplicar_foto(brinquedo, variante, e_padrao, foto, Brinquedos, ImagemBrinqued
                                + f": {foto['rotulo']}")[:180],
         )
         if hasattr(nova, "fundo"):
-            nova.fundo = "com"  # o fundo azul do estúdio: a conferência do fundo não precisa baixar
+            nova.fundo = "com"  # o showroom (seção 118): a conferência do fundo não precisa baixar
         if atual is not None:  # a de antes fica guardada no adesivo, sem a posição (fora da galeria)
             ImagemBrinquedo.objects.filter(pk=atual.pk).update(tipo=None, papel_na_capa="")
         _subir(foto, nova)
@@ -341,7 +347,7 @@ def rodar(Brinquedos, ImagemBrinquedo, VarianteAdesivo, so=(), simular=False, de
 
 
 def no_deploy(apps, schema_editor=None, avisar=print):
-    """A migração 0197: só no Render (o Cloudinary só está lá); se algo falhar, o deploy segue."""
+    """As migrações 0197 e 0215: só no Render (o Cloudinary só está lá); se algo falhar, o deploy segue."""
     from django.conf import settings
 
     if not getattr(settings, "IS_RENDER", False):
