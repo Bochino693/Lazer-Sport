@@ -8258,3 +8258,19 @@ Dependência nova: rjsmin (requirements.txt).
    vira o próximo passo, "Gerar o contrato" (a tela do documento) ou
    "Depois". Só para quem edita a proposta no Comercial e só com itens.
    Testes: tests_resolver_avisos.py (test_aprovacao_manual_num_toque).
+   A PÁGINA FECHA A FILEIRA ("veja que cabe mais dois elementos e você
+   paginou ... faça tudo ficar em conformidade"). Clientes vinha com 30 por
+   página: com 4 cartões por fileira, a última fileira de uma página que
+   continuava saía com 2 e um buraco. Agora toda lista do painel pagina em
+   múltiplo de 12 (1, 2, 3 e 4 colunas dividem): Clientes, notas, materiais,
+   manutenções e as outras de 30 -> 36; Orçamentos, O.S., pedidos do Monte
+   seu espaço e Segurança das contas 25 -> 24; movimentos de estoque
+   50 -> 48; peças, brinquedos e usuários da gestão 18 -> 24. E os cards
+   comuns (todas as listas) param em 4 por fileira, como os de Clientes: a
+   tela larga não abre uma 5ª coluna que deixaria buraco. Teste:
+   tests_cartao_cliente.PaginaFechaAFileiraTests.
+   O AGENTE DO SITE: .claude/agents/site-lazer-sport.md ("tem nenhum agente
+   que trabalha pro meu site"). Um agente personalizado com as regras da
+   casa (interface estilo app, fotos em ambiente, privacidade, migrações,
+   testes, conferência no navegador, LEIA-ME, publicação). Aparece em
+   "Agentes personalizados" ao lado do editor de vídeo e do Instagram.

@@ -1268,7 +1268,7 @@ class MateriaisInnerView(
                 | Q(descricao__icontains=busca)
             ).distinct()
 
-        pagina = Paginator(materiais.order_by("nome_material", "pk"), 30).get_page(request.GET.get("page"))
+        pagina = Paginator(materiais.order_by("nome_material", "pk"), 36).get_page(request.GET.get("page"))
         materiais = list(pagina.object_list)
         tipos = list(TipoMaterial.objects.annotate(total_itens=Count("material")).order_by("descricao"))
         fornecedores = list(Fornecedor.objects.annotate(total_itens=Count("estoques")))
@@ -1444,7 +1444,7 @@ class MovimentacoesInnerView(RespostaJSONMixin, EstoqueInternoRequiredMixin, Vie
             sem_preco=Count("pk", filter=Q(tipo="entrada", valor_unitario__isnull=True)),
             estimados=Count("pk", filter=Q(custo_estimado=True)),
         )
-        pagina = Paginator(movimentos, 50).get_page(request.GET.get("page"))
+        pagina = Paginator(movimentos, 48).get_page(request.GET.get("page"))
         movimentos = list(pagina.object_list)
         filtros = request.GET.copy()
         filtros.pop("page", None)
@@ -1602,7 +1602,7 @@ class VendasView(FinanceiroInternoRequiredMixin, View):
     orçamento, e a etiqueta "Orçamento" separa as duas origens.
     """
 
-    POR_PAGINA = 30
+    POR_PAGINA = 36
 
     def get(self, request):
         consulta = (
@@ -1646,7 +1646,7 @@ class VendasView(FinanceiroInternoRequiredMixin, View):
 
 
 class PedidosView(FinanceiroInternoRequiredMixin, View):
-    POR_PAGINA = 30
+    POR_PAGINA = 36
 
     #: Mesma definição de "em aberto" que a central de avisos usa para
     #: contar. Duas listas para o mesmo conceito acabam divergindo, e foi
@@ -1728,7 +1728,7 @@ class ManutencaoInnerView(ManutencaoInternoRequiredMixin, View):
             Manutencao.objects
             .select_related("usuario__user", "brinquedo")
             .order_by("-criado_em", "-id"),
-            30,
+            36,
         ).get_page(request.GET.get("page"))
         return fragmento.responder(request, "manutencao_inner.html", "partes/manutencoes_lista.html", {
             "manutencoes": pagina.object_list,

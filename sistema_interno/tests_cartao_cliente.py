@@ -486,8 +486,13 @@ class AsOutrasListasNaoMudamTests(Base):
         self.assertNotIn("perfil", comum)
         self.assertNotIn("barra", comum)
         self.assertIn(
-            '.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody{\n'
-            "  display:grid!important;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));",
+            '.ls-content .ls-visao-alvo[data-visao="cards"] .ls-visao-tabela tbody{\n',
+            comum,
+        )
+        # no máximo quatro por fileira (seção 121): a página fecha a fileira cheia
+        self.assertIn(
+            "  display:grid!important;grid-template-columns:repeat(auto-fill,"
+            "minmax(max(min(100%,290px),calc((100% - 42px) / 4)),1fr));",
             comum,
         )
         self.assertIn("content:attr(data-rotulo);display:block;margin:0 0 4px;", comum)
@@ -612,3 +617,47 @@ class BarraDeAcoesTests(SimpleTestCase):
             capture_output=True, text=True, timeout=60,
         )
         self.assertEqual(resultado.returncode, 0, resultado.stdout + resultado.stderr)
+
+
+class PaginaFechaAFileiraTests(SimpleTestCase):
+    """"Veja que cabe mais dois elementos e você paginou" (seção 121).
+
+    Os cartões vão de 1 a 4 por fileira; a página de toda lista do painel
+    tem um número que 1, 2, 3 e 4 dividem (múltiplo de 12), para a última
+    fileira de uma página que continua nunca sair pela metade.
+    """
+
+    def test_toda_lista_do_painel_pagina_em_multiplo_de_12(self):
+        from contas.views import SegurancaContasView
+        from sistema_interno.views_clientes import ClientesInnerView
+        from sistema_interno.views_gestao import OrcamentosInnerView
+        from sistema_interno.views_notas_entrada import NotasEntradaView
+        from sistema_interno.views_ordens_servico import OrdensServicoInnerView
+        from sistema_interno import views_pedidos_projeto3d
+
+        tamanhos = {
+            "clientes": ClientesInnerView.POR_PAGINA,
+            "orçamentos": OrcamentosInnerView.POR_PAGINA,
+            "O.S.": OrdensServicoInnerView.POR_PAGINA,
+            "notas": NotasEntradaView.POR_PAGINA,
+            "contas": SegurancaContasView.POR_PAGINA,
+            "pedidos 3D": views_pedidos_projeto3d.POR_PAGINA,
+        }
+        for nome, tamanho in tamanhos.items():
+            with self.subTest(lista=nome):
+                self.assertEqual(tamanho % 12, 0, f"{nome}: {tamanho} por página deixa fileira pela metade")
+
+    def test_os_paginadores_escritos_a_mao_tambem(self):
+        import re as _re
+
+        raiz = Path(__file__).resolve().parent.parent
+        arquivos = [
+            raiz / "sistema_interno" / "views.py",
+            raiz / "core" / "views_gestao_produtos.py",
+        ]
+        for arquivo in arquivos:
+            texto = arquivo.read_text(encoding="utf-8")
+            for numero in _re.findall(r"Paginator\([^()]*(?:\([^()]*\))?[^()]*,\s*(\d+)\s*,?\s*\)", texto) + \
+                    _re.findall(r"POR_PAGINA = (\d+)", texto):
+                with self.subTest(arquivo=arquivo.name, numero=numero):
+                    self.assertEqual(int(numero) % 12, 0)

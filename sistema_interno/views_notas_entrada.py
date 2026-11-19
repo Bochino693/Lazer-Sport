@@ -78,7 +78,7 @@ class _BaseNotas(InternoRequiredMixin):
 # ======================================================================
 class NotasEntradaView(_BaseNotas):
     template_name = "notas_entrada_inner.html"
-    POR_PAGINA = 30
+    POR_PAGINA = 36
     FILTROS = ("todas", "conferencia", "lancada")
 
     def get(self, request):

@@ -46,7 +46,7 @@ class SegurancaContasView(RespostaJSONMixin, InternoRequiredMixin, View):
     template_name = "contas/seguranca_contas.html"
     rota_padrao = "seguranca_contas"
     funcoes_necessarias = (GESTAO,)
-    POR_PAGINA = 25
+    POR_PAGINA = 24
 
     def get(self, request):
         situacao = request.GET.get("situacao") or "pendentes"

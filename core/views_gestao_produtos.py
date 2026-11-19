@@ -131,7 +131,7 @@ class PecaAdminView(AdminOnlyMixin, View):
         elif situacao == "sem_preco":
             pecas = pecas.filter(preco_venda__isnull=True)
 
-        pagina = Paginator(pecas, 18).get_page(request.GET.get("page"))
+        pagina = Paginator(pecas, 24).get_page(request.GET.get("page"))
 
         dados = []
         for peca in pagina:

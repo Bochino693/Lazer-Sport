@@ -26,7 +26,7 @@ from core import objetos_3d
 
 from .views import GestorInternoRequiredMixin
 
-POR_PAGINA = 25
+POR_PAGINA = 24
 
 
 def _tabela():

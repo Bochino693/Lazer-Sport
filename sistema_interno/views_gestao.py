@@ -222,7 +222,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
     #: de edição. Com 400 propostas isso dava 2 MB de HTML; com alguns
     #: milhares o servidor estourava o tempo do gunicorn e a resposta virava
     #: 502. O peso agora é o da página, e não o do histórico da empresa.
-    POR_PAGINA = 25
+    POR_PAGINA = 24
 
     #: Soma dos itens de UMA proposta, sem multiplicar linhas.
     #:

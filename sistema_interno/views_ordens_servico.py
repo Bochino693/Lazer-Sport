@@ -220,7 +220,7 @@ class OrdensServicoInnerView(
 ):
     rota_padrao = "ordens_servico_inner"
     ACOES_SEM_TRANSACAO = ("enviar",)
-    POR_PAGINA = 25
+    POR_PAGINA = 24
 
     def indice_de_busca(self, consulta):
         """Os mesmos campos que a busca do servidor percorre.

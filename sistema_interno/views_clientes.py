@@ -63,7 +63,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
     rota_padrao = "clientes_inner"
     template_name = "clientes_inner.html"
-    POR_PAGINA = 30
+    POR_PAGINA = 36
 
     # ------------------------------------------------------------ leitura
     def get(self, request):

@@ -3572,7 +3572,7 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 filtro_busca |= Q(pk=int(numero))
             brinquedos = brinquedos.filter(filtro_busca)
 
-        paginator = Paginator(brinquedos, 18)
+        paginator = Paginator(brinquedos, 24)
         page = request.GET.get("page")
         brinquedos_page = paginator.get_page(page)
 
@@ -5629,7 +5629,7 @@ class ManutencaoAdminView(AdminOnlyMixin, View):
 class UserAdminView(AdminOnlyMixin, View):
     template_name = "gestao/users_adm.html"
     #: "faça a paginação a cada 18 usuários por página"
-    POR_PAGINA = 18
+    POR_PAGINA = 24
 
     def get(self, request):
         from . import presenca
