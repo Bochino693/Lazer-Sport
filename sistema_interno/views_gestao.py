@@ -1392,9 +1392,16 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             # A aprovação registrada aqui é o começo do prazo de produção
             # (a da página do cliente já tem o dia dela, `respondido_em`).
             orcamento.marcar_inicio_da_producao()
-            orcamento.save(update_fields=[
-                "status", "motivo_negociacao", "producao_inicio", "atualizado",
-            ])
+            campos = ["status", "motivo_negociacao", "producao_inicio", "atualizado"]
+            # A APROVAÇÃO MANUAL GUARDA QUEM E QUANDO (seção 121), como a
+            # recusa verbal: "Aprovada por Ana (informado pela equipe) em ...".
+            if status == Orcamento.Status.APROVADO and not orcamento.respondido_em:
+                orcamento.respondido_por = (
+                    request.user.get_full_name() or request.user.username
+                ) + " (informado pela equipe)"
+                orcamento.respondido_em = timezone.now()
+                campos += ["respondido_por", "respondido_em"]
+            orcamento.save(update_fields=campos)
 
         registrar_atividade_orcamento(
             orcamento,

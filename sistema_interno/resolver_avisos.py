@@ -312,6 +312,8 @@ def _propostas(user, acesso, chave, request):
             ),
             "abrir": _url("orcamentos_inner", q=orcamento.pk),
             "previa": _url("orcamento_previa_inner", orcamento.pk),
+            # o passo seguinte da aprovação: o contrato para o cliente assinar
+            "contrato_url": _url("documento_assinatura_inner", orcamento.pk) if editar else "",
             "acoes": {
                 # Reenviar é o "Enviar → WhatsApp" da lista de Orçamentos,
                 # com a mesma trava de `pode_enviar` (vencida não gera link).
@@ -332,7 +334,10 @@ def _propostas(user, acesso, chave, request):
                     and (orcamento.email_destinatario or "").strip()
                     and dias is not None and dias >= 0
                 ),
-                # A situação, como o botão "Situação" da lista.
+                # A situação, como o botão "Situação" da lista. A aprovação
+                # que o cliente deu por telefone, WhatsApp ou no balcão é um
+                # toque só (seção 121): "Cliente aprovou", ao lado da recusa.
+                "aprovar": bool(editar and viva and not congelada and itens_da_proposta),
                 "recusar": bool(editar and viva and not congelada),
                 "expirar": bool(editar and viva and not congelada and orcamento.vencido),
             },

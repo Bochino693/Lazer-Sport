@@ -7035,3 +7035,74 @@ body.modal-open .ls-folha-veu{display:none!important}
 .ls-content .ls-visao-alvo[data-visao="cards"][data-visao-cartao="perfil"] td[data-v="total"][data-zerado] .ls-money{
   color:var(--muted)!important;
 }
+
+/* ======================================================================
+   A FOLHA DE AÇÕES COMO A DE UM APP (LEIA-ME-V10, seção 121)
+
+   O dono, com o print do "Mais" de um cartão de cliente: "veja que feio
+   esta ação, eu falei tudo estilo app". A folha saía estreita, com o nome
+   cortado numa linha só e uma barra de rolagem de lado (o nome comprido
+   empurrava a caixa), e o "Excluir" solto embaixo. Agora, no PC e no
+   celular: a bolinha com as iniciais e o nome inteiro (até duas linhas)
+   no topo, cada ação numa linha com o ícone num quadradinho colorido, o
+   que apaga em vermelho depois de uma linha, e "Cancelar" no pé. Nunca
+   rola de lado. (Seção nova, fora da "LISTA OU CARDS, SEGUNDA PARTE":
+   aqui só se veste o que ls-listas.js monta.)
+   ====================================================================== */
+.ls-action-fab-menu[data-folha="1"]{
+  width:min(330px,calc(100vw - 20px));padding:10px;gap:3px;overflow-x:hidden;border-radius:20px;
+  border:1px solid var(--line);
+  background:linear-gradient(165deg,var(--panel),rgba(var(--bg-rgb),.98));
+  box-shadow:0 26px 70px rgba(var(--sombra-rgb),calc(.5 * var(--sombra-forca))),0 0 0 1px rgba(var(--acento-rgb),.08);
+}
+.ls-action-fab-menu[data-folha="1"] .ls-action-fab-head{
+  display:flex;flex-direction:row;align-items:center;gap:12px;width:100%;min-width:0;
+  margin:0 0 6px;padding:6px 6px 12px;border-bottom:1px solid var(--line-soft);
+}
+.ls-action-fab-menu[data-folha="1"] .ls-action-fab-head .ls-folha-avatar{
+  flex:0 0 42px;width:42px;height:42px;display:grid;place-items:center;border-radius:50%;
+  color:var(--acento-texto);background:rgba(var(--acento-rgb),.16);
+  border:1px solid rgba(var(--acento-rgb),.3);font-size:.92rem;font-weight:900;letter-spacing:.02em;
+}
+.ls-action-fab-menu[data-folha="1"] .ls-action-fab-head .ls-folha-textos{display:flex;text-transform:none;letter-spacing:0;flex-direction:column;gap:2px;min-width:0;flex:1 1 auto}
+.ls-action-fab-menu[data-folha="1"] .ls-folha-textos > span{
+  color:var(--muted);font-size:.64rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+}
+.ls-action-fab-menu[data-folha="1"] .ls-folha-nome{
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
+  white-space:normal;overflow-wrap:anywhere;text-transform:none;
+  color:var(--text);font-size:.98rem;font-weight:900;line-height:1.22;
+}
+.ls-action-fab-menu[data-folha="1"] > .btn,.ls-action-fab-menu[data-folha="1"] > form > .btn,
+.ls-action-fab-menu[data-folha="1"] > a,.ls-action-fab-menu[data-folha="1"] > button:not(.ls-folha-cancelar){
+  min-height:50px!important;padding:7px 10px!important;gap:12px;justify-content:flex-start!important;
+  border-radius:13px!important;font-size:.9rem!important;
+}
+.ls-action-fab-menu[data-folha="1"] :is(.btn,a,button):not(.ls-folha-cancelar) > i{
+  width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:11px;
+  font-size:1rem;color:var(--acento-texto);background:rgba(var(--acento-rgb),.14);
+}
+.ls-action-fab-menu[data-folha="1"] :is(.btn-outline-danger,[data-excluir],[data-excluir-os],[data-acao-perigosa]) > i{
+  color:var(--red-texto)!important;background:rgba(var(--red-rgb),.14);
+}
+.ls-action-fab-menu[data-folha="1"] .ls-action-label{white-space:normal;text-align:left;line-height:1.2}
+.ls-folha-cancelar{display:none}
+.ls-action-fab-menu[data-folha="1"] > button.ls-folha-cancelar{
+  display:flex!important;order:3;align-items:center;justify-content:center!important;width:100%;
+  min-height:46px!important;margin-top:8px;padding:10px 14px!important;
+  border:1px solid var(--line)!important;border-radius:13px!important;
+  background:rgba(var(--verniz-rgb),.05)!important;color:var(--text)!important;
+  font-size:.9rem!important;font-weight:800!important;text-align:center;
+}
+.ls-action-fab-menu[data-folha="1"] > button.ls-folha-cancelar:hover,
+.ls-action-fab-menu[data-folha="1"] > button.ls-folha-cancelar:focus-visible{
+  background:rgba(var(--acento-rgb),.12)!important;
+}
+.ls-action-fab-menu:not([data-folha="1"]) .ls-folha-avatar{display:none}
+@media (max-width:760px){
+  .ls-action-fab-menu[data-folha="1"]{
+    width:100%!important;border-radius:24px 24px 0 0;
+    padding:8px 14px calc(14px + env(safe-area-inset-bottom,0px));
+  }
+  .ls-action-fab-menu[data-folha="1"] > button.ls-folha-cancelar{min-height:52px!important;font-size:.98rem!important}
+}

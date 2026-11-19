@@ -925,6 +925,11 @@
       mail.addEventListener("click", function () { lembrarPorEmail(item, mail, mostrarErro); });
       barra.appendChild(mail);
     }
+    if (acoes.aprovar) {
+      var aprovou = botao("ls-res-botao sucesso", "bi-hand-thumbs-up", "Cliente aprovou");
+      aprovou.addEventListener("click", function () { aprovar(item, estado, li, urls, aprovou, mostrarErro); });
+      barra.appendChild(aprovou);
+    }
     var formRecusa = null;
     if (acoes.recusar) {
       var recusou = botao("ls-res-botao", "bi-hand-thumbs-down", "Cliente recusou");
@@ -1067,6 +1072,69 @@
       });
     });
     return form;
+  }
+
+  /* APROVAÇÃO MANUAL (seção 121): o cliente disse sim por telefone, no
+     WhatsApp ou no balcão. Um toque, uma pergunta clara, e a proposta vai
+     para Aprovado com quem registrou e quando. O cartão não some: vira o
+     próximo passo -- gerar o contrato para o cliente assinar. */
+  function aprovar(item, estado, li, urls, b, mostrarErro) {
+    mostrarErro("");
+    confirmar({
+      titulo: "O cliente aprovou a proposta #" + item.id + "?",
+      texto: item.cliente + " · " + item.total + ". Registre quando ele aprovou por telefone, WhatsApp ou no balcão: a proposta vai para Aprovado, o prazo de produção começa a contar e o próximo passo é o contrato para ele assinar.",
+      confirmar: "Sim, o cliente aprovou",
+      cancelar: "Voltar",
+      icone: "sucesso"
+    }).then(function (sim) {
+      if (!sim) return;
+      ocupar(b, "Registrando");
+      postar(urls.orcamentos, {
+        action: "status", id: item.id, status: "aprovado",
+        motivo: "Aprovada pelo cliente (registrada pela equipe)."
+      }).then(function () {
+        estado.quantidade = Math.max(0, estado.quantidade - 1);
+        pintarPlacar(estado);
+        li.classList.add("is-resolvido", "is-aprovado");
+        var barraVelha = li.querySelector(".ls-res-acoes");
+        if (barraVelha) barraVelha.remove();
+        var formVelho = li.querySelector(".ls-res-recusa");
+        if (formVelho) formVelho.remove();
+        var passo = criar("div", "ls-res-proximo");
+        var topo = criar("p", "ls-res-feito");
+        topo.appendChild(icone("bi-check2-circle"));
+        topo.appendChild(criar("span", "", "Aprovada agora. Próximo passo: o contrato para o cliente assinar."));
+        passo.appendChild(topo);
+        var acoes = criar("div", "ls-res-acoes");
+        if (item.contrato_url) {
+          var contrato = criar("a", "ls-res-botao primario");
+          contrato.href = item.contrato_url;
+          contrato.appendChild(icone("bi-pen"));
+          contrato.appendChild(criar("span", "", "Gerar o contrato"));
+          acoes.appendChild(contrato);
+        }
+        var ok = botao("ls-res-botao", "bi-check2", "Depois");
+        ok.addEventListener("click", function () {
+          li.classList.add("is-saindo");
+          window.setTimeout(function () {
+            var lista = li.parentNode;
+            li.remove();
+            if (lista && !lista.querySelector(".ls-res-item")) {
+              if (estado.quantidade > 0) estado.carregar();
+              else desenharVazio(estado);
+            }
+          }, semMovimento() ? 0 : 260);
+        });
+        acoes.appendChild(ok);
+        passo.appendChild(acoes);
+        li.appendChild(passo);
+        toast("sucesso", "Proposta #" + item.id + " aprovada", "Registrada em seu nome. Gere o contrato para o cliente assinar.");
+        avisarGravacao();
+      }).catch(function (erro) {
+        liberar(b);
+        mostrarErro(erro.message);
+      });
+    });
   }
 
   function expirar(item, estado, li, urls, b, mostrarErro) {

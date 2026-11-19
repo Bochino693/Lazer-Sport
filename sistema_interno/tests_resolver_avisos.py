@@ -394,6 +394,30 @@ class FolhaDePropostasTests(Base):
         self.assertEqual(resposta.status_code, 200, resposta.content)
         self.assertEqual(quantidade_do_aviso(self.gestor, "orcamentos_em_aberto"), 0)
 
+    def test_aprovacao_manual_num_toque(self):
+        """"Também deve deixar fácil a aprovação manual" (seção 121): o
+        "Cliente aprovou" ao lado da recusa, com quem registrou e quando, e
+        o caminho do contrato logo em seguida."""
+        orcamento = self.proposta("Aprovou por telefone")
+        sem_itens = self.proposta("Sem itens", itens=0)
+        itens = {i["id"]: i for i in self.folha("orcamentos_em_aberto").json()["itens"]}
+        self.assertTrue(itens[orcamento.pk]["acoes"]["aprovar"])
+        self.assertFalse(itens[sem_itens.pk]["acoes"]["aprovar"])
+        self.assertEqual(itens[orcamento.pk]["contrato_url"], f"/orcamentos/{orcamento.pk}/documento/")
+
+        resposta = self.client.post("/orcamentos/", {
+            "action": "status", "id": orcamento.pk, "status": "aprovado",
+            "motivo": "Aprovada pelo cliente (registrada pela equipe).",
+        }, **AJAX)
+
+        self.assertEqual(resposta.status_code, 200, resposta.content)
+        orcamento.refresh_from_db()
+        self.assertEqual(orcamento.status, Orcamento.Status.APROVADO)
+        self.assertIn("informado pela equipe", orcamento.respondido_por)
+        self.assertIsNotNone(orcamento.respondido_em)
+        ids = [i["id"] for i in self.folha("orcamentos_em_aberto").json()["itens"]]
+        self.assertNotIn(orcamento.pk, ids)
+
     def test_recusada_mostra_o_motivo_do_cliente(self):
         orcamento = self.proposta("Recusou")
         orcamento.registrar_recusa(motivo="Achou caro", por="Maria")

@@ -8237,3 +8237,24 @@ Dependência nova: rjsmin (requirements.txt).
    varredura que pula a falha recente, o comando, o Open-Meteo pelo
    estado, o ritmo do Nominatim); tests_etapas_do_pedido.py (o link do
    pagamento com o quadro).
+   A FOLHA DE AÇÕES ("Mais") COMO A DE UM APP. O dono, com o print do
+   "Mais" de um cartão de cliente: "veja que feio esta ação, eu falei tudo
+   estilo app". A folha (ls-listas.js + o menu flutuante do painel.js, a
+   mesma em TODAS as listas em cards) saía estreita, com o nome cortado e
+   uma barra de rolagem de lado. Agora: a bolinha com as iniciais, o nome
+   inteiro em até duas linhas (nome gravado todo em maiúsculas aparece
+   como nome de gente: "Maria Aparecida dos Santos"), cada ação numa linha
+   com o ícone num quadradinho colorido (o que apaga em vermelho) e
+   "Cancelar" no pé; no celular ela sobe do pé da tela. Nunca rola de lado.
+   CSS numa seção nova no fim de interno_modern.css ("A FOLHA DE AÇÕES
+   COMO A DE UM APP"), fora da "LISTA OU CARDS, SEGUNDA PARTE".
+   A APROVAÇÃO MANUAL NUM TOQUE ("também deve deixar fácil a aprovação
+   manual"): na folha "Propostas em aberto" (o sino e o Início), ao lado
+   de "Cliente recusou", o botão verde "Cliente aprovou". Uma pergunta
+   clara (cliente, total e o que acontece), e a proposta vai para
+   Aprovado pelo mesmo caminho da "Situação" (action=status), agora
+   guardando quem registrou e quando ("Aprovada por Ana (informado pela
+   equipe) em ..."), como a recusa verbal já guardava. O cartão não some:
+   vira o próximo passo, "Gerar o contrato" (a tela do documento) ou
+   "Depois". Só para quem edita a proposta no Comercial e só com itens.
+   Testes: tests_resolver_avisos.py (test_aprovacao_manual_num_toque).

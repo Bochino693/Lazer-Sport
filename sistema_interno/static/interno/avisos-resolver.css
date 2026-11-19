@@ -179,6 +179,13 @@
 .ls-res-botao.primario{border-color:transparent;background:var(--acento);color:var(--acento-tinta)}
 .ls-res-botao.primario:hover{filter:brightness(1.06)}
 .ls-res-botao.perigo{border-color:transparent;background:var(--red);color:var(--red-tinta)}
+/* "Cliente aprovou" (seção 121): o sim registrado num toque, em verde */
+.ls-res-botao.sucesso{border-color:transparent;background:var(--green);color:var(--green-tinta)}
+.ls-res-botao.sucesso:hover{filter:brightness(1.06)}
+a.ls-res-botao{text-decoration:none}
+.ls-res-item.is-aprovado{border-color:rgba(var(--green-rgb),.45)}
+.ls-res-proximo{display:grid;gap:10px;margin-top:4px}
+.ls-res-proximo .ls-res-feito{margin:0}
 .ls-res-botao.feito{border-color:rgba(var(--green-rgb),.4);background:rgba(var(--green-rgb),.14);color:var(--green-texto)}
 .ls-res-botao .spinner-border{width:.95rem;height:.95rem;border-width:.15em}
 .ls-res-link{

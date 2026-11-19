@@ -56,7 +56,10 @@ def segunda_parte():
     css = CSS.read_text(encoding="utf-8")
     # o título do bloco (a primeira parte só o cita, mais acima)
     titulo = css.index("LISTA OU CARDS, SEGUNDA PARTE —")
-    return sem_comentarios(css[css.rindex("/*", 0, titulo):])
+    # até a seção seguinte (a folha de ações como a de um app, seção 121,
+    # veio depois dela e tem a sombra de uma janela flutuante, não de cartão)
+    fim = css.find("/* ======", titulo)
+    return sem_comentarios(css[css.rindex("/*", 0, titulo):fim if fim != -1 else None])
 
 
 def linha_do(html, cliente):

@@ -84,7 +84,7 @@
       var no = caixa.children[i];
       // o cabeçalho do menu, o próprio "⋮" e a linha divisória não são ações
       if (no.classList.contains("ls-action-fab") || no.classList.contains("ls-action-fab-head") ||
-          no.classList.contains("ls-folha-divisor")) continue;
+          no.classList.contains("ls-folha-divisor") || no.classList.contains("ls-folha-cancelar")) continue;
       var acao = no.matches("a,button") ? no : no.querySelector("a,button");
       if (acao) lista.push({ no: no, acao: acao });
     }
@@ -154,7 +154,10 @@
     var itens = Array.prototype.filter.call(menu.querySelectorAll("a,button"), function (item) {
       return !item.disabled && item.offsetParent !== null;
     });
-    function peso(item) { return item.closest(".ls-folha-perigo") ? 1 : 0; }
+    function peso(item) {
+      if (item.classList.contains("ls-folha-cancelar")) return 2;
+      return item.closest(".ls-folha-perigo") ? 1 : 0;
+    }
     return itens.sort(function (a, b) { return peso(a) - peso(b); });
   }
 
@@ -192,6 +195,25 @@
     vigia.observe(menu, { attributes: true, attributeFilter: ["class"] });
   }
 
+  var PARTICULAS = { de: 1, da: 1, do: 1, das: 1, dos: 1, e: 1, di: 1, du: 1 };
+
+  function nomeDeGente(texto) {
+    var nome = String(texto || "").trim().replace(/\s+/g, " ");
+    // só o que está TODO em maiúsculas; "Buffet ABC" e siglas ficam como estão
+    if (!nome || nome !== nome.toUpperCase() || nome === nome.toLowerCase() || nome.length < 4) return nome;
+    return nome.toLowerCase().split(" ").map(function (palavra, indice) {
+      if (indice && PARTICULAS[palavra]) return palavra;
+      return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+    }).join(" ");
+  }
+
+  function iniciais(nome) {
+    var partes = String(nome || "").split(" ").filter(function (p) { return p && !PARTICULAS[p.toLowerCase()]; });
+    if (!partes.length) return "•";
+    var letras = partes[0].charAt(0) + (partes.length > 1 ? partes[partes.length - 1].charAt(0) : "");
+    return letras.toUpperCase();
+  }
+
   /* O "⋮" vira "Mais", e o menu dele ganha o que uma folha de ações tem:
      o nome do registro no topo, a linha antes do que apaga, o foco na
      primeira ação ao abrir e as setas só pelo que está à vista (o que já
@@ -209,13 +231,38 @@
     gatilho.setAttribute("aria-label", "Mais ações deste registro");
     gatilho.setAttribute("aria-haspopup", "menu");
 
+    /* O TOPO DA FOLHA É O DO APP: a bolinha com as iniciais, o nome
+       inteiro (até duas linhas, nunca uma barra de rolagem) e "Ações"
+       pequeno em cima. Nome gravado TODO EM MAIÚSCULAS (o cadastro
+       importado) aparece como nome de gente: "Flavia Batista Goncalves". */
     var cabeca = menu.querySelector(".ls-action-fab-head");
     var nome = linha && linha.getAttribute("data-visao-nome");
     if (cabeca && nome) {
+      nome = nomeDeGente(nome);
+      var avatar = document.createElement("span");
+      avatar.className = "ls-folha-avatar";
+      avatar.setAttribute("aria-hidden", "true");
+      avatar.textContent = iniciais(nome);
+      var textos = document.createElement("span");
+      textos.className = "ls-folha-textos";
+      var rotulo = cabeca.querySelector("span");
+      if (rotulo) textos.appendChild(rotulo);
       var titulo = document.createElement("strong");
       titulo.className = "ls-folha-nome";
       titulo.textContent = nome;
-      cabeca.appendChild(titulo);
+      titulo.title = nome;
+      textos.appendChild(titulo);
+      cabeca.appendChild(avatar);
+      cabeca.appendChild(textos);
+    }
+    /* "Cancelar" no pé, como toda folha de ações de app: fecha sem fazer nada. */
+    if (!menu.querySelector(".ls-folha-cancelar")) {
+      var cancelar = document.createElement("button");
+      cancelar.type = "button";
+      cancelar.className = "ls-folha-cancelar";
+      cancelar.textContent = "Cancelar";
+      cancelar.addEventListener("click", function () { if (fab._lsFechar) fab._lsFechar(true); });
+      menu.appendChild(cancelar);
     }
     /* O que apaga vai para o fim da folha, depois de uma linha -- pela
        ordem do CSS (`order`), e não mexendo no menu: na lista ele continua
