@@ -7784,10 +7784,134 @@ Dependência nova: rjsmin (requirements.txt).
        assinado. Os links que o próprio painel gira não refazem o cartão.
      * Banco: sistema_interno/0080_diario_de_bordo_da_assinatura (só esquema).
 
+116) OS AVISOS QUE SE RESOLVEM ALI MESMO: A FOLHA DO SINO E DO INÍCIO
+   O PEDIDO: "melhore as notificações, deixe modais para solucionar
+   problemas pequenos e afins" -- sobre o "O que precisa de você" com
+   "Cadastros de clientes incompletos (19)", "Proposta aprovada (1)" e
+   "Propostas em aberto (2)". Cada aviso só levava para outra tela, onde a
+   pessoa ainda tinha de achar o que consertar.
+   ONDE: o sino (central de avisos, no topo de toda tela) e o "O que
+   precisa de você" do Início, que agora mostra os MESMOS avisos do sino no
+   alto da prioridade do dia (antes da fila de propostas a vencer, O.S. e
+   produção). O toque num aviso com conserto pequeno abre uma FOLHA (a casca
+   das folhas do ls-aviso: cartão no meio no computador, folha que sobe de
+   baixo no celular, sol/lua/eclipse); os outros continuam levando para a
+   tela. Toda folha tem "Abrir a tela" no rodapé, e o Ctrl+clique no aviso
+   continua abrindo a tela numa aba nova.
+   AS FOLHAS (o aviso -> o que resolve):
+     * Cadastros de clientes incompletos -> a lista dos clientes ATIVOS que
+       faltam (quem tem proposta viva primeiro), cada um com SÓ o que falta:
+       contato (telefone, com chips "Tem WhatsApp / Só ligação / Ainda não
+       sei", ou e-mail), CPF/CNPJ (conferido pelo dígito enquanto se digita;
+       o número guardado que está errado vem para corrigir) e endereço (o CEP
+       preenche rua, bairro, cidade e UF). "Salvar este cliente" grava sem
+       fechar; o cliente completo sai da lista, o contador da folha, o do
+       sino e a bolinha de Clientes caem na hora e o próximo já abre. Salvar
+       só uma parte diz o que ainda falta.
+     * Proposta aprovada -> o resumo (cliente, total, itens, quem aprovou e
+       quando) e os dois passos: 1) o PRAZO DE ENTREGA em dias úteis (campo e
+       chips 10/15/20/30/45) -- é o prazo de produção que a Cláusula 3ª do
+       contrato lê; sem ele a folha diz com quantos dias o contrato sairia;
+       2) o CONTRATO: "Gerar o contrato" (pergunta antes, pela folha do
+       LSAviso, se o prazo ainda não foi combinado), "Mandar o link no
+       WhatsApp" (o link de 5 minutos do cartão) e "Abrir o cartão de
+       assinatura"; assinado, mostra quem assinou. E "Abrir a proposta".
+     * Propostas em aberto / a vencer / vencidas -> uma linha por NEGOCIAÇÃO
+       (v1, v2 e v3 são uma só, como o número do sino), com validade, envio e
+       as ações da lista de Orçamentos: "Reenviar no WhatsApp" (no rascunho,
+       "Enviar no WhatsApp", que pergunta antes porque tira do rascunho; a
+       conversa abre no toque), "Lembrar por e-mail" (o atalho do Início,
+       só aguardando resposta, com e-mail e envio ligado), "Cliente recusou"
+       (chips de motivo + o texto, obrigatório como na janela Situação) e,
+       na vencida, "Marcar como expirada" (pergunta antes). Recusada ou
+       expirada, a linha sai e o número cai.
+     * Propostas recusadas -> o motivo que o cliente escreveu, em cada uma,
+       e "Abrir para fazer a versão nova".
+     * Pedidos em aberto -> cada pedido com o botão do andamento da tela de
+       Pedidos (a mesma folha de passos do producao-etiquetas.js).
+     * Material para repor -> o que está no mínimo (saldo, mínimo, local,
+       fornecedor), para a compra; a entrada é pela tela do estoque ou pela
+       entrada de nota (seção 115).
+     Sem folha (levam para a tela, como antes): vendas a confirmar,
+     manutenções, O.S., produção, projetos 3D e as movimentações de colegas
+     -- não há conserto de um toque para eles.
+   OS AVISOS MAIS CLAROS (sistema_interno/avisos.py):
+     * cada aviso tem a AÇÃO escrita nele ("Completar", "Combinar entrega",
+       "Acompanhar", "Lembrar cliente", "Resolver", "Ver motivos",
+       "Atualizar andamento", "Ver o que comprar"...), embaixo do detalhe;
+     * o detalhe diz o que fazer e conta o certo: "Falta CPF/CNPJ válido em
+       18, endereço em 6 e contato em 2" (uma consulta, as mesmas partes de
+       completude_clientes.filtro_incompletos); "1 rascunho por enviar e 1
+       esperando o cliente" (por negociação, como o número);
+     * o topo da lista do sino diz "19 urgentes de 22": o número urgente e o
+       total do selo juntos (antes "19 urgentes" ao lado de um 22 no sino
+       parecia conta errada);
+     * a aprovada sai do sino quando a parte da equipe está feita: com o
+       contrato gerado (o prazo vai nele). Antes ficava sete dias dizendo
+       "combine data e montagem" mesmo depois de combinado;
+     * a tela de Clientes com "?incompletos=1" e o cartão "Cadastros
+       incompletos" contam só os ATIVOS, como o sino (o sino dizia 19 e a
+       lista abria com os arquivados junto);
+     * no celular, o painel do sino vira uma faixa de margem a margem abaixo
+       do topo (preso ao sino, metade dele saía pela esquerda da tela).
+     QUEM VÊ CADA AVISO NÃO MUDOU (avisos.coletar e permissoes.capacidades).
+   PERMISSÕES: a folha abre com a MESMA capacidade que dá o aviso
+   (avisos.RESOLVIVEIS: clientes, orcamentos, pedidos, estoque); quem não
+   recebe o aviso leva 403. Cada botão de dentro só aparece quando a função
+   pode (as flags vêm do servidor) e grava pelo endereço da tela de origem,
+   que confere de novo:
+     ENDPOINT NOVO (só leitura): GET /avisos/resolver/<chave>/ (rota
+       `resolver_aviso`, views_resolver_avisos.py + resolver_avisos.py) --
+       a lista (até 30; "mostrando 30 de 45" e a próxima leva vem quando
+       estas acabam), as ações permitidas e os endereços. no-store.
+     OS QUE JÁ EXISTIAM:
+       clientes_inner action=completar (Vendas, Ambulante, Gestão) -- agora
+         devolve também `faltas` e `incompleto` (a regra da contagem);
+       consultar_cep_inner (os mesmos);
+       orcamentos_inner action=enviar canal=whatsapp e action=status
+         (orcamentos_editar_comercial: Vendas, Ambulante, Gestão; o
+         Ambulante só a carteira dele);
+       lembrar_cliente (o atalho do Início) -- agora confere
+         orcamentos_editar_comercial, como o "Enviar": o Financeiro, que
+         recebe o aviso pelo bloco de preço, não manda lembrete;
+       prazo_producao (Produção ou quem vê o orçamento);
+       documento_assinatura_inner action=gerar e documento_assinatura_link
+         (orcamentos_editar_comercial);
+       andamento_pedido (Financeiro e Gestão).
+     O Financeiro abre a folha das propostas sem os botões do Comercial (vê
+     o prazo, não o contrato). Produção não abre folha de proposta nem de
+     cliente; Vendas não abre a de pedidos nem a de estoque.
+   O CÓDIGO: static/interno/avisos-resolver.js (carregado uma vez em
+   base_inner, depois do painel.js; escuta por delegação, em captura, os
+   `[data-resolver]` do sino e do Início -- a navegação suave não troca o
+   topo e redesenha o Início; trocar de tela fecha a folha, recarregar o
+   mesmo endereço relê a lista) e static/interno/avisos-resolver.css
+   (arquivo próprio, só variáveis do tema). O desenho do aviso é um só:
+   montarLista em painel.js e partes/aviso_item.html (o Início sem
+   JavaScript). Nada de <select>, alert ou confirm: chips de rádio e a
+   folha do LSAviso. Nenhum dado de cliente vai para log; o CPF/CNPJ só
+   viaja na folha quando é o número errado a corrigir. O pulso do sino
+   (pulso.py) passou a olhar também o DocumentoAssinatura.
+   SEM MIGRAÇÃO.
+   O TESTE QUE SEGURA ISTO: sistema_interno/tests_resolver_avisos.py -- o
+   que cada folha mostra (só o que falta, uma linha por negociação, o
+   mesmo número do sino, o teto), o que salva (o cliente completo sai, a
+   recusa e o contrato tiram do número, o prazo vai para a cláusula), as
+   permissões por função (folha e ações) e as regras do painel (o script
+   liga uma vez, sem alert/confirm/select; a folha de estilo sem cor
+   escrita à mão e fora da folha do painel). CONFERIDO NA TELA (Playwright,
+   dados sintéticos): sino e Início nos três temas, as folhas de clientes,
+   aprovada, em aberto, a vencer, pedidos e estoque no computador e no
+   celular (390 px, sem rolagem lateral), completar um cliente (o contador
+   foi de 19 a 18 na folha e no sino), CPF errado e CPF de outro cliente
+   recusados na linha, prazo combinado, contrato gerado e link aberto, e a
+   folha aberta de novo depois de trocar de tela pelo menu (um pedido só
+   por toque, uma folha só).
+
 117) O LINK DE 10 MINUTOS E A RÉGUA DO PEDIDO (AS ETAPAS CLARAS PARA SEGUIR)
    O dono: "deixe o tempo de assinatura 10 min agora em vez de 5, revise
    todo o sistema e deixe fluido, com as etapas bem definidas e claras para
-   seguir." (A seção 116 fica para as notificações, em andamento.)
+   seguir."
 
    O LINK VALE 10 MINUTOS
      * documento_assinatura.VALIDADE_DO_LINK = 10 * 60. É a mesma constante

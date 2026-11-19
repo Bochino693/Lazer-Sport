@@ -15,7 +15,16 @@
   <a href="{% url 'ordens_servico_inner' %}" class="app-glance-card mint"><span class="app-glance-icon"><i class="bi bi-clipboard2-check"></i></span><span><strong>{{ total_ordens_servico_abertas }}</strong><small>ordens de serviço abertas</small></span><em>execução e atendimento</em></a>
 </section>
 <section class="app-workspace">
-  <article class="app-focus-panel"><header class="app-section-head"><div><span class="app-eyebrow">Prioridade do dia</span><h2>O que precisa de você</h2></div>{% if fila_trabalho %}<span class="app-count">{{ fila_trabalho|length }}</span>{% endif %}</header><div class="app-task-list">{% for tarefa in fila_trabalho %}
+  <article class="app-focus-panel"><header class="app-section-head"><div><span class="app-eyebrow">Prioridade do dia</span><h2>O que precisa de você</h2></div>{% if total_avisos %}<span class="app-count" title="Pendências no sino">{{ total_avisos }}</span>{% endif %}</header>
+  {% comment %}
+    OS MESMOS AVISOS DO SINO (seção 116), no alto da prioridade do dia: o
+    servidor desenha a primeira vez e `desenharAvisos` (painel.js) repinta a
+    cada estado novo, então os dois lugares nunca discordam. O toque num
+    aviso com conserto pequeno abre a folha que resolve ali mesmo.
+  {% endcomment %}
+  <div class="ls-avisos-inicio" data-avisos-lista>{% for aviso in avisos %}{% include "partes/aviso_item.html" %}{% endfor %}</div>
+  {% if fila_trabalho and avisos %}<p class="ls-avisos-inicio-rotulo">Na fila de hoje</p>{% endif %}
+  <div class="app-task-list">{% for tarefa in fila_trabalho %}
   {% comment %}
     O item que TEM como ser resolvido daqui traz o botão junto; o que
     depende de decisão humana continua sendo um link para onde se decide.
@@ -35,7 +44,7 @@
     </button>
     {% endif %}
   </div>
-{% empty %}<div class="app-all-clear"><span><i class="bi bi-check2"></i></span><div><strong>Tudo em ordem por aqui</strong><small>Não há prazos críticos nem bloqueios esperando decisão.</small></div></div>{% endfor %}</div></article>
+{% empty %}{% if not avisos %}<div class="app-all-clear"><span><i class="bi bi-check2"></i></span><div><strong>Tudo em ordem por aqui</strong><small>Não há prazos críticos nem bloqueios esperando decisão.</small></div></div>{% endif %}{% endfor %}</div></article>
   <aside class="app-start-panel"><header class="app-section-head"><div><span class="app-eyebrow">Começar</span><h2>Ações rápidas</h2></div></header><div class="app-start-grid">{% if permissoes_interno.orcamentos_criar %}<a href="{% url 'orcamentos_inner' %}?novo=1"><i class="bi bi-file-earmark-plus"></i><span><strong>Criar proposta</strong><small>Orçar com o catálogo</small></span></a>{% endif %}{% if permissoes_interno.ordens_servico_editar %}<a href="{% url 'ordens_servico_inner' %}?novo=1"><i class="bi bi-clipboard2-plus"></i><span><strong>Abrir Ordem de Serviço</strong><small>Manutenção ou serviço prestado</small></span></a>{% endif %}{% if permissoes_interno.producao %}<a href="{% url 'ordens_producao' %}"><i class="bi bi-play-circle"></i><span><strong>Planejar produção</strong><small>Abrir uma nova ordem</small></span></a>{% elif permissoes_interno.lista_montagem %}<a href="{% url 'lista_montagem' %}"><i class="bi bi-list-check"></i><span><strong>Lista de montagem</strong><small>Fila, etapas e prazos</small></span></a>{% endif %}{% if permissoes_interno.estoque %}<a href="{% url 'stock' %}"><i class="bi bi-arrow-left-right"></i><span><strong>Movimentar estoque</strong><small>Entrada, saída ou ajuste</small></span></a>{% endif %}{% if permissoes_interno.manutencoes %}<a href="{% url 'manutencao_inner' %}"><i class="bi bi-wrench"></i><span><strong>Atender manutenção</strong><small>Ver chamados abertos</small></span></a>{% endif %}{% if permissoes_interno.clientes %}<a href="{% url 'clientes_inner' %}"><i class="bi bi-person-plus"></i><span><strong>Cadastrar cliente</strong><small>Pessoa, empresa ou buffet</small></span></a>{% endif %}{% if permissoes_interno.producao %}<a href="{% url 'guias_producao' %}"><i class="bi bi-journal-richtext"></i><span><strong>Escrever manual</strong><small>Etapas de um brinquedo</small></span></a>{% elif permissoes_interno.rh %}<a href="{% url 'rh_inicio' %}"><i class="bi bi-people"></i><span><strong>Equipe e ponto</strong><small>Colaboradores, ponto e termos</small></span></a>{% endif %}</div></aside>
 </section>
 <section class="app-pipelines">

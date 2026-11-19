@@ -40,6 +40,7 @@ from .views import (
 from .views_app import manifesto, service_worker
 from .views_avisos import EstadoAvisosView, InscricaoPushView
 from .views_avisos_app import AvisosDoAplicativoView
+from .views_resolver_avisos import ResolverAvisoView
 from .views_acessos import AvaliacaoSetoresInnerView, UsuariosEquipeInnerView
 from .views_etiquetas import EtiquetasInnerView
 from .views_funil import (
@@ -403,6 +404,13 @@ urlpatterns = [
     # O aparelho pede (ou desiste de) receber aviso quando o painel está
     # fechado -- é o único caminho até quem está na estrada.
     path('avisos/aparelho/', InscricaoPushView.as_view(), name='avisos_aparelho'),
+    # A folha que resolve o aviso ali mesmo (LEIA-ME-V10, seção 116): a
+    # lista do que falta e as ações que já existem nas telas. Só leitura.
+    path(
+        'avisos/resolver/<slug:chave>/',
+        ResolverAvisoView.as_view(),
+        name='resolver_aviso',
+    ),
 
     # ---------------- notificações do aplicativo (cliente) ----------------
     # Outro público, outra tela: aqui a LOJA fala com quem baixou o
