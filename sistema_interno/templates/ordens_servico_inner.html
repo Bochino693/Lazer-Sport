@@ -1017,6 +1017,28 @@ LSTela.pronto(function () {
   buscaClienteOS.entrada.id="osClienteBusca";
   document.getElementById("osClienteBox").appendChild(buscaClienteOS.elemento);
 
+  // O CLIENTE DA O.S. NUNCA SE PERDE AO SALVAR.
+  // A busca só conhece os clientes que vieram com a tela. Um cliente
+  // cadastrado depois (em outra aba, ou pelo automatizador de documentos)
+  // abria o campo vazio, e salvar a O.S. desligava o cliente dela. Se o
+  // cliente da O.S. não está na lista, ele entra com o que a O.S. já traz.
+  function garantirClienteDaOS(o){
+    if(!o||!o.cliente)return;
+    var id=String(o.cliente);
+    if(clientes.some(function(c){return String(c.valor)===id;}))return;
+    var opcao={
+      valor:id,
+      rotulo:o.nome_cliente||("Cliente #"+id),
+      detalhe:"Cadastrado depois que esta tela abriu",
+      grupo:"Clientes",
+      whatsapp:o.whatsapp_cliente||"",
+      telefone:o.contato||"",
+      email:o.email_cliente||""
+    };
+    clientes.push(opcao);
+    buscaClienteOS.adicionarOpcao(opcao,false);
+  }
+
   function abrirCadastroDeClienteOS(nomeDigitado){
     var form=document.getElementById("formClienteNovoOS");
     if(!form)return;
@@ -1279,7 +1301,7 @@ LSTela.pronto(function () {
      perdendo a revisão. Guardando a O.S. de origem junto do rascunho, e
      aceitando-a de volta em `dados`, ela volta como o que é. */
   var osEmEdicao=null;
-  function abrir(id,dados){var o=dados||(id?achar(id):null);osEmEdicao=o||null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);limparItens();valor("osId",o?o.id:"");valor("osRevisao",o?o.revisao:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:(PADRAO_NOVA[chave]||""));});buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();aplicarEtapas();desenharVersoesOS(o);aplicarSomenteLeitura(o);Painel.erro("osErro","");contarEspelho(null);Painel.abrir("modalOS");}
+  function abrir(id,dados){var o=dados||(id?achar(id):null);osEmEdicao=o||null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);limparItens();valor("osId",o?o.id:"");valor("osRevisao",o?o.revisao:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:(PADRAO_NOVA[chave]||""));});garantirClienteDaOS(o);buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();aplicarEtapas();desenharVersoesOS(o);aplicarSomenteLeitura(o);Painel.erro("osErro","");contarEspelho(null);Painel.abrir("modalOS");}
 
   /* A corrente de versões desta O.S. Cada uma abre na PRÉVIA: a
      substituída não está na lista da página -- é por isso que ela

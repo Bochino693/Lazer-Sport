@@ -236,3 +236,32 @@ class DadosDaLinhaNaoEnvelhecemTests(TestCase):
             "var orcamentos = JSON.parse(",
             self.gabarito("orcamentos_inner.html"),
         )
+
+
+class ClienteDaOSNaoSePerdeTests(TestCase):
+    """A lista se renova por partes, mas a busca de clientes não.
+
+    A troca por partes manda as O.S. novas e deixa a lista de clientes do
+    autocompletar como estava ao abrir a tela. Uma O.S. ligada a um cliente
+    cadastrado depois (outra aba, automatizador de documentos) abria com o
+    campo do cliente vazio, e salvar a O.S. desligava o cliente. A janela
+    agora põe o cliente da O.S. na busca antes de preenchê-la.
+    """
+
+    def gabarito(self):
+        return (RAIZ / "templates" / "ordens_servico_inner.html").read_text(encoding="utf-8")
+
+    def test_o_cliente_entra_na_busca_antes_de_preencher_o_campo(self):
+        texto = self.gabarito()
+        self.assertIn("function garantirClienteDaOS(o)", texto)
+        self.assertIn(
+            'garantirClienteDaOS(o);buscaClienteOS.definirValor(o?o.cliente:"",false);',
+            texto,
+        )
+
+    def test_o_cliente_que_ja_esta_na_lista_nao_e_duplicado(self):
+        texto = self.gabarito()
+        inicio = texto.index("function garantirClienteDaOS(o)")
+        corpo = texto[inicio:texto.index("\n  }\n", inicio)]
+        self.assertIn("clientes.some(", corpo)
+        self.assertIn("buscaClienteOS.adicionarOpcao(opcao,false)", corpo)

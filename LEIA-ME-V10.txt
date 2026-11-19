@@ -8466,3 +8466,16 @@ Dependência nova: rjsmin (requirements.txt).
    novo ("Já importada"), e a O.S. aberta com o anexo e o cliente novo no
    campo. No computador (1366) e no celular (390, sem rolagem lateral), nos
    temas Lua e Sol, sem erro de JavaScript.
+   NA JUNÇÃO (conferência do agente principal):
+   - Tema sol: o quadro "complete o que falta" usava o painel quase branco;
+     agora leva o tom do acento (os-automatizador.css).
+   - O CLIENTE DA O.S. NÃO SE PERDE MAIS: a busca de clientes da janela da
+     O.S. só conhece os clientes que vieram com a tela, e a lista de O.S. se
+     renova por partes sem trazer clientes novos. Uma O.S. ligada a um
+     cliente cadastrado depois (outra aba, automatizador) abria com o campo
+     vazio, e salvar desligava o cliente. garantirClienteDaOS() põe o
+     cliente da O.S. na busca antes de preencher o campo
+     (ordens_servico_inner.html). Teste:
+     tests_lista_por_partes.ClienteDaOSNaoSePerdeTests; conferido no
+     navegador (a lista trocada por uma O.S. com cliente desconhecido abre
+     com o nome e o vínculo).
