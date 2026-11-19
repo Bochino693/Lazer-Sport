@@ -1,0 +1,251 @@
+/* ======================================================================
+   O AUTOMATIZADOR DA O.S. (LEIA-ME-V10, seção 122) — a folha que lê os
+   documentos e cria as O.S.
+
+   O MESMO DESENHO DA IMPORTAÇÃO DO ORÇAMENTO (importacao-word.css): cartão
+   no meio no computador, folha que sobe de baixo no celular, com a alça;
+   o anel do progresso; o "Próximo campo"; os selos de estado. Cada
+   documento é uma linha que se resolve ali mesmo.
+
+   SÓ PAPÉIS DE COR DO TEMA (interno_modern.css): superfície, tinta e os
+   acentos -- nenhuma cor escrita à mão, nenhum cartão branco ou cinza. Por
+   isso a folha funciona igual no Sol, na Lua e no Eclipse.
+   ====================================================================== */
+
+html.ls-osdoc-aberta{overflow:hidden}
+/* Como nas outras janelas do painel: com a folha aberta, as abas de baixo
+   do celular saem (senão cobrem o pé da folha). */
+html.ls-osdoc-aberta .ls-abas{display:none!important}
+.ls-osdoc[hidden]{display:none!important}
+.ls-osdoc [hidden]{display:none!important}
+.ls-osdoc{position:fixed;inset:0;z-index:1085;display:grid;place-items:center;padding:24px 16px}
+.ls-osdoc-fundo{
+  position:absolute;inset:0;background:rgba(var(--sombra-rgb),.58);backdrop-filter:blur(3px);
+  opacity:0;transition:opacity .2s ease;
+}
+.ls-osdoc-cartao{
+  position:relative;display:flex;flex-direction:column;width:min(880px,100%);max-height:calc(var(--ls-vh) - 48px);
+  border-radius:22px;background:var(--panel);color:var(--text);border:1px solid var(--line);box-shadow:var(--shadow);
+  opacity:0;transform:translateY(14px) scale(.98);transition:opacity .2s ease,transform .22s ease;overflow:hidden;
+}
+.ls-osdoc.aberta .ls-osdoc-fundo{opacity:1}
+.ls-osdoc.aberta .ls-osdoc-cartao{opacity:1;transform:none}
+/* O cartão recebe o foco só para o leitor de tela anunciar a folha: o
+   contorno âmbar do painel ([tabindex]:focus-visible) não vai em volta dele. */
+.ls-osdoc-cartao:focus,.ls-osdoc-cartao:focus-visible{outline:none!important}
+.ls-osdoc-alca{display:none}
+
+.ls-osdoc-topo{
+  display:flex;justify-content:space-between;align-items:flex-start;gap:14px;
+  padding:20px 22px 12px;border-bottom:1px solid var(--line-soft);
+}
+.ls-osdoc-topo-texto{min-width:0}
+.ls-osdoc-kicker{font-size:.76rem;font-weight:900;color:var(--acento-texto);letter-spacing:.02em}
+.ls-osdoc-topo h2{margin:3px 0 4px;font-size:1.32rem;font-weight:950;color:var(--text)}
+.ls-osdoc-topo p{margin:0;max-width:640px;font-size:.86rem;line-height:1.45;color:var(--text-2)}
+.ls-osdoc-fechar{
+  flex:0 0 42px;width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);
+  color:var(--text-2);display:grid;place-items:center;cursor:pointer;
+}
+.ls-osdoc-fechar:hover{color:var(--text);border-color:var(--line-forte)}
+.ls-osdoc-fechar:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+
+.ls-osdoc-corpo{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;padding:16px 22px 20px;overflow:auto;overscroll-behavior:contain;min-height:0}
+
+/* ------------------------------------------------------------ soltar */
+.ls-osdoc-soltar{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:132px;
+  margin:0;padding:18px 16px;text-align:center;cursor:pointer;border:2px dashed var(--line-forte);
+  border-radius:var(--radius-lg);background:rgba(var(--acento-rgb),.05);color:var(--text);
+  transition:border-color .15s ease,background .15s ease;
+}
+.ls-osdoc-soltar i{font-size:2.1rem;color:var(--info-texto)}
+.ls-osdoc-soltar strong{font-size:1rem;font-weight:900}
+.ls-osdoc-soltar span{font-size:.82rem;color:var(--text-2)}
+.ls-osdoc-soltar:hover,.ls-osdoc-soltar.arrastando{border-color:var(--acento);background:rgba(var(--acento-rgb),.11)}
+.ls-osdoc-soltar.lendo{opacity:.72;pointer-events:none}
+.ls-osdoc-arquivo{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.ls-osdoc-arquivo:focus-visible + .ls-osdoc-progresso,.ls-osdoc-arquivo:focus-visible ~ .ls-osdoc-soltar{outline:2px solid var(--acento)}
+
+/* ---------------------------------------------------------- progresso */
+.ls-osdoc-progresso{
+  position:sticky;top:-16px;z-index:3;padding:12px 14px;border-radius:var(--radius-md);
+  border:1px solid var(--line);background:var(--panel-2);
+}
+.ls-osdoc-progresso-linha{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px 12px;align-items:center}
+.ls-osdoc-anel{position:relative;width:46px;height:46px}
+.ls-osdoc-anel svg{width:46px;height:46px;transform:rotate(-90deg)}
+.ls-osdoc-anel circle{fill:none;stroke-width:4}
+.ls-osdoc-anel .trilho{stroke:var(--line)}
+.ls-osdoc-anel .feito{stroke:var(--acento);stroke-linecap:round;transition:stroke-dasharray .3s ease}
+.ls-osdoc-anel span{position:absolute;inset:0;display:grid;place-items:center;font-size:.68rem;font-weight:950;color:var(--text)}
+/* Só a lista de espera (nenhum lote rodando): sem anel, o ícone da espera. */
+.ls-osdoc-progresso.so-espera .ls-osdoc-anel{display:none}
+.ls-osdoc-progresso.so-espera .ls-osdoc-progresso-linha{grid-template-columns:minmax(0,1fr) auto}
+.ls-osdoc-progresso-texto{display:grid;gap:2px;min-width:0}
+.ls-osdoc-progresso-texto strong{font-size:.95rem;font-weight:950;color:var(--text)}
+.ls-osdoc-progresso-texto span{font-size:.8rem;color:var(--text-2);overflow-wrap:anywhere}
+.ls-osdoc-proximo{
+  min-height:42px;font-weight:900;border:1px solid var(--acento);background:rgba(var(--acento-rgb),.12);color:var(--text);
+}
+.ls-osdoc-proximo:hover{background:rgba(var(--acento-rgb),.2);color:var(--text)}
+
+/* --------------------------------------------------------------- linhas */
+.ls-osdoc-lista{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.ls-osdoc-lista:empty{display:none}
+.ls-osdoc-item{
+  display:grid;grid-template-columns:minmax(0,1fr);gap:10px;min-width:0;padding:12px 14px;border-radius:var(--radius-lg);
+  border:1px solid var(--line);background:var(--panel-soft);
+}
+.ls-osdoc-item.criada{border-color:var(--green-linha)}
+.ls-osdoc-item.falta{border-color:rgba(var(--yellow-rgb),.55)}
+.ls-osdoc-item.repetida{border-color:rgba(var(--info-rgb),.45)}
+.ls-osdoc-item.ilegivel{border-color:var(--red-linha)}
+.ls-osdoc-item.saindo{opacity:.45;transition:opacity .2s ease}
+.ls-osdoc-item-topo{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center}
+.ls-osdoc-icone{
+  width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:1.15rem;
+  background:rgba(var(--info-rgb),.12);color:var(--info-texto);
+}
+.ls-osdoc-item.criada .ls-osdoc-icone{background:rgba(var(--green-rgb),.13);color:var(--green-texto)}
+.ls-osdoc-item.falta .ls-osdoc-icone{background:rgba(var(--yellow-rgb),.15);color:var(--yellow-texto)}
+.ls-osdoc-item.ilegivel .ls-osdoc-icone{background:rgba(var(--red-rgb),.12);color:var(--red-texto)}
+.ls-osdoc-item-titulo{display:grid;gap:2px;min-width:0}
+.ls-osdoc-item-titulo strong{font-size:.92rem;font-weight:900;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-osdoc-item-titulo small{font-size:.8rem;color:var(--text-2);overflow-wrap:anywhere}
+.ls-osdoc-selo{
+  padding:3px 10px;border-radius:999px;font-size:.72rem;font-weight:950;white-space:nowrap;
+  border:1px solid var(--line);background:var(--panel-2);color:var(--text-2);
+}
+.ls-osdoc-selo.criada{color:var(--green-texto);background:rgba(var(--green-rgb),.12);border-color:rgba(var(--green-rgb),.38)}
+.ls-osdoc-selo.falta{color:var(--yellow-texto);background:rgba(var(--yellow-rgb),.14);border-color:rgba(var(--yellow-rgb),.5)}
+.ls-osdoc-selo.repetida{color:var(--info-texto);background:rgba(var(--info-rgb),.12);border-color:rgba(var(--info-rgb),.4)}
+.ls-osdoc-selo.ilegivel{color:var(--red-texto);background:rgba(var(--red-rgb),.11);border-color:rgba(var(--red-rgb),.4)}
+.ls-osdoc-selo.lendo{color:var(--acento-texto);background:rgba(var(--acento-rgb),.12);border-color:rgba(var(--acento-rgb),.4)}
+.ls-osdoc-girando{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-1px;border-radius:50%;
+  border:2px solid rgba(var(--acento-rgb),.3);border-top-color:var(--acento);animation:ls-osdoc-girar .8s linear infinite}
+@keyframes ls-osdoc-girar{to{transform:rotate(360deg)}}
+
+/* O que foi lido. Na O.S. criada fica numa dobra (aberta no computador,
+   fechada no celular): a linha de cima já diz o número, o cliente e o
+   equipamento. */
+.ls-osdoc-dobra > summary{
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;list-style:none;
+  font-size:.78rem;font-weight:900;color:var(--text-2);
+}
+.ls-osdoc-dobra > summary::-webkit-details-marker{display:none}
+.ls-osdoc-dobra > summary i{transition:transform .18s ease}
+.ls-osdoc-dobra[open] > summary i{transform:rotate(180deg)}
+.ls-osdoc-dobra[open] > summary{margin-bottom:8px}
+.ls-osdoc-dobra > summary:focus-visible{outline:2px solid var(--acento);outline-offset:2px;border-radius:6px}
+
+/* O que foi lido: rótulo e valor em pílulas, que quebram linha sozinhas. */
+.ls-osdoc-lido{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.ls-osdoc-lido li{
+  display:inline-flex;align-items:baseline;gap:5px;max-width:100%;padding:4px 10px;border-radius:999px;
+  font-size:.78rem;color:var(--text);background:var(--panel-2);border:1px solid var(--line-soft);min-width:0;
+}
+.ls-osdoc-lido li b{font-weight:900;color:var(--text-2);white-space:nowrap}
+.ls-osdoc-lido li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.ls-osdoc-lido li em{font-style:normal;color:var(--muted);font-size:.72rem;white-space:nowrap}
+.ls-osdoc-motivo{margin:0;font-size:.85rem;line-height:1.45;color:var(--text-2)}
+.ls-osdoc-item.ilegivel .ls-osdoc-motivo{color:var(--text)}
+.ls-osdoc-avisos{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+.ls-osdoc-avisos li{display:flex;gap:7px;align-items:flex-start;font-size:.8rem;line-height:1.4;color:var(--text-2)}
+.ls-osdoc-avisos li i{color:var(--yellow-texto);margin-top:1px}
+.ls-osdoc-acoes{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ls-osdoc-acoes .btn{min-height:40px;font-weight:900}
+.ls-osdoc-link{border:0;background:none;padding:6px 4px;font-size:.84rem;font-weight:900;color:var(--acento-texto);cursor:pointer;text-decoration:none}
+.ls-osdoc-link:hover{text-decoration:underline;color:var(--acento-texto)}
+.ls-osdoc-link.perigo{color:var(--red-texto);margin-left:auto}
+
+/* ------------------------------------------------- completar ali mesmo */
+.ls-osdoc-form{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:12px;border-radius:var(--radius-md);border:1px solid var(--line-soft);background:var(--panel-2)}
+.ls-osdoc-item.falta .ls-osdoc-form{background:rgba(var(--acento-rgb),.07);border-color:rgba(var(--acento-rgb),.28)}
+.ls-osdoc-falta{display:grid;grid-template-columns:minmax(0,1fr);gap:7px;min-width:0}
+.ls-osdoc-falta-rotulo{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin:0;font-size:.88rem;font-weight:950;color:var(--text)}
+.ls-osdoc-falta-rotulo i{color:var(--yellow-texto)}
+.ls-osdoc-falta-motivo{font-size:.78rem;font-weight:700;color:var(--muted)}
+.ls-osdoc-falta .form-control{min-height:44px}
+.ls-osdoc-falta textarea.form-control{min-height:78px}
+.ls-osdoc-falta.alvo{border-radius:var(--radius-md);outline:2px solid var(--acento);outline-offset:4px;animation:ls-osdoc-alvo 1.1s ease-out 2}
+@keyframes ls-osdoc-alvo{0%{box-shadow:0 0 0 0 rgba(var(--acento-rgb),.5)}100%{box-shadow:0 0 0 14px rgba(var(--acento-rgb),0)}}
+.ls-osdoc-chips{display:flex;flex-wrap:wrap;gap:6px}
+.ls-osdoc-chips .ls-chip{min-height:40px;max-width:100%;flex-direction:column;align-items:flex-start;justify-content:center;
+  gap:1px;text-align:left;white-space:normal;line-height:1.25}
+.ls-osdoc-chips .ls-chip small{display:block;color:var(--muted);font-weight:700;font-size:.72rem}
+.ls-osdoc-chips .ls-chip[aria-pressed="true"]{border-color:var(--acento);background:rgba(var(--acento-rgb),.16);color:var(--text)}
+.ls-osdoc-grade{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.ls-osdoc-grade label{display:grid;gap:3px;min-width:0;font-size:.74rem;font-weight:900;color:var(--text-2)}
+.ls-osdoc-itens{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.ls-osdoc-linha{
+  display:grid;grid-template-columns:minmax(0,1fr) 92px 140px;gap:8px;align-items:end;padding:8px 10px;
+  border-radius:12px;background:var(--panel-soft);border:1px solid var(--line-soft);
+}
+.ls-osdoc-linha-nome{display:grid;gap:2px;min-width:0;align-self:center}
+.ls-osdoc-linha-nome strong{font-size:.86rem;color:var(--text);overflow-wrap:anywhere}
+.ls-osdoc-linha-nome small{font-size:.72rem;color:var(--muted)}
+.ls-osdoc-linha label{display:grid;gap:3px;font-size:.72rem;font-weight:900;color:var(--text-2)}
+.ls-osdoc-linha .form-control{min-height:40px;text-align:right}
+.ls-osdoc-linha.sem-valor{border-color:rgba(var(--yellow-rgb),.55)}
+.ls-osdoc-total{margin:0;font-size:.84rem;color:var(--text-2)}
+.ls-osdoc-total b{color:var(--text);font-variant-numeric:tabular-nums}
+.ls-osdoc-erros{margin:0;padding:8px 10px;border-radius:10px;font-size:.82rem;font-weight:800;color:var(--red-texto);
+  background:rgba(var(--red-rgb),.08);border:1px solid rgba(var(--red-rgb),.35)}
+.ls-osdoc-salvar{min-height:46px;font-weight:950}
+
+.ls-osdoc-pendentes{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding-top:4px}
+.ls-osdoc-pendentes h3{margin:0;font-size:.98rem;font-weight:950;color:var(--text)}
+.ls-osdoc-pendentes h3 i{color:var(--yellow-texto);margin-right:4px}
+.ls-osdoc-pendentes > p{margin:-4px 0 0;font-size:.8rem;color:var(--muted)}
+.ls-osdoc-privacidade{margin:0;color:var(--muted);font-size:.75rem;line-height:1.45}
+.ls-osdoc-privacidade i{margin-right:4px}
+
+/* O anexo dentro da janela da O.S.: "Lido do documento os-0457.docx". */
+.ls-osdoc-anexo{
+  display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:0 0 12px;padding:9px 12px;border-radius:12px;
+  border:1px solid rgba(var(--info-rgb),.38);background:rgba(var(--info-rgb),.08);font-size:.84rem;color:var(--text-2);
+}
+.ls-osdoc-anexo i{color:var(--info-texto)}
+.ls-osdoc-anexo a{font-weight:900;color:var(--acento-texto)}
+.ls-osdoc-anexo strong{color:var(--text);overflow-wrap:anywhere}
+
+/* ================================================================ celular */
+@media (max-width:760px){
+  .ls-osdoc{place-items:end stretch;padding:0}
+  /* Com o lote começado, o texto de apresentação sai: o espaço é das linhas. */
+  .ls-osdoc.com-itens .ls-osdoc-topo p{display:none}
+  .ls-osdoc.com-itens .ls-osdoc-soltar{min-height:0;padding:12px;flex-direction:row;gap:10px}
+  .ls-osdoc.com-itens .ls-osdoc-soltar i{font-size:1.5rem}
+  .ls-osdoc.com-itens .ls-osdoc-soltar span{display:none}
+  .ls-osdoc-progresso{top:-12px;padding:10px 12px}
+  .ls-osdoc-progresso-linha{grid-template-columns:auto minmax(0,1fr) auto;gap:8px 10px}
+  .ls-osdoc-anel,.ls-osdoc-anel svg{width:40px;height:40px}
+  .ls-osdoc-progresso-texto strong{font-size:.88rem}
+  .ls-osdoc-progresso-texto span{font-size:.74rem}
+  .ls-osdoc-proximo{grid-column:auto;width:auto;padding:6px 10px;font-size:.8rem}
+  .ls-osdoc-proximo-longo{display:none}
+  .ls-osdoc-item-topo{grid-template-columns:auto minmax(0,1fr);align-items:start}
+  .ls-osdoc-selo{grid-column:2;justify-self:start}
+  .ls-osdoc-falta[data-falta="valores"] .ls-osdoc-grade{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ls-osdoc-cartao{
+    width:100%;max-height:calc(var(--ls-vh) * .92);border-radius:22px 22px 0 0;transform:translateY(100%);
+  }
+  .ls-osdoc.aberta .ls-osdoc-cartao{transform:translateY(0)}
+  .ls-osdoc-alca{display:flex;justify-content:center;padding:8px 0 2px;cursor:grab;touch-action:none}
+  .ls-osdoc-alca span{width:44px;height:5px;border-radius:999px;background:var(--line)}
+  .ls-osdoc-topo{padding:6px 16px 10px}
+  .ls-osdoc-topo h2{font-size:1.15rem}
+  .ls-osdoc-topo p{font-size:.8rem}
+  .ls-osdoc-corpo{padding:12px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+  .ls-osdoc-soltar{min-height:108px}
+  .ls-osdoc-grade{grid-template-columns:minmax(0,1fr)}
+  .ls-osdoc-linha{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .ls-osdoc-linha-nome{grid-column:1 / -1}
+  .ls-osdoc-acoes .btn{flex:1 1 100%}
+  .ls-osdoc-link.perigo{margin-left:auto}
+}
+@media (prefers-reduced-motion:reduce){
+  .ls-osdoc-fundo,.ls-osdoc-cartao,.ls-osdoc-anel .feito{transition:none}
+  .ls-osdoc-girando,.ls-osdoc-falta.alvo{animation:none}
+}

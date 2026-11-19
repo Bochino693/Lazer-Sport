@@ -6,6 +6,7 @@
 {% block body_class %}ls-os-body ls-commercial-body{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" data-ls-tela="os-automatizador" href="{% estatico 'interno/os-automatizador.css' %}">
 <style>
   /* Cabeçalho operacional: menos bloco verde, mais superfície do app. */
   .ls-os-body .ls-page-hero{
@@ -133,11 +134,14 @@
   </div>
   <div class="ls-page-hero-actions">
     <a class="btn btn-outline-secondary" href="{% url 'manutencao_inner' %}"><i class="bi bi-inbox me-1"></i> Chamados</a>
+    {# o automatizador: os documentos viram O.S. sozinhos (seção 122) #}
+    {% if pode_editar %}<button class="btn btn-outline-primary" type="button" id="lerDocumentosOS" data-osdoc-abrir><i class="bi bi-magic me-1" aria-hidden="true"></i> Ler documentos</button>{% endif %}
     {% if pode_editar %}<button class="btn btn-success" type="button" id="novaOS"><i class="bi bi-plus-lg me-1"></i> Nova O.S.</button>{% endif %}
   </div>
 </section>
 
 {% include "partes/os_lista.html" %}
+{% if pode_editar %}{% include "partes/os_automatizador.html" %}{% endif %}
 
 <!-- Montagem da O.S. -->
 <div class="modal fade" id="modalOS" tabindex="-1" data-bs-backdrop="static" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><form class="modal-content" id="formOS" method="post" action="{% url 'ordens_servico_inner' %}">
@@ -632,6 +636,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{% estatico 'interno/os-automatizador.js' %}"></script>
 <script>
 LSTela.pronto(function () {
   "use strict";

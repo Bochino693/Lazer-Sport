@@ -8274,3 +8274,195 @@ Dependência nova: rjsmin (requirements.txt).
    casa (interface estilo app, fotos em ambiente, privacidade, migrações,
    testes, conferência no navegador, LEIA-ME, publicação). Aparece em
    "Agentes personalizados" ao lado do editor de vídeo e do Instagram.
+122) O AUTOMATIZADOR DA ORDEM DE SERVIÇO: OS DOCUMENTOS VIRAM O.S. SOZINHOS
+   O pedido do dono: "vc deve também criar um automatizador na ordem de
+   serviço para ler os documentos e auto salvar no sistema."
+   O QUE É: na tela Ordens de Serviço, o botão "Ler documentos" abre uma
+   folha (cartão no meio no computador; folha que sobe de baixo, com a
+   alça, no celular). A equipe escolhe ou arrasta UM OU VÁRIOS documentos --
+   ficha de O.S., pedido/solicitação de serviço, laudo, relatório de
+   visita -- em Word (.docx), PDF com texto ou .txt (até 10 MB cada). Cada
+   um é lido e, quando traz o essencial, a O.S. é CRIADA NA HORA, sem tela
+   de conferência. O que faltar, a pessoa completa ali mesmo, na linha do
+   documento. Atalho: /ordens-servico/importar/ abre a tela com a folha.
+   QUEM: quem cria O.S. à mão -- Produção, Gestão e o superusuário
+   (`capacidades["ordens_servico_editar"]`). O Financeiro vê a O.S. e abre
+   o documento anexado, mas não importa: o botão não aparece e as rotas
+   respondem 403 (pela URL também). Vendas nem passa da porta da O.S.
+   COMO FUNCIONA A FOLHA:
+     * cada arquivo vira uma linha "Na fila" e vai ao servidor UM DE CADA
+       VEZ, num pedido próprio (os-automatizador.js): um lote de dez é uma
+       fila de dez pedidos de poucos segundos, com o anel do progresso e o
+       placar ("6 O.S. criadas · 3 para completar · 1 já importada · 1 sem
+       leitura"), e nunca um pedido de minutos perto do limite de 90 s do
+       gunicorn. Fechar a folha não para o lote.
+     * "O.S. criada": o número, o cliente e o equipamento; "O que foi lido"
+       (aberto no computador, dobrado no celular); os avisos; "Abrir a O.S."
+       (a janela da O.S. abre na própria tela), "Prévia" e "Documento
+       original".
+     * "Falta completar": o que foi lido e SÓ os campos que faltam, já
+       preenchidos com o que o documento traz, e "Salvar e criar a O.S."
+       ("Descartar" pergunta pela folha do LSAviso). "Próximo campo" leva
+       ao primeiro campo vazio, com o destaque. O documento fica guardado
+       esperando: reabrir a folha mostra "Esperando completar" (de toda a
+       equipe), sem subir o arquivo de novo.
+     * "Já importada": "Já importado (o mesmo arquivo) na OS-00042/2026"
+       com "Abrir a OS-00042/2026".
+     * "Não deu para ler": o motivo e o que fazer (PDF que é foto, .doc
+       antigo, imagem, planilha, arquivo vazio ou corrompido).
+     * Com a folha aberta não sobe toast por cima (a folha é o recado); com
+       ela fechada, o toast conta o lote. A lista de O.S. de trás se
+       atualiza sozinha. A O.S. de um cliente que a leitura acabou de
+       cadastrar abre numa tela recarregada inteira: a janela da O.S. escolhe
+       o cliente numa lista que veio com a tela, e sem isso abriria com o
+       campo vazio (e salvar desligaria o cliente).
+     * A janela da O.S. mostra "Lida do documento arquivo.docx · Abrir".
+   O QUE ELE LÊ (importacao_os/campos.py), por regra, sem IA:
+     * "Rótulo: valor" na linha, vários na mesma ("Equipamento: Cama
+       elástica   Nº de série: CE-3091"; o dois-pontos da hora não corta);
+       a ficha em tabela ("Equipamento | Cama elástica", ou a linha de
+       títulos com os valores embaixo); a SEÇÃO ("DEFEITO RELATADO" e o
+       texto nos parágrafos de baixo, ou numa caixa de uma célula); no PDF
+       e no .txt, "Equipamento        Cama elástica" em colunas, sem
+       dois-pontos.
+     * Os campos da O.S.: equipamento (+ modelo/marca), série/patrimônio,
+       defeito relatado/solicitação ("Serviço a executar" entra aqui),
+       diagnóstico/laudo, serviço executado, observações/recomendações,
+       técnico (casado com a equipe: nome completo, usuário, primeiro +
+       último nome, ou o primeiro nome só dele), tipo (Manutenção,
+       Instalação, Revisão preventiva, Visita técnica, Outro -- também pelo
+       título: "RELATÓRIO DE VISITA TÉCNICA"), situação ("Finalizado",
+       "Em andamento", "Aguardando peça"...), prioridade (e "URGENTE" sozinho
+       numa linha), datas (abertura/entrada, agendado para/data da visita
+       com hora "às 14h30", início, conclusão/entrega), garantia ("90
+       dias", "3 meses", "até 10/06/2027", "Garantia de 90 (noventa) dias"
+       em frase), local do serviço, forma de pagamento, frete, desconto (em
+       R$ ou %), total, valor pago/situação do pagamento, o chamado
+       ("MAN-00012" liga a O.S. ao chamado) e o número da O.S. no papel
+       ("ORDEM DE SERVIÇO Nº 0457", "O.S. nº 2026/118").
+     * As peças e serviços: a tabela pela mesma régua do orçamento
+       (deterministica.tabelas_de_itens), com "Peça" entendida como a
+       descrição; o tipo de cada linha pela coluna "Tipo", pelo título da
+       seção ("PEÇAS UTILIZADAS") ou pelas palavras ("mão de obra", "troca",
+       "deslocamento", "km"); o valor solto com rótulo ("Mão de obra: R$
+       150,00", "Deslocamento: R$ 80,00") vira linha. A peça casa com o
+       catálogo (confiança alta) e, sem valor no papel, leva o preço do
+       catálogo (com aviso).
+     * O rótulo de dois sentidos decide pelo valor: "Visita: 12/03/2027" é a
+       data; "Visita: R$ 80,00" é o deslocamento; "Entrada: 10/03" é quando
+       o equipamento entrou; "Entrada: R$ 200,00" é o sinal pago.
+     * O CLIENTE é a leitura do importador do orçamento (importacao_word:
+       deterministica + identificar), sobre as linhas que NÃO são da O.S.:
+       defeito, técnico (com o celular dele) e série saem antes, e a
+       fábrica (CNPJ, telefones, e-mail, endereço) e a equipe nunca viram o
+       cliente. Nome, estabelecimento, contato, CPF/CNPJ (com os dígitos
+       conferidos; inválido sai, com aviso), telefone (com o "tem WhatsApp"
+       do orçamento), e-mail e o endereço em partes.
+   O ESSENCIAL PARA CRIAR SOZINHO (importacao_os/gravar.py, `pendencias`):
+     1. o cliente: ligado a um cadastro pelo CPF/CNPJ, e-mail ou telefone;
+        ou, sem cadastro, nome + telefone ou e-mail para cadastrar. Só o
+        nome NÃO basta: com um cadastro de mesmo nome, a folha pergunta "é
+        este?" (chips com os candidatos, "Outro cliente: cadastrar", "Só o
+        nome na O.S."); sem contato, pede o contato;
+     2. o equipamento (o único campo obrigatório da O.S. à mão). Sem ele, o
+        brinquedo do catálogo citado no texto vale ("pelo catálogo");
+     3. o que foi pedido ou feito: defeito, diagnóstico, serviço executado ou
+        ao menos uma linha de peça/serviço;
+     4. as contas, quando há dinheiro: cada linha com quantidade e valor, e
+        itens + frete − desconto = o total escrito (e as linhas = o
+        subtotal). Um centavo de diferença segura: a folha mostra as linhas
+        para acertar e oferece "Aplicar desconto de R$ X" (fecha no total do
+        documento), "Lançar R$ X como serviço" (total sem linhas) ou "Ficar
+        com a soma das linhas";
+     5. Concluída só com o serviço executado escrito (sem ele, a folha pede;
+        com linhas de serviço, elas viram o texto, com aviso).
+   AS MESMAS REGRAS DA O.S. FEITA À MÃO: situação escrita no papel, ou
+   Concluída quando há serviço executado, Agendada com data futura, e
+   senão "Aguardando ciência" (a da O.S. nova); nunca Rascunho nem
+   Substituída. Agenda que já passou não vale para serviço por fazer (vira
+   aviso; "Agendada" passa a "Aberta"); garantia vencida não entra (aviso);
+   Concluída ganha a data de conclusão (a escrita, ou a da visita, ou a do
+   documento -- é ela que conta no "quanto o mês fechou"); sem série, a
+   identificação "LS-PAT-000123"; responsável = quem importou; até 80
+   linhas. O PAGAMENTO escrito no papel só é lançado para quem lança
+   pagamento (Financeiro/Gestão); para a Produção vira aviso ("quem lança
+   é o Financeiro ou a Gestão").
+   O CLIENTE NÃO REPETE: o cadastro é procurado pelo CPF/CNPJ, e-mail e
+   telefone (os dígitos, como quer que estejam escritos) numa consulta só,
+   e o nome (sem acento, sem "Ltda", com um erro de digitação de folga; a
+   cidade desempata) só quando nenhum dos três achou. Achado: a O.S. liga e
+   o cadastro só ganha o que está VAZIO (o telefone que existe não muda; o
+   endereço só se não havia nenhum). Novo: pelas regras da aba Clientes
+   (clientes.salvar_cliente e salvar_endereco: nome que não existe, CPF/
+   CNPJ e e-mail de mais ninguém), com "Cadastrado pela leitura da O.S. no
+   documento ..." nas observações. O endereço salvo entra na localização
+   em segundo plano pelo módulo do cadastro (nada de geocodificar aqui);
+   como em todo cadastro, o CEP sem a rua é completado pela consulta do
+   CEP da aba Clientes.
+   O MESMO DOCUMENTO NÃO VIRA DUAS O.S.: o SHA-256 do arquivo é ÚNICO no
+   banco (dois envios ao mesmo tempo param no índice, sem arquivo órfão no
+   cofre); o SHA-256 do TEXTO (só letras e números, sem acento) pega o
+   mesmo documento salvo de novo e, quase sempre, o PDF exportado do mesmo
+   Word; o número que o próprio painel imprime ("OS-00042/2026") aponta a
+   O.S. que já existe; e o número de O.S. escrito no papel com o mesmo
+   cliente (ou o mesmo equipamento) é a mesma O.S. Repetido não cria nada.
+   O pendente enviado de novo é o mesmo pendente.
+   O ANEXO E A PRIVACIDADE: o documento original fica anexado à O.S.
+   (DocumentoOrdemServico, migração 0081_documento_ordem_servico, SÓ
+   ESQUEMA) no cofre privado de sempre (rh/armazenamento.py, como a nota
+   fiscal): Cloudinary com entrega AUTENTICADA em produção (pasta "os/",
+   nome aleatório, sem o cliente no caminho), pasta local privado/os/ no
+   resto (OS_DOCUMENTOS_PRIVADOS_DIR). Sem URL pública: o arquivo só sai
+   pela rota /ordens-servico/documentos/<id>/arquivo/, para quem vê O.S.
+   (o pendente, só para quem importa), com no-store, nosniff e sandbox.
+   Excluir a O.S. ou descartar o pendente apaga o registro E o arquivo. No
+   banco fica a leitura (os campos, o que faltou, os avisos), nunca o texto
+   inteiro do documento. NADA SAI DO SERVIDOR: a leitura é local, por
+   regra; o documento nunca vai para a IA nem para serviço de fora (a IA do
+   importador do orçamento não é usada aqui).
+   O BANCO LONGE (~170 ms por consulta): o que quase nunca muda (a
+   identidade da empresa, a equipe, os técnicos e o catálogo) fica um
+   minuto no cache do processo -- o lote paga uma vez; as três chaves do
+   cliente vão numa consulta; O.S., linhas (bulk) e documento numa
+   transação. Contadas no teste, por documento (já com a sessão e o
+   usuário): 10 consultas com o cliente já cadastrado, 22 com cliente novo
+   e endereço, 5 para dizer "já importada" (tetos de 12, 24 e 6; o
+   primeiro documento do lote, com o cache frio, até 20).
+   O QUE NÃO DÁ: PDF que é foto (digitalização) e imagem (.jpg, .png) não
+   têm texto -- aqui não há OCR, e mandar o documento do cliente para um
+   OCR de fora quebraria a regra de privacidade. Um OCR local (Tesseract)
+   precisaria do programa instalado no servidor, que o Render nativo não
+   tem (só com imagem Docker): fica de fora, e a folha diz "Envie o Word ou
+   um PDF salvo direto do Word ou do sistema". Também não lê .doc antigo
+   (Word 97-2003), RTF e planilha (a folha diz como salvar).
+   Código: sistema_interno/importacao_os/ (__init__, arquivo, campos,
+   cliente, contexto, gravar, armazenamento), views_importacao_os.py,
+   models.py (DocumentoOrdemServico), urls.py (importar_documentos_os,
+   documento_importado_os, documento_ordem_servico_arquivo,
+   documentos_da_ordem_servico), templates/partes/os_automatizador.html,
+   ordens_servico_inner.html (o botão, a folha e os dois arquivos),
+   static/interno/os-automatizador.css e .js.
+   Testes: sistema_interno/tests_importacao_os.py (52): a leitura de
+   quatro desenhos (ficha com rótulos, seção e tabela de peças; ficha em
+   tabela com títulos em cima e coluna Tipo; PDF em colunas sem dois-pontos;
+   .txt com tabulações), a fábrica e o técnico fora do cliente, os rótulos
+   de dois sentidos; criar sozinho (situação, série LS-PAT, técnico,
+   garantia, concluída na data, cliente e endereço, anexo no cofre, chamado
+   ligado, pagamento só para o Financeiro/Gestão, lote de dez); o cliente
+   que já existe (telefone escrito de outro jeito, CNPJ, só o nome,
+   conflito, sem contato, só o nome na O.S.); o repetido (arquivo, texto
+   salvo de novo, número do painel, número escrito, outro cliente, corrida
+   no índice único sem arquivo órfão, pendente de novo); completar (o
+   equipamento, o valor, o desconto que fecha, valor inválido, serviço
+   executado, descartar, a lista de espera); o ilegível e o erro
+   inesperado (o lote segue); as permissões; e as consultas por documento.
+   Os documentos são montados no próprio teste (nenhum documento de
+   cliente no repositório).
+   CONFERIDO NA TELA (Playwright, servidor local, dados sintéticos): lotes
+   de 11 documentos (docx, PDF, txt, um PDF-foto, um repetido) lidos em
+   menos de 2 s no SQLite local: 6 criadas, 3 para completar, 1 já
+   importada, 1 sem leitura; completado o equipamento, escolhido o cliente
+   de mesmo nome, aplicado o desconto que fecha o total, o mesmo arquivo de
+   novo ("Já importada"), e a O.S. aberta com o anexo e o cliente novo no
+   campo. No computador (1366) e no celular (390, sem rolagem lateral), nos
+   temas Lua e Sol, sem erro de JavaScript.

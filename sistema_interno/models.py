@@ -21,6 +21,7 @@ from core.models import (
 from core.utils import buscar_coordenadas_por_cidade, geocodificar_endereco
 
 from .notas_entrada.armazenamento import armazenamento_das_notas, caminho_da_nota
+from .importacao_os.armazenamento import armazenamento_dos_documentos, caminho_do_documento
 
 
 class Prime(models.Model):
@@ -4161,6 +4162,98 @@ class EnvioOrdemServico(Prime):
     def __str__(self):
         estado = "ok" if self.sucesso else "falhou"
         return f"{self.ordem.numero_documento} · {self.get_canal_display()} · {estado}"
+
+
+class DocumentoOrdemServico(Prime):
+    """O documento de onde a O.S. foi lida: o automatizador (LEIA-ME-V10, 122).
+
+    A equipe solta fichas de O.S., pedidos de serviço e laudos na tela de
+    Ordens de Serviço; cada um é lido e, com o essencial no papel, a O.S.
+    nasce sozinha (`importacao_os/gravar.py`). Este registro é o anexo E o
+    rastro da importação: o arquivo original (cofre privado, sem endereço
+    público), quem enviou, quando, e o que a leitura achou e avisou.
+
+    NASCE ANTES DA O.S. quando falta alguma coisa: fica "Falta completar"
+    com a leitura guardada, e a pessoa completa na própria folha sem subir
+    o arquivo de novo. Criada a O.S., ele passa a apontar para ela.
+
+    O MESMO DOCUMENTO NÃO VIRA DUAS O.S.: o SHA-256 do arquivo é único no
+    banco (vale também com dois cliques ao mesmo tempo), e o texto
+    normalizado e o número de O.S. escrito no papel completam a busca de
+    repetido.
+    """
+
+    class Situacao(models.TextChoices):
+        PENDENTE = "pendente", "Falta completar"
+        CRIADA = "criada", "O.S. criada"
+
+    class Formato(models.TextChoices):
+        DOCX = "docx", "Word (.docx)"
+        PDF = "pdf", "PDF"
+        TXT = "txt", "Texto (.txt)"
+
+    ordem = models.ForeignKey(
+        OrdemServico, on_delete=models.CASCADE, null=True, blank=True, related_name="documentos",
+    )
+    situacao = models.CharField(
+        max_length=10, choices=Situacao.choices, default=Situacao.PENDENTE, db_index=True,
+    )
+    formato = models.CharField(max_length=4, choices=Formato.choices)
+    # Sem endereço público: cofre privado e entrega só pela view, conferindo
+    # a permissão (ver importacao_os/armazenamento.py).
+    arquivo = models.FileField(
+        upload_to=caminho_do_documento,
+        storage=armazenamento_dos_documentos,
+        max_length=100,
+        blank=True,
+    )
+    nome_arquivo = models.CharField(max_length=150, blank=True)
+    tamanho_arquivo = models.PositiveIntegerField(default=0)
+    sha256 = models.CharField(max_length=64, db_index=True)
+    texto_sha256 = models.CharField(max_length=64, blank=True, db_index=True)
+    numero_no_documento = models.CharField(
+        "número de O.S. escrito no documento", max_length=40, blank=True, db_index=True,
+    )
+    # Os campos lidos, o que faltou e os avisos -- nunca o texto inteiro do
+    # documento (esse está no arquivo, no cofre).
+    leitura = models.JSONField(default=dict, blank=True)
+    enviado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+
+    class Meta:
+        verbose_name = "Documento de ordem de serviço"
+        verbose_name_plural = "Documentos de ordens de serviço"
+        ordering = ("-criacao", "-id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["sha256"], condition=~models.Q(sha256=""), name="documento_os_sha256_unico",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.nome_arquivo or 'documento'} · {self.get_situacao_display()}"
+
+
+def _apagar_arquivo_do_documento_os(sender, instance, **kwargs):
+    """O registro foi embora (descartado, ou a O.S. excluída): o arquivo também.
+
+    Documento de cliente não fica órfão no cofre. Apagar é melhor esforço:
+    o armazenamento conta no log quando não consegue.
+    """
+    if instance.arquivo:
+        try:
+            instance.arquivo.delete(save=False)
+        except Exception:  # noqa: BLE001 -- apagar o arquivo nunca derruba a exclusão
+            import logging
+
+            logging.getLogger(__name__).exception("Documento de O.S. %s: arquivo não apagado", instance.pk)
+
+
+models.signals.post_delete.connect(
+    _apagar_arquivo_do_documento_os, sender=DocumentoOrdemServico,
+    dispatch_uid="sistema_interno.documento_os.apagar_arquivo",
+)
 
 
 # ======================================================================
