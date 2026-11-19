@@ -1206,7 +1206,7 @@ class PainelCoerenteTests(EquipeMixin, CatalogoDeTeste, TestCase):
 
 
 class ListaDeUsuariosTests(EquipeMixin, TestCase):
-    """18 por página, com os filtros de presença no servidor e a mesma pessoa em todo lugar."""
+    """24 por página (múltiplo de 12: fecha a fileira dos cards, seção 121), com os filtros de presença no servidor e a mesma pessoa em todo lugar."""
 
     def setUp(self):
         cache.clear()
@@ -1221,31 +1221,29 @@ class ListaDeUsuariosTests(EquipeMixin, TestCase):
     def linhas(self, resposta):
         return re.findall(r'<tr data-visao-item data-detalhe-tipo="usuario" data-detalhe-id="(\d+)"', resposta.content.decode())
 
-    def test_dezoito_por_pagina(self):
+    def test_vinte_e_quatro_por_pagina(self):
         primeira = self.abrir()
         html = primeira.content.decode()
-        self.assertEqual(len(self.linhas(primeira)), 18)
+        self.assertEqual(len(self.linhas(primeira)), 24)
         self.assertEqual(primeira.context["pagina"].paginator.count, 41)
-        self.assertEqual(primeira.context["pagina"].paginator.num_pages, 3)
-        self.assertIn("Exibindo <strong>1–18</strong> de", html)
+        self.assertEqual(primeira.context["pagina"].paginator.num_pages, 2)
+        self.assertIn("Exibindo <strong>1–24</strong> de", html)
         self.assertIn('<nav class="ls-pager" aria-label="Páginas da lista de contas">', html)
-        self.assertIn("<strong>1–18</strong> de 41", html)
+        self.assertIn("<strong>1–24</strong> de 41", html)
         self.assertIn('href="?page=2#usrContas"', html)        # a tela chega na lista, não no topo
         self.assertIn('aria-current="page"', html)
         self.assertIn('id="usrContas" data-lsa-ancora', html)
         self.assertNotIn('rel="prev"', html)                   # na primeira, o "Anterior" fica parado
         segunda = self.abrir(page=2)
-        self.assertEqual(len(self.linhas(segunda)), 18)
-        self.assertIn("<strong>19–36</strong> de 41", segunda.content.decode())
+        self.assertEqual(len(self.linhas(segunda)), 17)
+        self.assertIn("<strong>25–41</strong> de 41", segunda.content.decode())
         self.assertFalse(set(self.linhas(primeira)) & set(self.linhas(segunda)))
-        terceira = self.abrir(page=3)
-        self.assertEqual(len(self.linhas(terceira)), 5)
-        self.assertNotIn('rel="next"', terceira.content.decode())
+        self.assertNotIn('rel="next"', segunda.content.decode())
         # a página que não existe cai na última; texto no lugar do número, na primeira
-        self.assertEqual(self.abrir(page=99).context["pagina"].number, 3)
+        self.assertEqual(self.abrir(page=99).context["pagina"].number, 2)
         self.assertEqual(self.abrir(page="abc").context["pagina"].number, 1)
-        # as três páginas, juntas, são todas as contas, cada uma uma vez
-        todas = self.linhas(primeira) + self.linhas(segunda) + self.linhas(terceira)
+        # as duas páginas, juntas, são todas as contas, cada uma uma vez
+        todas = self.linhas(primeira) + self.linhas(segunda)
         self.assertEqual(sorted(map(int, todas)), sorted(User.objects.values_list("pk", flat=True)))
 
     def test_os_filtros_viajam_no_paginador(self):
@@ -1254,23 +1252,23 @@ class ListaDeUsuariosTests(EquipeMixin, TestCase):
         self.assertEqual(resposta.context["pagina"].paginator.count, 40)
         html = resposta.content.decode()
         self.assertIn('href="?q=conta&amp;tipo=clientes&amp;page=1#usrContas"', html)
-        self.assertIn('href="?q=conta&amp;tipo=clientes&amp;page=3#usrContas"', html)
-        self.assertIn("Exibindo <strong>19–36</strong> de", html)
+        self.assertNotIn('page=3#usrContas"', html)
+        self.assertIn("Exibindo <strong>25–40</strong> de", html)
         # a busca que não acha nada: o estado vazio de sempre, sem paginador
         vazio = self.abrir(q="ninguém com este nome").content.decode()
         self.assertIn("Nenhum usuário encontrado", vazio)
         self.assertNotIn('class="ls-pager"', vazio)
 
     def test_o_contador_filtra_no_servidor_e_segue_pelas_paginas(self):
-        for i, conta in enumerate(self.contas[:20]):
+        for i, conta in enumerate(self.contas[:26]):
             PresencaUsuario.objects.create(usuario=conta, visto_em=self.agora - dt.timedelta(seconds=10 + i), onde="site")
-        PresencaUsuario.objects.create(usuario=self.contas[25], visto_em=self.agora - dt.timedelta(days=3), onde="app")
+        PresencaUsuario.objects.create(usuario=self.contas[30], visto_em=self.agora - dt.timedelta(days=3), onde="app")
         resposta = self.abrir(presenca="online")
         html = resposta.content.decode()
-        self.assertEqual(resposta.context["pagina"].paginator.count, 20)
-        self.assertEqual(len(self.linhas(resposta)), 18)
+        self.assertEqual(resposta.context["pagina"].paginator.count, 26)
+        self.assertEqual(len(self.linhas(resposta)), 24)
         self.assertIn('data-lsa-filtro-aviso="online"', html)
-        self.assertIn("<strong>20 contas</strong> online agora", html)
+        self.assertIn("<strong>26 contas</strong> online agora", html)
         self.assertIn('href="?presenca=online&amp;page=2#usrContas"', html)
         self.assertIn('<a class="lsa-filtro-limpar" href="?#usrContas">Mostrar todas</a>', html)
         self.assertIn('<input type="hidden" name="presenca" value="online">', html)  # a busca não perde o filtro

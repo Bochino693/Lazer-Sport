@@ -213,7 +213,7 @@ class CadastroDePecaTests(GestaoProdutosBaseTests):
             for numero in range(30)
         ])
         primeira = self.get(self.url)
-        self.assertEqual(len(primeira.context["pecas"]), 18)
+        self.assertEqual(len(primeira.context["pecas"]), 24)
         self.assertContains(primeira, "Paginação de peças")
         etag = primeira["ETag"]
 
@@ -256,10 +256,10 @@ class CatalogoBrinquedosResponsivoTests(GestaoProdutosBaseTests):
                 avaliacao=Decimal("5.00"),
                 voltz="Bivolt",
             )
-            for numero in range(24)
+            for numero in range(30)
         ])
         resposta = self.get(self.url)
-        self.assertEqual(len(resposta.context["brinquedos"]), 18)
+        self.assertEqual(len(resposta.context["brinquedos"]), 24)
         self.assertGreater(resposta.context["page_obj"].paginator.num_pages, 1)
 
     def test_modal_formata_dinheiro_metros_e_opcoes(self):

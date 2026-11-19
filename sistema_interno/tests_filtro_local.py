@@ -87,7 +87,7 @@ class IndiceDaListaDeOrcamentosTests(TestCase):
         indice = self.indice(resposta)
 
         self.assertEqual(len(indice), 31)
-        self.assertEqual(resposta.content.decode().count('<tr data-registro='), 25)
+        self.assertEqual(resposta.content.decode().count('<tr data-registro='), 24)
         self.assertIn(str(escondida.pk), [registro["i"] for registro in indice])
 
     def test_o_indice_acha_pelo_nome_sem_acento_pelo_numero_e_pelo_item(self):

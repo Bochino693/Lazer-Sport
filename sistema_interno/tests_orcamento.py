@@ -55,7 +55,7 @@ class OrcamentoInternoTests(TestCase):
 
     URL = "/orcamentos/"
     #: Espelha `OrcamentosInnerView.POR_PAGINA`; conferido logo abaixo.
-    POR_PAGINA_ESPERADA = 25
+    POR_PAGINA_ESPERADA = 24
 
     def setUp(self):
         self.gestor = User.objects.create_superuser(

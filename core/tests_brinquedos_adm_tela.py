@@ -278,7 +278,7 @@ class FiltrosTests(Base):
     def test_a_paginacao_guarda_os_filtros(self):
         Brinquedos.objects.bulk_create([
             Brinquedos(nome_brinquedo=f"Brinquedo {n:02d}", descricao="x", avaliacao=5, voltz="220V")
-            for n in range(20)
+            for n in range(30)
         ])
         resposta = self.abrir(loja="nao")
         self.assertGreater(resposta.context["page_obj"].paginator.num_pages, 1)

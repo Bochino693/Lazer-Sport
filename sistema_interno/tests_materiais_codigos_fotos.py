@@ -139,11 +139,11 @@ class FotosMaterialTests(TestCase):
         self.assertTrue(Material.objects.get().foto_miniatura)
 
     def test_pagina_limita_materiais_e_busca_codigo(self):
-        for n in range(31):
+        for n in range(37):
             Material.objects.create(nome_material=f"Material {n:02d}", tipo_material=self.tipo)
         resposta = self.client.get(self.URL, HTTP_HOST="interno.testserver")
-        self.assertEqual(len(resposta.context["materiais"]), 30)
-        self.assertEqual(resposta.context["total_materiais"], 31)
+        self.assertEqual(len(resposta.context["materiais"]), 36)
+        self.assertEqual(resposta.context["total_materiais"], 37)
         resposta = self.client.get(self.URL, {"page": "2"}, HTTP_HOST="interno.testserver")
         self.assertEqual(len(resposta.context["materiais"]), 1)
         resposta = self.client.get(self.URL, {"q": "ard-0031"}, HTTP_HOST="interno.testserver")
