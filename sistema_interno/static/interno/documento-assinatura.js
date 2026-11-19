@@ -167,7 +167,7 @@
       .then(function (corpo) {
         if (!corpo.mudou || !noAr()) return;
         trocar(corpo);
-        if (corpo.assinado && corpo.msg) aviso(corpo.msg, "ok");
+        if (corpo.msg) aviso(corpo.msg, corpo.assinado ? "ok" : "info");
       })
       .catch(function () { /* rede fora: tenta na próxima volta */ });
   }

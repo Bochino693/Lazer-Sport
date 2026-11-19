@@ -73,12 +73,18 @@ class OrcamentoEOrdemServicoSeparadosTests(TestCase):
         self.assertEqual(anterior.status, Orcamento.Status.EM_NEGOCIACAO)
         self.assertIn("desconto", anterior.motivo_negociacao)
 
+        # Seção 123: a proposta em negociação muda no lugar até a assinatura
+        # (antes, 409). O que barra este envio é a lista vazia -- e nada muda.
         tentativa = self.post_interno("/orcamentos/", {
             "action": "save",
             "id": anterior.pk,
+            "nome_cliente": "Buffet Alegria",
             "itens": "[]",
         })
-        self.assertEqual(tentativa.status_code, 409)
+        self.assertEqual(tentativa.status_code, 400)
+        self.assertIn("item", tentativa.json()["msg"])
+        anterior.refresh_from_db()
+        self.assertEqual(anterior.status, Orcamento.Status.EM_NEGOCIACAO)
 
         resposta = self.post_interno("/orcamentos/", {
             "action": "refazer",

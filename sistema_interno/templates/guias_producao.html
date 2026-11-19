@@ -113,7 +113,7 @@
       {% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="produto" value="{{ produto.id }}"><input type="hidden" name="id" id="etapaId">
       <div class="modal-header"><h2 class="modal-title fs-5" id="etapaModalTitulo">Nova etapa</h2><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
-        <div id="etapaErro" class="alert alert-danger d-none"></div>
+        <div id="etapaErro" class="visually-hidden" role="alert"></div>
         <div class="row g-3">
           <div class="col-3"><label class="form-label">Ordem *</label><input class="form-control" type="number" min="1" max="999" name="ordem" id="etapaOrdem" required></div>
           <div class="col-9"><label class="form-label">Título *</label><input class="form-control" name="titulo" id="etapaTitulo" maxlength="120" required></div>
@@ -149,7 +149,7 @@
       </div>
 
       <div class="modal-body">
-        <div id="produtoGuiaErro" class="alert alert-danger d-none"></div>
+        <div id="produtoGuiaErro" class="visually-hidden" role="alert"></div>
 
         <div class="mb-3">
           <label class="form-label" for="produtoGuiaBrinquedoBusca">Já está no catálogo do site?</label>
@@ -215,7 +215,7 @@
       </div>
 
       <div class="modal-body">
-        <div id="copiarErro" class="alert alert-danger d-none"></div>
+        <div id="copiarErro" class="visually-hidden" role="alert"></div>
         <p class="text-muted small">
           Produto parecido já tem o manual pronto. As etapas vêm com texto e
           tempo; as fotos não, porque imagem de outro produto engana quem

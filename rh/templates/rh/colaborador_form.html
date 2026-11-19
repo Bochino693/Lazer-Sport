@@ -21,9 +21,14 @@
 <form class="rh-form" method="post" novalidate id="rhFormColaborador" data-rh-form-colaborador>
   {% csrf_token %}
   {% if form.errors %}
-    <div class="rh-erros" role="alert">
-      <strong><i class="bi bi-exclamation-octagon" aria-hidden="true"></i> Confira os campos marcados.</strong>
-      {% for erro in form.non_field_errors %}<div>{{ erro }}</div>{% endfor %}
+    {# O resumo do erro é a janela de app (LEIA-ME-V10, seção 123); cada campo errado continua aceso, com a frase dele. #}
+    <div class="ls-recados-servidor" data-ls-recados="" role="region" aria-label="Avisos">
+      <div class="ls-recado-cartao ls-recado--erro" data-ls-recado data-nivel="erro"
+           data-titulo="Confira os campos marcados" data-icone="pessoa" data-modal role="alert">
+        <strong class="ls-recado-titulo">Confira os campos marcados</strong>
+        <span class="ls-recado-texto">Os campos em vermelho precisam de ajuste antes de salvar a ficha.{% for erro in form.non_field_errors %}
+{{ erro }}{% endfor %}</span>
+      </div>
     </div>
   {% endif %}
 

@@ -49,7 +49,7 @@
   <form class="ls-dc-cartao" id="formDadosContrato" method="post" action="{% url 'dados_contrato_inner' %}" autocomplete="off" novalidate>
     {% csrf_token %}
     <input type="hidden" name="action" value="salvar">
-    <div class="ls-dc-erro d-none" id="dcErro" role="alert"></div>
+    <div class="visually-hidden" id="dcErro" role="alert"></div>
 
     <fieldset>
       <legend><i class="bi bi-building" aria-hidden="true"></i> A empresa</legend>

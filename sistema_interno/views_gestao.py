@@ -64,6 +64,7 @@ from core.models import (
 
 from .busca_local import montar_indice
 from . import clientes as svc_clientes
+from . import edicao_orcamento
 from . import etapas_padrao
 from . import fragmento
 from .documento_assinatura import situacao_do_cartao
@@ -108,6 +109,7 @@ from .utils import (
     endereco_do_site,
     exigir_confirmacao_exclusao,
     inteiro,
+    no_campo,
     texto,
 )
 from .views import (
@@ -524,7 +526,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 DocumentoAssinatura.objects
                 .filter(orcamento_id__in=[orcamento.pk for orcamento in orcamentos])
                 .exclude(situacao=DocumentoAssinatura.Situacao.SUBSTITUIDO)
-                .only("id", "orcamento_id", "situacao", "conteudo")
+                .only("id", "orcamento_id", "situacao", "conteudo", "assinante_nome", "assinado_em")
                 .order_by("id")
             ):
                 documentos[documento.orcamento_id] = documento
@@ -667,6 +669,8 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
     @staticmethod
     def serializar(orcamento):
         """Payload que o modal usa para reabrir um orçamento já salvo."""
+        documento_janela = OrcamentosInnerView.documento_da_janela(orcamento)
+        trava = edicao_orcamento.trava(orcamento)
         return {
             "id": orcamento.id,
             "revisao": orcamento.atualizado.isoformat() if orcamento.atualizado else "",
@@ -680,7 +684,14 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "whatsapp_cliente": orcamento.whatsapp_destinatario,
             "email_cliente": orcamento.email_destinatario,
             "status": orcamento.status,
-            "pode_editar": orcamento.pode_editar_formulario,
+            # ATÉ A ASSINATURA (seção 123): a janela grava enquanto não há
+            # trava; com ela, abre só para consulta e diz por quê no alto.
+            "pode_editar": trava is None,
+            "trava": trava.como_dict() if trava else None,
+            "aviso_edicao": (
+                edicao_orcamento.aviso_da_janela(orcamento, documento_janela)
+                if trava is None else ""
+            ),
             "versao": orcamento.versao,
             # O CÓDIGO E A CONTA DO SITE (LEIA-ME-V10, seção 104): o que o
             # cliente digita em Meus pedidos e, depois de digitado, a conta
@@ -748,7 +759,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             # pagamento: a janela mostra o atalho para o cartão dele. A
             # situação é a do cartão ("gerar", "aguardando", "assinado",
             # "suspenso"), a mesma palavra nas duas telas.
-            "documento_assinatura": OrcamentosInnerView.documento_da_janela(orcamento),
+            "documento_assinatura": documento_janela,
             # O 100% pago virou venda (core.Venda): o número dela.
             "venda": orcamento.venda_id or None,
             # O TEMPO DE PRODUÇÃO E AS ETIQUETAS (LEIA-ME-V10, seção 89): o
@@ -965,7 +976,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         )
 
     @staticmethod
-    def _validade(request, *, novo):
+    def _validade(request, *, novo, manter=None):
         """Até quando a proposta vale -- nunca para trás, nunca vazia por esquecimento.
 
         DUAS REGRAS, E CADA UMA RESOLVE UM PROBLEMA DIFERENTE.
@@ -985,16 +996,26 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
            sugestão -- quem decide é aqui, que é o único caminho por onde
            os dados entram.
         """
-        escolhida = data(request.POST.get("validade"), "Validade")
+        with no_campo("validade"):
+            escolhida = data(request.POST.get("validade"), "Validade")
 
         if escolhida is None:
             return Orcamento.validade_padrao() if novo else None
 
-        if escolhida < timezone.localdate():
+        # A APROVADA GUARDA A DELA (seção 123). Aprovada em outubro, com
+        # validade de outubro, ela ganha um item hoje sem ninguém ter de
+        # "consertar" uma data que, depois do sim do cliente, não diz mais
+        # nada (`manter` é a gravada, só na aprovada). Mexida, vale a 2.
+        if escolhida < timezone.localdate() and escolhida != manter:
             raise ErroDeFormulario(
                 "A validade não pode ser anterior a hoje: a proposta sairia "
                 "vencida. Use o atalho de "
-                f"{Orcamento.DIAS_DE_VALIDADE_PADRAO} dias ou escolha outra data."
+                f"{Orcamento.DIAS_DE_VALIDADE_PADRAO} dias ou escolha outra data.",
+                titulo="Validade no passado", campo="validade",
+                acao={
+                    "rotulo": f"Usar {Orcamento.DIAS_DE_VALIDADE_PADRAO} dias",
+                    "chave": "validade_padrao",
+                },
             )
         return escolhida
 
@@ -1006,32 +1027,49 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             return self.erro(
                 request,
                 "O Financeiro participa de propostas existentes; a criação cabe ao Comercial.",
-                status=403,
+                status=403, titulo="Sem permissão",
             )
 
+        # A O.S. vem junto (a trava de baixo pergunta por ela) e o FOR
+        # UPDATE prende só a linha do orçamento: no PostgreSQL ele não
+        # aceita o lado anulável de um LEFT JOIN (seção 111).
         orcamento = (
-            get_object_or_404(limitar_orcamentos(request.user, Orcamento.objects.select_for_update()), pk=orcamento_id)
+            get_object_or_404(
+                limitar_orcamentos(
+                    request.user,
+                    Orcamento.objects.select_for_update(of=("self",)).select_related("ordem_servico"),
+                ),
+                pk=orcamento_id,
+            )
             if orcamento_id else Orcamento()
         )
         if orcamento.pk and "revisao" in request.POST:
             atual = orcamento.atualizado.isoformat() if orcamento.atualizado else ""
             if request.POST["revisao"] != atual:
-                return self.erro(request, "Este orçamento mudou em outro atendimento. Seus campos continuam aqui; confira a versão atual antes de salvar novamente.", status=409)
-        if orcamento.pk and not orcamento.pode_editar_formulario:
+                return self.erro(
+                    request,
+                    "Este orçamento mudou em outro atendimento. Seus campos continuam "
+                    "aqui; confira a versão atual antes de salvar novamente.",
+                    status=409, titulo="Mudou em outro atendimento",
+                    acao={"rotulo": "Ver a versão atual", "chave": "versao_atual", "id": orcamento.pk},
+                    nivel="alerta", icone="alerta",
+                )
+        # ATÉ A ASSINATURA (LEIA-ME-V10, seção 123). Enviada, em negociação
+        # ou aprovada, a proposta muda aqui mesmo; assinada, não muda mais
+        # -- e a recusa diz por quê, com o botão que resolve.
+        trava = edicao_orcamento.trava(orcamento) if orcamento.pk else None
+        if trava is not None:
             return self.erro(
-                request,
-                (
-                    "Uma proposta já enviada não pode ser sobrescrita. "
-                    "Use ‘Refazer proposta’ para criar uma nova versão e "
-                    "preservar o que o cliente recebeu."
-                ),
-                status=409,
+                request, trava.texto, status=409, titulo=trava.titulo,
+                acao=trava.acao, trava=trava.chave, nivel="alerta", icone=trava.icone,
             )
-        # Cada assinatura toca o banco. Ler a parte comercial para um
-        # usuário que só altera o financeiro fazia duas consultas aos itens
-        # sem qualquer possibilidade de mudar esse bloco.
+        # UMA leitura dos itens de antes serve para tudo: a assinatura dos
+        # blocos, o total de antes (o pagamento é refeito contra o novo) e
+        # o que o contrato e a lista de montagem levavam.
+        itens_antes = list(orcamento.itens.order_by("id")) if orcamento.pk else []
+        antes = edicao_orcamento.Antes.do_orcamento(orcamento, itens_antes) if orcamento.pk else None
         comercial_antes = (
-            self._assinatura_comercial(orcamento)
+            self._assinatura_comercial(orcamento, itens=itens_antes)
             if orcamento.pk and acesso["orcamentos_editar_comercial"] else None
         )
         financeiro_antes = (
@@ -1054,38 +1092,51 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 try:
                     validate_email(orcamento.email_cliente)
                 except ValidationError:
-                    raise ErroDeFormulario("Informe um e-mail válido para o cliente.")
+                    raise ErroDeFormulario(
+                        "Informe um e-mail válido para o cliente.",
+                        titulo="E-mail inválido", campo="email_cliente",
+                    )
             if not orcamento.cliente and not orcamento.nome_cliente:
                 raise ErroDeFormulario(
-                    "Escolha um cliente cadastrado ou escreva o nome do destinatário."
+                    "Escolha um cliente cadastrado ou escreva o nome do destinatário.",
+                    titulo="Falta o cliente", campo="nome_cliente",
                 )
 
             # Salvar é concluir a criação da proposta. O rascunho de uma
             # janela interrompida fica no navegador (LSRascunhos) e só
             # aparece na lateral; não deve virar um registro incompleto no
             # banco. Rascunhos antigos também saem dessa condição quando a
-            # equipe termina e salva o formulário.
-            orcamento.status = Orcamento.Status.AGUARDANDO_RESPOSTA
-            orcamento.validade = self._validade(request, novo=novo)
+            # equipe termina e salva o formulário. As outras situações
+            # FICAM (seção 123): a aprovada que ganhou um item continua
+            # aprovada, a enviada continua esperando o cliente.
+            aprovada = orcamento.pk and orcamento.status == Orcamento.Status.APROVADO
+            if novo or orcamento.status == Orcamento.Status.RASCUNHO:
+                orcamento.status = Orcamento.Status.AGUARDANDO_RESPOSTA
+            orcamento.validade = self._validade(
+                request, novo=novo, manter=orcamento.validade if aprovada else None,
+            )
             orcamento.forma_envio = texto(request, "forma_envio", limite=120)
             orcamento.observacoes = texto(request, "observacoes")
 
         if acesso["orcamentos_editar_financeiro"]:
-            orcamento.desconto = decimal_br(
-                request.POST.get("desconto"), "Desconto",
-                limite=Decimal("9999999999.99"),
-            ) or ZERO
-            orcamento.frete = decimal_br(
-                request.POST.get("frete"), "Frete",
-                limite=Decimal("9999999999.99"),
-            ) or ZERO
+            with no_campo("desconto"):
+                orcamento.desconto = decimal_br(
+                    request.POST.get("desconto"), "Desconto",
+                    limite=Decimal("9999999999.99"),
+                ) or ZERO
+            with no_campo("frete"):
+                orcamento.frete = decimal_br(
+                    request.POST.get("frete"), "Frete",
+                    limite=Decimal("9999999999.99"),
+                ) or ZERO
             # Com o valor final combinado, ele é o total: o desconto vira a
             # diferença até ele e não é guardado à parte (senão contaria
             # duas vezes em quem ainda lê o campo).
-            orcamento.valor_final = decimal_br(
-                request.POST.get("valor_final"), "Valor final",
-                limite=Decimal("9999999999.99"),
-            )
+            with no_campo("valor_final"):
+                orcamento.valor_final = decimal_br(
+                    request.POST.get("valor_final"), "Valor final",
+                    limite=Decimal("9999999999.99"),
+                )
             if orcamento.valor_final is not None:
                 orcamento.desconto = ZERO
             orcamento.forma_pagamento = texto(
@@ -1106,7 +1157,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         comercial_mudou = novo or (
             acesso["orcamentos_editar_comercial"]
             and comercial_antes != self._assinatura_comercial(
-                orcamento, itens=itens_gravados,
+                orcamento, itens=itens_gravados if itens_gravados is not None else itens_antes,
             )
         )
         financeiro_mudou = novo or (
@@ -1136,6 +1187,16 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             for bloco in blocos_reabertos:
                 self._reabrir_bloco(orcamento, bloco)
 
+        # O QUE DERIVA DA PROPOSTA ANDA JUNTO (seção 123): o pagamento contra
+        # o total novo, a lista de montagem, o contrato que espera assinatura
+        # (refeito com os itens novos) e a linha do histórico com o que mudou.
+        resultado = None
+        if not novo:
+            resultado = edicao_orcamento.acompanhar(
+                orcamento, request.user, antes,
+                itens_gravados if itens_gravados is not None else itens_antes,
+            )
+
         registrar_atividade_orcamento(
             orcamento,
             request,
@@ -1143,6 +1204,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 AtividadeOrcamento.Tipo.CRIADO
                 if novo else AtividadeOrcamento.Tipo.ALTERADO
             ),
+            resumo=resultado.resumo() if resultado else "",
         )
 
         mapa = orcamento.sincronizar_cliente_aprovado()
@@ -1152,12 +1214,17 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             complemento = " Cliente atualizado no mapa do site."
         elif orcamento.status == Orcamento.Status.APROVADO and orcamento.cliente_id:
             complemento = " Para aparecer no mapa, complete o endereço do cliente."
+        if resultado and resultado.contrato_refeito:
+            complemento += " " + edicao_orcamento.TEXTO_CONTRATO_REFEITO
 
         return self.sucesso(
             request,
             f"Orçamento #{orcamento.pk} salvo — total {orcamento.total}.{complemento}",
             id=orcamento.pk,
             mapa_publicado=bool(mapa and mapa.latitude and mapa.longitude),
+            janela=resultado.janela() if resultado else None,
+            contrato_refeito=bool(resultado and resultado.contrato_refeito),
+            contrato_retirado=bool(resultado and resultado.contrato_retirado),
         )
 
     @staticmethod
@@ -1228,7 +1295,10 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             raise ErroDeFormulario("Formato inválido na lista de itens.")
 
         if not linhas:
-            raise ErroDeFormulario("Adicione pelo menos um item ao orçamento.")
+            raise ErroDeFormulario(
+                "Adicione pelo menos um item ao orçamento.",
+                titulo="Faltam os itens", campo="item:1:descricao",
+            )
 
         if len(linhas) > 60:
             raise ErroDeFormulario("Um orçamento aceita no máximo 60 itens.")
@@ -1266,21 +1336,26 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
             descricao = (linha.get("descricao") or "").strip()
             if not descricao:
-                raise ErroDeFormulario(f"Item {posicao}: informe a descrição.")
+                raise ErroDeFormulario(
+                    f"Item {posicao}: informe a descrição.",
+                    titulo="Confira o item", campo=f"item:{posicao}:descricao",
+                )
 
-            quantidade = inteiro(
-                str(linha.get("quantidade") or ""),
-                f"Item {posicao}: quantidade",
-                obrigatorio=True,
-                minimo=1,
-                maximo=100000,
-            )
-            valor = decimal_br(
-                str(linha.get("valor_unitario") or ""),
-                f"Item {posicao}: valor unitário",
-                obrigatorio=True,
-                limite=Decimal("9999999999.99"),
-            )
+            with no_campo(f"item:{posicao}:quantidade"):
+                quantidade = inteiro(
+                    str(linha.get("quantidade") or ""),
+                    f"Item {posicao}: quantidade",
+                    obrigatorio=True,
+                    minimo=1,
+                    maximo=100000,
+                )
+            with no_campo(f"item:{posicao}:valor"):
+                valor = decimal_br(
+                    str(linha.get("valor_unitario") or ""),
+                    f"Item {posicao}: valor unitário",
+                    obrigatorio=True,
+                    limite=Decimal("9999999999.99"),
+                )
 
             # Catálogo primeiro: é de onde vem quase todo item. Se a
             # linha aponta para um brinquedo, o produto de fábrica é
@@ -1339,19 +1414,24 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         if orcamento.status == Orcamento.Status.SUBSTITUIDO:
             raise ErroDeFormulario(
-                "Esta versão foi substituída e permanece somente no histórico."
+                "Esta versão foi substituída e permanece somente no histórico.",
+                titulo="Versão substituída",
             )
         if hasattr(orcamento, "ordem_servico") and status != orcamento.status:
             raise ErroDeFormulario(
                 "A proposta já liberou uma O.S. e permanece congelada no "
-                "histórico comercial. Atualize somente a Ordem de Serviço."
+                "histórico comercial. Atualize somente a Ordem de Serviço.",
+                titulo="Proposta com O.S.",
             )
         # Assinada ou com pagamento, a aprovação é fato: "Recusado" com a
         # venda na receita e o termo assinado era uma fase sem sentido
         # (LEIA-ME-V10, seção 111).
         travada = orcamento.motivo_situacao_travada
         if travada and status != orcamento.status:
-            raise ErroDeFormulario(travada)
+            raise ErroDeFormulario(
+                travada,
+                titulo="Contrato assinado" if orcamento.contrato_assinado else "Pagamento registrado",
+            )
 
         # O MOTIVO DA RECUSA É OBRIGATÓRIO, E NO SERVIDOR.
         #
@@ -1464,7 +1544,9 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 orcamento=self.serializar(nova),
             )
         if not anterior.pode_refazer:
-            raise ErroDeFormulario(self._porque_nao_refazer(anterior))
+            raise ErroDeFormulario(
+                self._porque_nao_refazer(anterior), titulo="Sem nova versão",
+            )
 
         motivo = texto(request, "motivo", limite=600)
         heranca = anterior.motivo_da_proxima_versao
@@ -1598,14 +1680,16 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         # existe, e o dinheiro que entrou tem de ser anotado.
         if orcamento.status != Orcamento.Status.APROVADO:
             raise ErroDeFormulario(
-                "O pagamento só é registrado depois da aprovação definitiva."
+                "O pagamento só é registrado depois da aprovação definitiva.",
+                titulo="Ainda não aprovado",
             )
-        valor = decimal_br(
-            request.POST.get("valor_pago"),
-            "Valor pago",
-            obrigatorio=True,
-            limite=Decimal("9999999999.99"),
-        )
+        with no_campo("valor_pago"):
+            valor = decimal_br(
+                request.POST.get("valor_pago"),
+                "Valor pago",
+                obrigatorio=True,
+                limite=Decimal("9999999999.99"),
+            )
         mudanca = orcamento.registrar_pagamento(
             valor, texto(request, "observacao_pagamento", limite=240),
         )

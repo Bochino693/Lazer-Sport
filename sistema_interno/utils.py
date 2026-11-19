@@ -1,6 +1,7 @@
 """Helpers de formulário do sistema interno."""
 
 import re
+from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlsplit, urlunsplit
 
@@ -8,7 +9,37 @@ from django.utils import timezone
 
 
 class ErroDeFormulario(Exception):
-    """Falha previsível de validação: vira mensagem pro usuário, não 500."""
+    """Falha previsível de validação: vira mensagem pro usuário, não 500.
+
+    A JANELA DO ERRO (LEIA-ME-V10, seção 123). O texto continua sendo o
+    `str()` do erro (a chave `msg` do JSON, que toda tela lê). Opcionais,
+    para a janela de app ficar clara: `titulo` ("Contrato assinado"),
+    `campo` (o `name` do campo que a tela acende e foca), `acao` (o botão
+    que resolve: {"rotulo", "url"} ou {"rotulo", "chave"}) e `status` (o
+    HTTP; sem ele, 400).
+    """
+
+    def __init__(self, mensagem="", *, titulo="", campo="", acao=None, status=None):
+        super().__init__(mensagem)
+        self.titulo = titulo
+        self.campo = campo
+        self.acao = acao
+        self.status = status
+
+
+@contextmanager
+def no_campo(nome):
+    """O erro de validação levantado aqui dentro é do campo `nome`.
+
+    Os leitores (`decimal_br`, `inteiro`, `data`) só sabem o rótulo; quem
+    chama sabe qual campo da tela errou -- e a janela acende esse campo.
+    """
+    try:
+        yield
+    except ErroDeFormulario as erro:
+        if not erro.campo:
+            erro.campo = nome
+        raise
 
 
 PALAVRA_CONFIRMACAO_EXCLUSAO = "CONFIRMAR"

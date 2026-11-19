@@ -284,6 +284,13 @@ class EstadoDocumentoAssinaturaView(_BaseDocumento):
                     f"{documento.assinante_nome} assinou o documento do orçamento "
                     f"#{orcamento.pk}."
                 )
+            elif documento and visto_doc and str(documento.pk) != visto_doc:
+                # Refeito em outra tela (a proposta mudou antes da assinatura,
+                # seção 123): o cartão troca, e quem olha fica sabendo.
+                corpo["msg"] = (
+                    "O contrato foi refeito com o pedido atualizado: o link "
+                    "anterior deixou de valer e o novo já está aqui."
+                )
         resposta = JsonResponse(corpo)
         resposta["Cache-Control"] = "no-store"
         return resposta

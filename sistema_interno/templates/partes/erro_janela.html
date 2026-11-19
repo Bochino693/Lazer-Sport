@@ -1,0 +1,15 @@
+{% comment %}
+  O ERRO QUE A TELA TRAZ DO SERVIDOR, COMO JANELA DE APP (LEIA-ME-V10, seção 123).
+
+  Mesmo formato dos recados do servidor (core/templates/partials/ls_avisos.html):
+  o ls-aviso.js lê este cartão ao abrir a tela e o mostra como a folha de
+  app (`data-modal`), com o título; sem o script, o cartão fica à vista no
+  alto, com a cara dos avisos. Recebe `titulo`, `texto`, `icone` e `id`.
+{% endcomment %}
+<div class="ls-recados-servidor" data-ls-recados="" role="region" aria-label="Avisos">
+  <div class="ls-recado-cartao ls-recado--erro" data-ls-recado data-nivel="erro"
+       data-titulo="{{ titulo }}" data-icone="{{ icone|default:'erro' }}" data-modal role="alert">
+    <strong class="ls-recado-titulo">{{ titulo }}</strong>
+    <span class="ls-recado-texto"{% if id %} id="{{ id }}"{% endif %}>{{ texto }}</span>
+  </div>
+</div>

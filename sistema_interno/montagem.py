@@ -1108,6 +1108,164 @@ def sincronizar_orcamento(orcamento_id, *, silencioso=False):
     return producao
 
 
+def _chave_exata(trilha, brinquedo_id, peca_id, nome, variante):
+    return (trilha, brinquedo_id, peca_id, sem_acento(nome), sem_acento(variante))
+
+
+def _chave_larga(trilha, brinquedo_id, peca_id, nome):
+    if brinquedo_id or peca_id:
+        return (trilha, brinquedo_id, peca_id)
+    return (trilha, sem_acento(nome))
+
+
+def _avanco(unidade):
+    """Quanto a unidade já andou: as mais adiantadas ficam no pedido."""
+    from .models import UnidadeMontagem
+
+    S = UnidadeMontagem.Situacao
+    ordem = {S.ENTREGUE: 3, S.PRONTA: 2, S.PRODUCAO: 1}.get(unidade.situacao, 0)
+    return (ordem, len(unidade.etapas_em or {}), -(unidade.posicao or 0), -(unidade.pk or 0))
+
+
+def acompanhar_itens_do_orcamento(orcamento, agora=None) -> dict:
+    """Os itens do orçamento APROVADO mudaram (seção 123): a lista acompanha.
+
+    "Teve que inserir mais itens" depois de aprovar: antes, o caminho era a
+    versão 2, e a lista ficava com as máquinas da 1 (substituída, saía) e
+    entrava a 2 do zero -- quem já estava montando perdia o lugar. Agora a
+    proposta muda no lugar e a lista acerta SÓ a diferença:
+
+      * a máquina que continua no pedido fica onde está -- a vaga, a
+        posição na fila e as etapas feitas (o casamento é pelo brinquedo, a
+        peça ou o nome escrito, e o adesivo; trocar só o adesivo de uma
+        que já anda não a tira da vaga);
+      * a que entrou vai para a fila como as outras do orçamento (pela
+        chegada dele; peça e kit, sem fila, já entram);
+      * a que saiu é CANCELADA, primeiro as que ainda nem começaram; se só
+        sobrar a que já anda (ou está pronta), ela sai e o resultado conta
+        (`comecadas_que_sairam`) -- a tela manda avisar a Produção.
+
+    Depois, a fila anda e as previsões se refazem (`distribuir`) e a origem
+    se acerta (situação, etapas, prazo). Devolve {"entraram", "sairam",
+    "comecadas_que_sairam"} -- vazio quando nada mudou na lista.
+    """
+    from .models import Orcamento, ProducaoOrigem, UnidadeMontagem
+
+    S = UnidadeMontagem.Situacao
+    P = ProducaoOrigem.Situacao
+    if orcamento.status != Orcamento.Status.APROVADO:
+        return {}
+    producao = ProducaoOrigem.objects.filter(orcamento=orcamento).first()
+    # Sem produção ainda, o sinal da aprovação (ou a lista ao abrir) põe as
+    # máquinas de agora; entregue ou cancelada, é história.
+    if producao is None or producao.situacao in (P.CANCELADA, P.ENTREGUE):
+        return {}
+    agora = agora or timezone.now()
+    regras = Regras.agora()
+    # Os itens que a janela acabou de gravar já estão na memória (com o
+    # catálogo de cada um): sem eles, ou sem a chave de algum, lê do banco.
+    gravados = getattr(orcamento, "_prefetched_objects_cache", {}).get("itens")
+    if gravados is None or any(item.pk is None for item in gravados):
+        orcamento = Orcamento.objects.prefetch_related(
+            "itens__brinquedo", "itens__peca", "itens__produto__brinquedo",
+        ).get(pk=orcamento.pk)
+    linhas = linhas_do_orcamento(orcamento, regras, dias_de_projeto_do_orcamento(orcamento, producao))
+    vivas = sorted(
+        (u for u in producao.unidades.all() if u.situacao != S.CANCELADA),
+        key=_avanco, reverse=True,
+    )
+    if not linhas:
+        # ficou só serviço (montagem, frete...): não há máquina a montar
+        comecadas = sum(1 for u in vivas if u.situacao != S.FILA or u.etapa)
+        cancelar(producao, agora)
+        return {"entraram": 0, "sairam": len(vivas), "comecadas_que_sairam": comecadas} if vivas else {}
+
+    usadas = set()
+    plano = []  # (linha, [unidades que continuam])
+    for linha in linhas:
+        exata = _chave_exata(linha.trilha, getattr(linha.brinquedo, "pk", None),
+                             getattr(linha.peca, "pk", None), linha.nome, linha.variante)
+        escolhidas = []
+        for unidade in vivas:
+            if len(escolhidas) >= linha.quantidade:
+                break
+            if unidade.pk not in usadas and _chave_exata(
+                unidade.trilha, unidade.brinquedo_id, unidade.peca_id, unidade.nome, unidade.variante,
+            ) == exata:
+                escolhidas.append(unidade)
+                usadas.add(unidade.pk)
+        plano.append([linha, escolhidas])
+    for item in plano:
+        linha, escolhidas = item
+        if len(escolhidas) >= linha.quantidade:
+            continue
+        larga = _chave_larga(linha.trilha, getattr(linha.brinquedo, "pk", None),
+                             getattr(linha.peca, "pk", None), linha.nome)
+        for unidade in vivas:
+            if len(escolhidas) >= linha.quantidade:
+                break
+            if unidade.pk not in usadas and _chave_larga(
+                unidade.trilha, unidade.brinquedo_id, unidade.peca_id, unidade.nome,
+            ) == larga:
+                escolhidas.append(unidade)
+                usadas.add(unidade.pk)
+
+    saem = [u for u in vivas if u.pk not in usadas]
+    novas, mudadas = [], []
+    for linha, escolhidas in plano:
+        for numero in range(1, linha.quantidade + 1):
+            if numero <= len(escolhidas):
+                unidade = escolhidas[numero - 1]
+                antes = (unidade.numero, unidade.de, unidade.nome, unidade.variante,
+                         unidade.item_orcamento_id, unidade.dias)
+                unidade.numero, unidade.de = numero, linha.quantidade
+                unidade.nome = linha.nome[:200]
+                unidade.variante = (linha.variante or "")[:80]
+                unidade.item_orcamento = linha.item_orcamento
+                if unidade.situacao == S.FILA:
+                    unidade.dias = linha.dias
+                if antes != (unidade.numero, unidade.de, unidade.nome, unidade.variante,
+                             unidade.item_orcamento_id, unidade.dias):
+                    unidade.atualizado = agora
+                    mudadas.append(unidade)
+                continue
+            unidade = UnidadeMontagem(
+                producao=producao, numero=numero, de=linha.quantidade,
+                nome=linha.nome[:200], variante=(linha.variante or "")[:80],
+                brinquedo=linha.brinquedo, peca=linha.peca, trilha=linha.trilha,
+                dias=linha.dias, chegada=producao.chegada, situacao=S.FILA,
+                item_orcamento=linha.item_orcamento,
+            )
+            if linha.trilha not in COM_FILA:
+                _entrar(unidade, agora)
+            novas.append(unidade)
+    if not (novas or saem or mudadas):
+        return {}
+    with transaction.atomic():
+        if mudadas:
+            UnidadeMontagem.objects.bulk_update(
+                mudadas, ["numero", "de", "nome", "variante", "item_orcamento", "dias", "atualizado"],
+            )
+        if saem:
+            UnidadeMontagem.objects.filter(pk__in=[u.pk for u in saem]).update(
+                situacao=S.CANCELADA, posicao=None, atualizado=agora,
+            )
+        if novas:
+            UnidadeMontagem.objects.bulk_create(novas)
+    # a origem pronta que ganhou máquina volta a andar: `acertar_origem`
+    # (dentro de `_depois_de_mudar`) refaz a situação pelas unidades
+    entraram = distribuir(agora)
+    _depois_de_mudar(producao, entraram=entraram, agora=agora)
+    mudou()
+    if not (novas or saem):
+        return {}
+    return {
+        "entraram": len(novas),
+        "sairam": len(saem),
+        "comecadas_que_sairam": sum(1 for u in saem if u.situacao != S.FILA or u.etapa),
+    }
+
+
 def sincronizar_tudo():
     """A rede de segurança: o que devia estar na lista e não está (e o contrário).
 

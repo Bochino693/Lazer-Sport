@@ -151,8 +151,15 @@
       caixa.classList.remove("is-salvando");
       caixa.classList.add("is-salvo");
       window.setTimeout(function () { caixa.classList.remove("is-salvo"); }, 1600);
-      avisar("sucesso", "Prazo salvo", corpo.msg);
-      caixa.dispatchEvent(new CustomEvent("ls:prazo-salvo", { bubbles: true, detail: prazo }));
+      avisar(corpo.contrato_refeito ? "info" : "sucesso", corpo.titulo || "Prazo salvo", corpo.msg);
+      /* A revisão nova vai junto: a janela do orçamento em volta não se
+         acha velha no "Salvar" seguinte (seção 123). */
+      caixa.dispatchEvent(new CustomEvent("ls:prazo-salvo", {
+        bubbles: true,
+        detail: Object.assign({}, prazo, {
+          revisao: corpo.revisao || "", revisao_anterior: corpo.revisao_anterior || ""
+        })
+      }));
     }).catch(function (erro) {
       entrada.value = antes;
       caixa.classList.remove("is-salvando");

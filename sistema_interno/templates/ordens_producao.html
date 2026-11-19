@@ -229,7 +229,7 @@
       </div>
 
       <div class="modal-body">
-        <div id="ordemErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="ordemErro" class="visually-hidden" role="alert"></div>
 
         <div class="row g-3">
           <div class="col-12 col-md-7">
@@ -319,7 +319,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="colaboradorErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="colaboradorErro" class="visually-hidden" role="alert"></div>
         <label class="form-label" for="colaboradorNome">Nome da pessoa</label>
         <input class="form-control" id="colaboradorNome" name="nome_colaborador" maxlength="90" autocomplete="off" required>
         <div class="form-text">Use o nome pelo qual a equipe reconhece quem está na montagem.</div>
@@ -344,16 +344,20 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="concluirErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="concluirErro" class="visually-hidden" role="alert"></div>
         <p><strong id="concluirNome"></strong></p>
         <p class="mb-0 text-muted">
           Cada material da ficha técnica recebe uma saída de estoque com o número
           desta ordem no histórico. A baixa só acontece uma vez e não pode ser desfeita
           automaticamente.
         </p>
-        <div id="concluirAviso" class="alert alert-warning mt-3 d-none" role="alert">
-          O estoque atual não cobre a ficha técnica inteira. Se continuar, a baixa
-          será recusada e nada é alterado.
+        <div id="concluirAviso" class="ls-nota-app alerta mt-3 d-none" role="alert">
+          <span class="ls-nota-app-icone" aria-hidden="true"><i class="bi bi-box-seam"></i></span>
+          <div class="ls-nota-app-corpo">
+            <strong>Estoque não cobre a ficha</strong>
+            <span>O estoque atual não cobre a ficha técnica inteira. Se continuar, a baixa
+            será recusada e nada é alterado.</span>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -376,7 +380,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="cancelarErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="cancelarErro" class="visually-hidden" role="alert"></div>
         <p class="mb-0"><strong id="cancelarNome"></strong> passa para cancelada e sai da fila de produção.</p>
       </div>
       <div class="modal-footer">
@@ -399,7 +403,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="excluirErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="excluirErro" class="visually-hidden" role="alert"></div>
         <p class="mb-0"><strong id="excluirNome"></strong> é apagada definitivamente.</p>
       </div>
       <div class="modal-footer">

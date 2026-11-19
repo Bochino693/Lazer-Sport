@@ -190,7 +190,7 @@ class RespostaJSONMixin:
 
     rota_padrao = "stock"
 
-    def erro(self, request, mensagem, /, status=400):
+    def erro(self, request, mensagem, /, status=400, *, titulo="", campo="", acao=None, **extras):
         # Ação declarada em ACOES_SEM_TRANSACAO não abriu transação, então
         # não tem nada para desfazer -- e marcar rollback aqui derrubaria
         # a transação de quem chamou (em teste, a do próprio TestCase),
@@ -199,11 +199,23 @@ class RespostaJSONMixin:
             transaction.set_rollback(True)
 
         if pede_json(request):
-            return JsonResponse({"status": "erro", "msg": mensagem}, status=status)
+            # A JANELA DO ERRO (seção 123): `msg` continua sendo o texto de
+            # sempre; `titulo`, `campo` e `acao` vão quando a ação os tem.
+            corpo = {"status": "erro", "msg": mensagem}
+            if titulo:
+                corpo["titulo"] = titulo
+            if campo:
+                corpo["campo"] = campo
+            if acao:
+                corpo["acao"] = acao
+            for chave, valor in extras.items():
+                if chave not in self.CAMPOS_RESERVADOS:
+                    corpo[chave] = valor
+            return JsonResponse(corpo, status=status)
         # O envio comum (formulário sem fetch) volta para a lista com o
         # motivo num toast -- antes voltava calado, e "não aconteceu nada"
         # parecia "deu certo". Ver core/ls_aviso.py.
-        messages.error(request, mensagem)
+        messages.error(request, mensagem, extra_tags=f"titulo:{titulo}" if titulo else "")
         return redirect(self.rota_padrao)
 
     #: Chaves que a resposta usa para dizer se deu certo. Nenhum extra
@@ -284,7 +296,11 @@ class RespostaJSONMixin:
         try:
             return self.despachar_acao(request)
         except ErroDeFormulario as exc:
-            return self.erro(request, str(exc))
+            return self.erro(
+                request, str(exc), status=getattr(exc, "status", None) or 400,
+                titulo=getattr(exc, "titulo", ""), campo=getattr(exc, "campo", ""),
+                acao=getattr(exc, "acao", None),
+            )
         except ValueError as exc:
             return self.erro(request, str(exc))
         except ProtectedError as exc:

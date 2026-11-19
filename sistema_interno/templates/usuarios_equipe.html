@@ -91,7 +91,7 @@
       {% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="id" id="usuarioId">
       <div class="modal-header"><div><span class="ls-modal-kicker">Acesso interno</span><h5 class="modal-title" id="usuarioTitulo">Nova pessoa</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="usuarioErro"></div>
+        <div class="visually-hidden" id="usuarioErro" role="alert"></div>
         <div class="row g-3">
           <div class="col-12 col-md-6"><label class="form-label" for="usuarioNome">Nome</label><input class="form-control" id="usuarioNome" name="first_name" maxlength="150" required></div>
           <div class="col-12 col-md-6"><label class="form-label" for="usuarioSobrenome">Sobrenome</label><input class="form-control" id="usuarioSobrenome" name="last_name" maxlength="150"></div>

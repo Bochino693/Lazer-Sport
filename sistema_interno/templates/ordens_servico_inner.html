@@ -143,8 +143,8 @@
 <div class="modal fade" id="modalOS" tabindex="-1" data-bs-backdrop="static" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><form class="modal-content" id="formOS" method="post" action="{% url 'ordens_servico_inner' %}">
   {% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="id" id="osId"><input type="hidden" name="revisao" id="osRevisao"><input type="hidden" name="itens" id="osItens">
   <div class="modal-header"><div><span class="ls-modal-kicker">Execução operacional</span><h5 class="modal-title" id="osTitulo">Nova Ordem de Serviço</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
-  <div class="modal-body ls-compact-form"><div id="osErro" class="alert alert-danger d-none"></div>
-    <div id="osCongelada" class="alert alert-warning" role="status" hidden></div>
+  <div class="modal-body ls-compact-form"><div id="osErro" class="visually-hidden" role="alert"></div>
+    <section id="osCongelada" class="ls-janela-trava" role="status" hidden><span class="ls-nota-app-icone" aria-hidden="true"><i class="bi bi-clock-history"></i></span><div class="ls-nota-app-corpo"><strong>Versão preservada</strong><span id="osCongeladaTexto"></span></div></section>
     {% comment %}
       As versões desta O.S., pelo mesmo motivo da proposta: a lista as
       esconde para não contar o mesmo serviço duas vezes, e escondido da
@@ -293,8 +293,8 @@
       {% csrf_token %}<input type="hidden" name="action" value="enviar"><input type="hidden" name="id" id="envioOSId">
       <div class="modal-header"><div><span class="ls-modal-kicker">Documento do cliente</span><h5 class="modal-title" id="envioOSTitulo">Enviar O.S.</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
-        <div id="envioOSErro" class="alert alert-danger d-none"></div>
-        <div id="envioOSSucesso" class="alert alert-success d-none" role="status"></div>
+        <div id="envioOSErro" class="visually-hidden" role="alert"></div>
+        <div id="envioOSSucesso" class="visually-hidden" role="status"></div>
         <section class="ls-share-preview" aria-label="Prévia da Ordem de Serviço">
           <div class="ls-share-preview-mark"><i class="bi bi-clipboard2-check"></i></div>
           <div class="ls-share-preview-copy"><span>Ordem de Serviço Lazer &amp; Sport</span><strong id="envioOSResumo">Documento pronto para o cliente</strong><small>Atendimento, itens, fotos, impressão e confirmação.</small></div>
@@ -326,7 +326,7 @@
           <div class="col-12">
             <label class="form-label" for="envioOSEmail">E-mail do cliente</label>
             <div class="input-group"><span class="input-group-text"><i class="bi bi-envelope"></i></span><input class="form-control" id="envioOSEmail" name="email" type="email"><button class="btn btn-primary" id="enviarOSEmail" type="button" {% if not email_configurado %}disabled{% endif %}>Enviar O.S.</button></div>
-            {% if not email_configurado %}<div class="alert alert-warning mt-2 mb-0 py-2 px-3 small"><i class="bi bi-exclamation-triangle me-1"></i>{{ email_diagnostico }} Use WhatsApp ou copie o link.</div>{% endif %}
+            {% if not email_configurado %}<div class="ls-nota-app alerta mt-2 mb-0" role="status"><span class="ls-nota-app-icone" aria-hidden="true"><i class="bi bi-envelope-exclamation"></i></span><div class="ls-nota-app-corpo"><strong>E-mail ainda não ligado</strong><span>{{ email_diagnostico }} Use o WhatsApp ou copie o link.</span></div></div>{% endif %}
           </div>
         </div>
         <p class="text-muted small mt-3 mb-2"><i class="bi bi-info-circle me-1"></i>No WhatsApp, confirme o envio dentro da conversa que será aberta.</p>
@@ -354,7 +354,7 @@
 <!-- Pagamento -->
 <div class="modal fade" id="modalPagamentoOS" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><form class="modal-content" id="formPagamentoOS" method="post" action="{% url 'ordens_servico_inner' %}">
   {% csrf_token %}<input type="hidden" name="action" value="pagamento"><input type="hidden" name="id" id="pagamentoOSId"><div class="modal-header"><div><span class="ls-modal-kicker">Financeiro</span><h5 class="modal-title" id="pagamentoOSTitulo">Pagamento</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div><div class="modal-body">
-  <div id="pagamentoOSErro" class="alert alert-danger d-none"></div>
+  <div id="pagamentoOSErro" class="visually-hidden" role="alert"></div>
   {% comment %}
     Era um alerta claro do Bootstrap: fundo branco dentro do painel
     escuro, com o total a pagar sumindo no branco. Mesmo quadro da janela
@@ -397,7 +397,7 @@
         <button type="button" class="btn-close" data-fechar-filho-os aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="clienteNovoOSErro"></div>
+        <div class="visually-hidden" id="clienteNovoOSErro" role="alert"></div>
         <p class="text-muted small mb-3">A ficha fica salva em Clientes e volta selecionada nesta O.S. automaticamente.</p>
         <div class="row g-3">
           <div class="col-12 col-md-7">
@@ -475,7 +475,7 @@
         <button type="button" class="btn-close" data-fechar-filho-os aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="pecaOSErro"></div>
+        <div class="visually-hidden" id="pecaOSErro" role="alert"></div>
         <p class="text-muted small mb-2">
           Entra nesta linha na hora, sem perder o que já foi digitado. Ela
           <strong>não vai para o site</strong>: publicar continua sendo uma
@@ -594,7 +594,7 @@
         <button class="btn-close" type="button" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <div id="refazerOSErro" class="alert alert-danger d-none"></div>
+        <div id="refazerOSErro" class="visually-hidden" role="alert"></div>
         <p class="text-muted small mb-3">
           A O.S. atual fica <strong>congelada e consultável</strong> — ela é o
           papel que o cliente leu. A versão nova nasce rascunho, com os mesmos
@@ -1340,7 +1340,7 @@ LSTela.pronto(function () {
     var aviso=document.getElementById("osCongelada");
     aviso.hidden=!travado;
     if(travado){
-      aviso.textContent="Esta é a versão "+(o.versao||1)+", substituída por "
+      document.getElementById("osCongeladaTexto").textContent="Esta é a versão "+(o.versao||1)+", substituída por "
         +"outra e mantida como está: ela é o documento que o cliente leu. "
         +(o.motivo_refacao?"Motivo da troca: "+o.motivo_refacao:"");
     }
@@ -1547,7 +1547,8 @@ LSTela.pronto(function () {
   function desenharEnviosOS(envios){var lista=document.getElementById("enviosOSLista");lista.innerHTML="";(envios||[]).forEach(function(e){var li=document.createElement("li");li.className=e.sucesso?"ok":"falhou";var forte=document.createElement("strong");forte.textContent=e.canal+(e.destino?" · "+e.destino:"");var quando=document.createElement("span");quando.textContent=e.quando+(e.por?" · "+e.por:"");li.appendChild(forte);li.appendChild(quando);if(e.detalhe){var detalhe=document.createElement("em");detalhe.textContent=e.detalhe;li.appendChild(detalhe);}lista.appendChild(li);});if(!lista.children.length){var vazio=document.createElement("li"),span=document.createElement("span");span.textContent="Nenhum envio registrado nesta O.S.";vazio.appendChild(span);lista.appendChild(vazio);}}
 
   var osEnvioAtual=null;
-  function avisoOS(texto,tipo){Painel.erro("envioOSErro",tipo==="erro"?texto:"");var ok=document.getElementById("envioOSSucesso");ok.textContent=tipo==="sucesso"?texto:"";ok.classList.toggle("d-none",tipo!=="sucesso"||!texto);}
+  /* Erro na janela de app, "deu certo" no toast (seção 123); as caixas são a fala do leitor de tela. */
+  function avisoOS(texto,tipo){var ok=document.getElementById("envioOSSucesso");ok.textContent=tipo==="sucesso"?texto:"";if(tipo==="erro"){Painel.erro("envioOSErro",texto,{titulo:"Não deu para enviar"});return;}Painel.erro("envioOSErro","");if(tipo==="sucesso"&&texto)Painel.aviso(texto,"ok");}
   /* O LINK DO CLIENTE NASCE NO ENVIO -- E O BOTÃO CONTINUA SERVINDO.
 
      A página do cliente recusa uma O.S. que ainda não foi enviada. Antes

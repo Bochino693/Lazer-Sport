@@ -1140,7 +1140,11 @@ export async function iniciar(raiz) {
   $("mtAprender").addEventListener("click", async () => {
     const arquivo = $("mtAprenderArquivo").files[0];
     const destino = $("mtAprendidas");
-    if (!arquivo) { destino.innerHTML = '<p class="mt-dica text-warning">Escolha o arquivo primeiro.</p>'; return; }
+    if (!arquivo) {
+      /* Os avisos e erros são a janela de app (LEIA-ME-V10, seção 123). */
+      Painel.erro(null, "Escolha o arquivo 3D primeiro.", { titulo: "Falta o arquivo", campo: $("mtAprenderArquivo") });
+      return;
+    }
     const pronto = ocupado($("mtAprender"), "Lendo o arquivo…");
     destino.innerHTML = "";
     try {
@@ -1168,10 +1172,7 @@ export async function iniciar(raiz) {
       }
     } catch (erro) {
       destino.innerHTML = "";
-      const e = document.createElement("p");
-      e.className = "mt-dica text-danger";
-      e.textContent = erro.message;
-      destino.appendChild(e);
+      Painel.erro(null, erro.message, Painel.detalhesDoErro(erro, { titulo: "Não deu para ler o arquivo" }));
     } finally { pronto(); }
   });
   $("guardarPeca").addEventListener("click", async () => {

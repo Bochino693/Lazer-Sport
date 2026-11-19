@@ -22,8 +22,9 @@
          nivel: "sucesso" | "info" | "alerta" | "erro" (vale também
          success, warning, error, ok). acao: {rotulo, url} ou
          {rotulo, aoClicar}. duracao em ms (0 = fixo). Devolve {fechar()}.
-     await LSAviso.modal({nivel, titulo, texto, icone, botao, acao})
+     await LSAviso.modal({nivel, titulo, texto, icone, botao, acao, lista})
          A folha de um botão ("Entendi"). Com `acao`, o botão é a ação.
+         `lista`: linhas curtas embaixo do texto (o que andou junto).
      await LSAviso.confirmar({titulo, texto, confirmar, cancelar, perigo})
          -> true / false. No lugar do window.confirm. `perigo` deixa o
          botão principal vermelho (exclusão). Aceita só o texto também.
@@ -482,6 +483,15 @@
                 texto.id = id + "Texto";
                 cartao.appendChild(texto);
             }
+            /* O que andou junto, item por item ("Pagamento: ...", "Lista de
+               montagem: ..."): a folha do resultado de uma gravação. */
+            if (o.lista && o.lista.length) {
+                var lista = criar("ul", "ls-recado-folha-lista");
+                o.lista.forEach(function (linha) {
+                    if (linha) lista.appendChild(criar("li", "", String(linha)));
+                });
+                cartao.appendChild(lista);
+            }
 
             var botoes = criar("div", "ls-recado-folha-botoes");
             var principal = criar("button", "ls-recado-botao ls-recado-botao--primario", o.confirmar);
@@ -610,6 +620,7 @@
             titulo: o.titulo,
             texto: o.texto,
             icone: o.icone,
+            lista: (opcoes && Array.isArray(opcoes.lista)) ? opcoes.lista : null,
             confirmar: String((opcoes && opcoes.botao) || (acao ? acao.rotulo : "Entendi")),
             cancelar: acao ? "Fechar" : "",
             perigo: false

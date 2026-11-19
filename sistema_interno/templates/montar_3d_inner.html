@@ -249,7 +249,7 @@
     <div class="modal-content">
       <div class="modal-header"><div><span class="ls-modal-kicker">Usar a montagem</span><h5 class="modal-title">Ligar o 3D da montagem</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="usarErro"></div>
+        <div class="visually-hidden" id="usarErro" role="alert"></div>
         <p class="small">O .glb da montagem (exatamente o que está na tela) vai para os brinquedos escolhidos (troca o 3D que eles tinham) e/ou para o projeto (a ficha do projeto ganha "Ver em 3D").</p>
         <label class="form-label" for="usarProjeto">Projeto</label>
         <select class="form-select mb-3" id="usarProjeto"><option value="">Nenhum projeto</option></select>
@@ -269,7 +269,7 @@
     <div class="modal-content">
       <div class="modal-header"><div><span class="ls-modal-kicker">Biblioteca</span><h5 class="modal-title">Guardar a peça</h5></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
-        <div class="alert alert-danger d-none" id="guardarErro"></div>
+        <div class="visually-hidden" id="guardarErro" role="alert"></div>
         <label class="form-label" for="guardarNome">Nome</label>
         <input class="form-control mb-2" id="guardarNome" maxlength="80">
         <label class="form-label" for="guardarCategoria">Categoria</label>

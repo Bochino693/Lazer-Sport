@@ -220,7 +220,7 @@
       <div class="modal-header"><h5 class="modal-title">Padronizar códigos</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
       <div class="modal-body">
         <p>IDs, fotos e vínculos permanecem. Códigos anteriores ficam no histórico e continuam disponíveis na busca. Etiquetas antigas poderão precisar de reimpressão.</p>
-        <div id="codigosErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="codigosErro" class="visually-hidden" role="alert"></div>
         <p id="codigosResumo"></p>
         <table class="ls-table"><thead><tr><th>Material</th><th>Atual</th><th>Novo</th></tr></thead><tbody id="codigosPrevia"></tbody></table>
         <label class="form-label mt-3">Digite PADRONIZAR para aplicar<input class="form-control" name="confirmacao" required pattern="PADRONIZAR" autocomplete="off"></label>
@@ -241,7 +241,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="materialErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="materialErro" class="visually-hidden" role="alert"></div>
         <div class="row g-3">
           <div class="col-12">{% include "partials/material_foto.html" %}</div>
           <div class="col-12 col-md-8">
@@ -297,7 +297,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="tipoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="tipoErro" class="visually-hidden" role="alert"></div>
         <label class="form-label" for="tipoDescricao">Nome do tipo *</label>
         <input class="form-control" id="tipoDescricao" name="descricao"
                data-rotulo="nome do tipo" maxlength="120" required placeholder="Lona, motor, elétrica...">
@@ -321,7 +321,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="fornecedorErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="fornecedorErro" class="visually-hidden" role="alert"></div>
         <div class="row g-3">
           <div class="col-12 col-md-6">
             <label class="form-label" for="fornecedorNome">Nome *</label>
@@ -374,7 +374,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="excluirErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="excluirErro" class="visually-hidden" role="alert"></div>
         <p class="mb-0">Excluir <strong id="excluirNome"></strong>?</p>
       </div>
       <div class="modal-footer">

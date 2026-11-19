@@ -1,0 +1,194 @@
+/* ======================================================================
+   O ERRO E O AVISO COMO APP, DENTRO DAS JANELAS DO PAINEL (LEIA-ME-V10,
+   seção 123).
+
+   O erro em si é a folha do LSAviso (painel.js, `Painel.erro`). Aqui fica
+   o que mora DENTRO da janela, perto do que a pessoa está fazendo:
+
+     * o campo que errou, aceso (`.ls-campo-erro`), até ser corrigido;
+     * a TRAVA no alto da janela que abre só para consulta ("Contrato
+       assinado por ... : este pedido não muda mais"), com o botão que
+       resolve (`.ls-janela-trava`);
+     * a NOTA do que anda junto quando se salva ("Aprovada, com o contrato
+       esperando a assinatura: mudar itens refaz o contrato") e as notas
+       fixas que antes eram caixas do Bootstrap (`.ls-nota-app`);
+     * a reserva do erro quando o ls-aviso.js não chegou (`.ls-erro-reserva`).
+
+   Só variáveis do tema (sol, lua e eclipse, interno_modern.css). Arquivo
+   próprio: não mexe na folha grande do painel.
+   ====================================================================== */
+
+/* O campo do erro: a borda e o halo do vermelho do tema. */
+.ls-campo-erro,
+.form-control.ls-campo-erro,
+.form-select.ls-campo-erro {
+  border-color: var(--red) !important;
+  box-shadow: 0 0 0 3px rgba(var(--red-rgb), .22) !important;
+}
+
+/* Com o foco (a janela do erro fecha e o foco vem para cá), o anel
+   também é vermelho: o laranja do foco comum disputava com o erro. */
+.ls-campo-erro:focus,
+.ls-campo-erro:focus-visible {
+  outline: 2px solid var(--red) !important;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(var(--red-rgb), .28) !important;
+}
+
+/* A linha da tabela de itens que errou (o campo dela fica aceso também). */
+tr:has(> td .ls-campo-erro) > td {
+  background: rgba(var(--red-rgb), .06);
+}
+
+/* ---------------------------------------------------------------- notas */
+.ls-nota-app,
+.ls-janela-aviso,
+.ls-janela-trava {
+  --nota-cor: var(--info-texto);
+  --nota-rgb: var(--info-rgb);
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid rgba(var(--nota-rgb), .34);
+  border-radius: 16px;
+  background: rgba(var(--nota-rgb), .08);
+  color: var(--text-2);
+  font-size: .86rem;
+  line-height: 1.5;
+}
+
+.ls-nota-app[hidden],
+.ls-janela-aviso[hidden],
+.ls-janela-trava[hidden] {
+  display: none !important;
+}
+
+.ls-nota-app.alerta,
+.ls-janela-aviso.alerta { --nota-cor: var(--yellow-texto); --nota-rgb: var(--yellow-rgb); }
+.ls-nota-app.erro,
+.ls-janela-trava.erro { --nota-cor: var(--red-texto); --nota-rgb: var(--red-rgb); }
+.ls-nota-app.ok { --nota-cor: var(--green-texto); --nota-rgb: var(--green-rgb); }
+
+.ls-nota-app-icone {
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--nota-cor);
+  background: rgba(var(--nota-rgb), .16);
+  font-size: 1.05rem;
+}
+
+.ls-nota-app-corpo {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: grid;
+  gap: 2px;
+}
+
+.ls-nota-app-corpo strong {
+  color: var(--text);
+  font-size: .92rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.ls-nota-app-corpo span,
+.ls-nota-app-corpo p {
+  margin: 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.ls-nota-app-corpo code {
+  color: var(--text-2);
+}
+
+/* A trava: cartão mais forte, com o botão que resolve à direita (embaixo,
+   no celular). Abre a janela: é a primeira coisa que se lê. */
+.ls-janela-trava {
+  --nota-cor: var(--acento);
+  --nota-rgb: var(--acento-rgb);
+  align-items: center;
+  padding: 14px 16px;
+  border-width: 1.5px;
+}
+
+.ls-janela-trava .ls-nota-app-icone {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  font-size: 1.25rem;
+}
+
+.ls-janela-trava-acao {
+  flex: 0 0 auto;
+  min-height: 42px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 13px;
+  background: var(--acento);
+  color: var(--acento-tinta);
+  font-weight: 800;
+  font-size: .86rem;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ls-janela-trava-acao:hover,
+.ls-janela-trava-acao:focus-visible {
+  color: var(--acento-tinta);
+  filter: brightness(1.06);
+}
+
+.ls-janela-trava-acao[hidden] {
+  display: none !important;
+}
+
+/* O aviso do que anda junto: discreto, mas inteiro. */
+.ls-janela-aviso {
+  --nota-cor: var(--info-texto);
+  --nota-rgb: var(--info-rgb);
+  padding: 10px 12px;
+  font-size: .82rem;
+}
+
+.ls-janela-aviso .ls-nota-app-icone {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  font-size: .95rem;
+}
+
+/* A reserva do erro: sem o ls-aviso.js, a caixa aparece como cartão. */
+.ls-erro-reserva {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(var(--red-rgb), .45);
+  border-radius: 16px;
+  background: rgba(var(--red-rgb), .10);
+  color: var(--red-texto);
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .ls-janela-trava {
+    flex-wrap: wrap;
+  }
+
+  .ls-janela-trava .ls-nota-app-corpo {
+    flex-basis: calc(100% - 60px);
+  }
+
+  .ls-janela-trava-acao {
+    width: 100%;
+    justify-content: center;
+  }
+}

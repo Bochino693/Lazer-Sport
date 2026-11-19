@@ -34,6 +34,7 @@ from core.producao import ler_prazo, texto_dos_dias
 
 from . import etiquetas_maquinas as etq
 from .models import Orcamento
+from .utils import ErroDeFormulario
 from .permissoes import (
     AMBULANTE,
     FINANCEIRO,
@@ -181,6 +182,8 @@ class PrazoProducaoView(FunilMixin, View):
             return _erro(str(erro))
 
         campos = ["prazo_producao_dias", "atualizado"]
+        prazo_antes = alvo.prazo_producao_dias
+        revisao_antes = alvo.atualizado.isoformat() if alvo.atualizado else ""
         alvo.prazo_producao_dias = dias
         if isinstance(alvo, Orcamento):
             if alvo.marcar_inicio_da_producao():
@@ -214,7 +217,33 @@ class PrazoProducaoView(FunilMixin, View):
             mensagem = f"Produção: {texto_dos_dias(dias)} — previsão {dados['previsao']}."
         else:
             mensagem = f"Produção: {texto_dos_dias(dias)}."
-        return JsonResponse({"status": "sucesso", "msg": mensagem, "prazo": dados})
+        corpo = {"status": "sucesso", "msg": mensagem, "prazo": dados}
+        if isinstance(alvo, Orcamento):
+            # A janela do orçamento grava o prazo à parte (este endereço) e
+            # depois "Salvar": sem a revisão nova ela se acharia velha e
+            # o salvar diria "mudou em outro atendimento" (seção 123).
+            corpo["revisao_anterior"] = revisao_antes
+            corpo["revisao"] = alvo.atualizado.isoformat() if alvo.atualizado else ""
+            # O PRAZO É A CLÁUSULA 3ª: com o contrato esperando a assinatura,
+            # ele é refeito com o prazo novo (os links velhos morrem). O
+            # assinado não muda -- o prazo de agora é a previsão da fábrica.
+            if prazo_antes != dias and alvo.status == Orcamento.Status.APROVADO:
+                from . import documento_assinatura as svc
+
+                atual = svc.documento_atual(alvo)
+                if atual is not None and atual.aguardando:
+                    try:
+                        svc.gerar(alvo, request.user, motivo="o prazo de entrega mudou")
+                    except ErroDeFormulario:
+                        pass
+                    else:
+                        corpo["contrato_refeito"] = True
+                        corpo["titulo"] = "Prazo salvo e contrato refeito"
+                        corpo["msg"] = (
+                            f"{mensagem} O contrato foi refeito com o prazo novo; os links "
+                            "anteriores deixaram de valer — gere/mande o link de novo."
+                        )
+        return JsonResponse(corpo)
 
 
 # ======================================================================

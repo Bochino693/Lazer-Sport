@@ -36,7 +36,7 @@
   <div class="ls-data-header">
     <div>
       <h2>Propostas</h2>
-      <p>Enviada não é sobrescrita: use Refazer para criar outra versão.</p>
+      <p>Muda no lugar até o cliente assinar o contrato; “Nova proposta” cria outra versão.</p>
     </div>
     {% comment %}
       A BUSCA NÃO VAI MAIS AO SERVIDOR A CADA PALAVRA.
@@ -230,7 +230,7 @@
                 <button type="button" class="btn btn-sm btn-outline-secondary"
                         data-editar="{{ orcamento.id }}" data-acao-cartao data-acao-ordem="2"
                         aria-label="{% if orcamento.pode_editar_formulario %}Editar{% else %}Consultar{% endif %} orçamento {{ orcamento.id }}"
-                        title="{% if orcamento.pode_editar_formulario %}Editar proposta ainda não enviada{% else %}Consultar versão preservada{% endif %}">
+                        title="{% if orcamento.pode_editar_formulario %}Editar a proposta (muda até o cliente assinar o contrato){% else %}Consultar: esta proposta não muda mais{% endif %}">
                   <i class="bi {% if orcamento.pode_editar_formulario %}bi-pencil{% else %}bi-search{% endif %}"></i><span class="ls-action-label">{% if orcamento.pode_editar_formulario %}Editar{% else %}Ver{% endif %}</span>
                 </button>
                 {% if pode_editar_comercial and orcamento.pode_enviar %}<button type="button" class="btn btn-sm btn-outline-primary"
@@ -273,7 +273,7 @@
                   cliente é pior do que não mandar nada. Aqui se cria a
                   versão nova, com o preço de hoje.
                 {% endcomment %}
-                {% if pode_editar_comercial and orcamento.pode_refazer and not orcamento.pode_editar_formulario %}
+                {% if pode_editar_comercial and orcamento.pode_refazer %}
                 <button class="btn btn-sm btn-outline-warning" type="button"
                         data-refazer="{{ orcamento.id }}"
                         data-nome="{{ orcamento.destinatario }}"

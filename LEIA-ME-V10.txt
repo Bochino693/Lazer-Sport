@@ -8213,3 +8213,207 @@ Dependência nova: rjsmin (requirements.txt).
    varredura que pula a falha recente, o comando, o Open-Meteo pelo
    estado, o ritmo do Nominatim); tests_etapas_do_pedido.py (o link do
    pagamento com o quadro).
+
+123) A PROPOSTA MUDA ATÉ A ASSINATURA, E O ERRO VIRA JANELA DE APLICATIVO
+   O PEDIDO: "na área interna, minha usuária fechou um contrato de um
+   jeito, porém teve que inserir mais itens e deu divergências, o sistema
+   deve permitir alterações até a assinatura, se assinou não muda mais.
+   mas enquanto isso podemos mudar sem erros, tire as notificações de erros
+   como um texto comum e trate tudo como app, renderizando janelas, sendo
+   claro e etc."
+   A CAUSA DAS DIVERGÊNCIAS: a janela do orçamento só gravava por cima do
+   rascunho (e da proposta salva que ainda não tinha saído). A aprovada que
+   precisava de mais um item recebia "Uma proposta já enviada não pode ser
+   sobrescrita. Use 'Refazer proposta'..." -- e o Refazer criava a versão
+   2: a 1 virava "substituída", o contrato dela ficava suspenso, a 2
+   precisava ser aprovada de novo, e o pagamento, a lista de montagem e a
+   régua ficavam apontando para versões diferentes.
+   A REGRA (no servidor, e a tela pergunta a mesma coisa):
+     situação                     sem contrato assinado     contrato assinado
+     Rascunho                     muda (vira Aguardando)    --
+     Aguardando resposta          muda NO LUGAR             não muda
+     Em negociação                muda NO LUGAR             não muda
+     Aprovado                     muda NO LUGAR             NÃO MUDA MAIS
+     Recusado / Expirado          só "Refazer proposta"     --
+     Substituído                  história (abra a versão que vale)
+     Com O.S. liberada            congelada com a O.S. (a regra de sempre)
+   "Muda" é tudo o que a janela grava: cliente e contato, itens (incluir,
+   tirar, quantidade, valor), desconto ou valor final, forma de pagamento,
+   forma de envio e observações. A situação NÃO muda ao salvar (a aprovada
+   que ganhou um item continua aprovada; só o rascunho vira "Aguardando"),
+   não nasce versão nova e "Refazer proposta" continua na lista e na trava,
+   como OPÇÃO (deixou de ser o único caminho). A aprovada guarda a validade
+   dela: a data que já passou e não foi mexida não trava o "Salvar" (o
+   calendário também não põe o piso de hoje nela). A regra mora em
+   Orcamento.pode_editar_formulario (models.py) e o porquê, com as palavras
+   da tela, em edicao_orcamento.trava -- há teste que confere as duas.
+   A PROPOSTA JÁ ENVIADA (Aguardando e Em negociação): o dono pediu "até a
+   assinatura", e nenhuma seção deste LEIA-ME guarda um pedido dele de
+   preservar a versão enviada (a frase "Enviada não é sobrescrita" era do
+   código de antes, não de um recado dele). Ela muda no lugar: o link do
+   cliente passa a mostrar o que mudou, o histórico diz "já enviada ao
+   cliente: o link dele mostra a versão nova" e a janela do resultado
+   ("Proposta atualizada") oferece "Reenviar ao cliente" (a janela de
+   envio de sempre). Quem preferir guardar a versão que o cliente leu
+   continua tendo "Refazer proposta".
+   O QUE ANDA JUNTO QUANDO SE SALVA (edicao_orcamento.acompanhar, na mesma
+   transação, e só o que mudou de verdade -- salvar sem mudar nada não
+   custa consulta a mais):
+     * O PAGAMENTO, contra o total novo (Orcamento.registrar_pagamento, a
+       porta de sempre): o pago que deixou de cobrir volta a PARCIAL e a
+       venda do 100% SAI (nunca fica uma venda de um total que não existe
+       mais); o parcial que passou a cobrir vira PAGO e ganha a venda; o
+       recebido não muda. A janela diz em uma linha ("o total subiu para
+       R$ X e o recebido não cobre mais -- voltou a parcial, faltam R$ Y.
+       A venda #12 saiu...").
+     * A LISTA DE MONTAGEM (montagem.acompanhar_itens_do_orcamento): só a
+       diferença -- a máquina que continua fica com a vaga, a posição e as
+       etapas feitas (casada pelo brinquedo, a peça ou o nome, e o
+       adesivo); a nova entra na fila como as outras do orçamento; a que
+       saiu é cancelada, primeiro as que nem começaram (se já estava em
+       produção ou pronta, a janela manda avisar a Produção). Depois a fila
+       anda e as previsões se refazem. O prazo que a lista escreve (a
+       Cláusula 3ª lê dele) vem antes do contrato.
+     * O CONTRATO que esperava a assinatura é REFEITO com os itens novos
+       (documento_assinatura.gerar, o "Gerar de novo" do cartão, com o
+       motivo): o anterior vira substituído, TODOS os links dele morrem na
+       hora e a janela diz: "Contrato refeito com os itens novos; os links
+       anteriores deixaram de valer -- gere/mande o link de novo", com
+       "Ver contrato" (se o cliente estava com o contrato aberto, ela diz
+       isso também). Mudar só a validade não refaz (ela não está no
+       contrato). Na proposta que não está aprovada (Em negociação, com o
+       contrato suspenso), não há compra para um contrato novo: o suspenso
+       é RETIRADO (documento_assinatura.aposentar), para nunca voltar a
+       valer com os itens velhos quando ela for aprovada de novo.
+     * O PRAZO DE ENTREGA gravado à parte (o campo da Produção na janela,
+       views_funil.PrazoProducaoView) também refaz o contrato que espera
+       assinatura (é a Cláusula 3ª) e devolve a revisão nova -- antes, mexer
+       no prazo e depois em "Salvar" dava "mudou em outro atendimento". O
+       prazo depois da assinatura continua mudando (é a previsão da
+       fábrica) e não toca no contrato assinado.
+     * O HISTÓRICO (o sino): "alterou" com o que mudou -- "itens: +
+       Basquete Street · total R$ 6.990,00 → R$ 19.890,00 · contrato
+       refeito (o anterior tinha 2 links) · proposta já aprovada, alterada
+       antes da assinatura" -- e a linha do documento "Contrato refeito: o
+       pedido mudou...". O diário de bordo do contrato novo começa com
+       "Contrato refeito por Fulano: o pedido mudou".
+     * O RESTO LÊ DE NOVO SOZINHO: a tela do documento (/orcamentos/<id>/
+       documento/) já abre com o contrato novo, e a aberta noutra aba troca
+       o cartão na sondagem de 10 s com o aviso "O contrato foi refeito com
+       o pedido atualizado"; a régua (etapas_do_pedido) volta a "Contrato
+       assinado: esperando a assinatura"; Meus pedidos do cliente lê o
+       mesmo; não há reserva de estoque para orçamento (nada a acertar).
+     * A PÁGINA DO CLIENTE com um link do contrato velho: "Este link foi
+       trocado -- O pedido foi atualizado e o contrato foi refeito depois
+       que este link saiu: ele não vale mais e nada foi assinado por ele.
+       Peça o link novo ao atendente." (o envio com ele é recusado, sem
+       gravar nada).
+   DEPOIS DA ASSINATURA: a janela abre só para consulta, com a TRAVA no
+   alto -- "Contrato assinado por Fulano em dd/mm: este pedido não muda
+   mais. Se a compra mudou, fale com a Gestão." e "Ver contrato" --, os
+   campos comerciais e financeiros desligados, o "Salvar" fora e o
+   "Cancelar" virando "Fechar". O servidor recusa qualquer gravação (409,
+   com a mesma janela: uma aba aberta antes da assinatura que tenta salvar
+   depois). O PAGAMENTO continua (é o estágio seguinte): "Registrar
+   pagamento" funciona e o 100% vira venda como sempre.
+   A CONCORRÊNCIA continua (a `revisao`): "Mudou em outro atendimento",
+   agora janela, com "Ver a versão atual" (a lista se atualiza e a janela
+   reabre com o que está gravado) e "Fechar" (os campos digitados ficam).
+
+   O ERRO COMO JANELA DE APLICATIVO, EM TODO O PAINEL
+     * UM LUGAR SÓ: Painel.erro(id, texto, detalhes) (painel.js) abre a
+       FOLHA do LSAviso (seção 82: cartão no meio no computador, folha que
+       sobe no celular) com ícone, título curto, a explicação e o botão que
+       resolve; o campo do erro fica ACESO (.ls-campo-erro, borda e anel
+       vermelhos do tema) e recebe o foco quando a folha fecha. A caixa de
+       antes (<div id="...Erro">) ficou no HTML como a FALA do leitor de
+       tela: região viva visualmente oculta (visually-hidden, role=alert);
+       sem o ls-aviso.js ela aparece como cartão (.ls-erro-reserva).
+     * O TÍTULO: o do servidor; senão pelo botão do formulário ("Não deu
+       para salvar", "...excluir", "...enviar", "...registrar"); 403 é "Sem
+       permissão"; a rede que cai é "Sem conexão", com "Tentar de novo". A
+       validação do navegador vira a mesma janela ("Confira o campo" --
+       "E-mail: escreva um e-mail completo, como nome@empresa.com.br."), em
+       português em qualquer aparelho, uma folha por tentativa, e o balão
+       do navegador sai (preventDefault).
+     * O SERVIDOR PODE DIZER MAIS (o `msg` continua, para quem já lê):
+       ErroDeFormulario(msg, titulo=, campo=, acao=, status=) e
+       RespostaJSONMixin.erro(..., titulo=, campo=, acao=) -> JSON {"status":
+       "erro", "msg", "titulo", "campo", "acao": {"rotulo", "url"} ou
+       {"rotulo", "chave"}, ...}; `no_campo("desconto")` põe o campo nos
+       erros dos leitores (decimal_br, inteiro, data). A tela resolve as
+       chaves dela em Painel.ligar({acoes: {...}, acharCampo}) -- no
+       orçamento: versao_atual, validade_padrao ("Usar 5 dias"), reenviar,
+       refazer e "item:2:quantidade" (a 2ª linha preenchida dos itens).
+       Sem formulário por fetch, o título vai no toast (extra_tags).
+     * O RESULTADO QUE PRECISA SER LIDO também é janela: o JSON de sucesso
+       pode trazer `janela` {titulo, texto, nivel, icone, lista, acao}
+       ("Contrato refeito", "Proposta atualizada") e o Painel.ligar a mostra
+       no lugar do "Salvo."; LSAviso.modal ganhou `lista` (as linhas do que
+       andou junto). O "deu certo" comum continua toast.
+     * AS TELAS VARRIDAS (nenhuma caixa alert do Bootstrap sobrou nos
+       templates do painel -- há teste): Orçamentos (a janela, situação,
+       nova versão, pagamento, avaliação dos blocos, brinquedo/peça/cliente
+       novos e o envio da proposta, que trocou a tarja verde pelo toast),
+       Clientes (cadastro, completar, dossiê e o envio da oferta), Estoque
+       (item, movimento, cliente, material/tipo/fornecedor rápidos e o
+       cálculo do frete, que virou cartão e janela), Materiais, Ordens de
+       serviço (a janela, o envio, pagamento, cliente, peça, nova versão e
+       a faixa da versão congelada), Ordens e guias de produção, Produtos
+       de produção, Objetos 3D e o Montar 3D (inclusive o "aprender" do
+       arquivo), Jogos (a janela, o gerador de APK/EXE e o aviso da
+       licença), Avisos do aplicativo, Usuários da equipe, Avaliação dos
+       setores, Transportadoras, Dados do contrato, Campanhas (a oferta),
+       a exclusão com confirmação escrita (includes), Importar Word/PDF e
+       a conferência (o erro do servidor vira janela: partes/erro_janela.
+       html), a ficha do colaborador do RH (o resumo vira janela; cada
+       campo continua aceso com a frase dele) e a tela de clientes da
+       gestão. As notas fixas (e-mail não ligado, VAPID, estoque que não
+       cobre a ficha, ordem sem etapas, custos incompletos) viraram o
+       cartão de app .ls-nota-app. Ficaram como estavam, de propósito: a
+       folha dos avisos do sino (seção 116: já é uma folha de app, com o
+       erro em cartão junto da linha), o "CEP incompleto" que acompanha a
+       digitação, e a tela de login (antes do painel, sem o ls-aviso).
+     * DE CARONA, na janela do orçamento: a nota "Documento importado de"
+       aparecia vazia em toda proposta (d-block vencia o hidden) e, no
+       celular, o X de remover item cobria a busca (o padding da célula da
+       tabela do painel é !important).
+   Banco: NENHUMA migração.
+   Código: sistema_interno/edicao_orcamento.py (novo: trava, aviso da
+   janela, o retrato de antes e o acompanhar), models.py (EDITAVEIS e
+   pode_editar_formulario), views_gestao.py (acao_save, serializar, os
+   títulos dos erros), documento_assinatura.py (gerar com motivo,
+   aposentar, o diário), montagem.py (acompanhar_itens_do_orcamento),
+   views_funil.py (o prazo), views_documento_assinatura.py (o aviso do
+   cartão refeito), utils.py (ErroDeFormulario e no_campo), views.py
+   (RespostaJSONMixin.erro), core/views_assinatura.py e core/templates/
+   assinatura_publica.html (o link trocado), static interno/painel.js
+   (Painel.erro, enviar, ligar e aviso), interno/avisos-janela.css (novo,
+   só variáveis do tema), site/ls-aviso.{js,css} (a lista da folha),
+   producao-etiquetas.js, documento-assinatura.js, campanhas.js,
+   montar3d.js e os templates da varredura.
+   Testes: sistema_interno/tests_edicao_ate_assinar.py (a aprovada que
+   ganha itens no lugar, sem versão nova e com o histórico; a validade
+   vencida da aprovada; o contrato refeito, o link velho recusado na
+   abertura e no envio e o novo assinando; o diário e o histórico; a tela
+   do documento, a régua e o cartão da outra aba; a validade que não
+   refaz; o prazo que refaz e devolve a revisão; o suspenso retirado; o
+   pago que volta a parcial e a venda que sai; o parcial que vira pago; a
+   lista de montagem que mantém a máquina com as etapas e põe/tira as
+   outras; o assinado recusado com quem e quando, também para o
+   Financeiro, e o pagamento que continua; a enviada e a em negociação no
+   lugar; recusada, expirada e substituída com Refazer; a O.S.; a trava e
+   pode_editar_formulario iguais; a concorrência; titulo/campo/acao no
+   JSON; o título no toast do formulário comum; o Painel.erro com a folha;
+   nenhuma caixa alert nos templates; o CSS só com variáveis). Ajustado:
+   tests_orcamento_os_separados (a em negociação agora muda no lugar).
+   Conferido no Chromium (dados sintéticos): o caso do dono de ponta a
+   ponta (aprovada com contrato -> mais um item -> "Contrato refeito" ->
+   tela do contrato com os itens novos e a régua -> link velho "trocado"
+   -> o cliente assina o novo no celular -> a aba velha tenta salvar e
+   recebe "Contrato assinado" -> a janela só consulta -> "Recebi tudo" vira
+   a venda) e os erros de propósito (mudou em outro atendimento, validade
+   no passado com "Usar 5 dias", item sem descrição aceso, e-mail, a
+   recusada com Refazer, pagamento sem valor; clientes, estoque e O.S.) no
+   PC 1366 e no celular 390, sol, lua e eclipse, sem rolagem lateral e
+   sem erro de JS.

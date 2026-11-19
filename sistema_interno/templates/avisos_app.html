@@ -62,11 +62,14 @@
       hospedagem, o botão "Enviar" existiria só para responder que não dá
       -- e a leitura óbvia seria "o sistema quebrou".
     {% endcomment %}
-    <div class="alert alert-warning mt-3 mb-0" role="status">
-      <i class="bi bi-exclamation-triangle me-1"></i>
-      As notificações ainda não estão ligadas nesta hospedagem: falta a
-      chave da aplicação (VAPID). Os rascunhos podem ser escritos, mas
-      nada sai até a configuração existir — veja <strong>docs/APP_PONTOS.md</strong>.
+    <div class="ls-nota-app alerta mt-3 mb-0" role="status">
+      <span class="ls-nota-app-icone" aria-hidden="true"><i class="bi bi-bell-slash"></i></span>
+      <div class="ls-nota-app-corpo">
+        <strong>Notificações ainda não ligadas</strong>
+        <span>Falta a chave da aplicação (VAPID) nesta hospedagem. Os rascunhos
+        podem ser escritos, mas nada sai até a configuração existir — veja
+        <b>docs/APP_PONTOS.md</b>.</span>
+      </div>
     </div>
   {% endif %}
 
@@ -186,7 +189,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="avisoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="avisoErro" class="visually-hidden" role="alert"></div>
 
         <div class="mb-3">
           <label class="form-label" for="avisoTituloCampo">Título</label>
@@ -256,7 +259,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="enviarAvisoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="enviarAvisoErro" class="visually-hidden" role="alert"></div>
         <p class="mb-2">
           <strong id="enviarAvisoTitulo"></strong> vai para
           <strong id="enviarAvisoPublico"></strong>.
@@ -287,7 +290,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
-        <div id="excluirAvisoErro" class="alert alert-danger d-none" role="alert"></div>
+        <div id="excluirAvisoErro" class="visually-hidden" role="alert"></div>
         <p class="mb-0">Excluir <strong id="excluirAvisoNome"></strong>?</p>
       </div>
       <div class="modal-footer">

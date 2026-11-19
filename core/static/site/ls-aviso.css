@@ -456,6 +456,29 @@ html.ls-recado-travado {
     white-space: pre-line;
 }
 
+/* As linhas do que andou junto (LSAviso.modal({lista})): cartões baixos,
+   alinhados à esquerda, para ler um por um. */
+.ls-recado-folha-lista {
+    width: 100%;
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+    text-align: left;
+}
+
+.ls-recado-folha-lista li {
+    padding: 9px 12px;
+    border: 1px solid var(--recado-borda);
+    border-radius: 13px;
+    background: var(--recado-fundo-2);
+    color: var(--recado-texto);
+    font-size: .86rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
 .ls-recado-folha-botoes {
     width: 100%;
     display: flex;
