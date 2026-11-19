@@ -2197,15 +2197,27 @@
       botao.classList.toggle("urgente", urgentes > 0);
     }
 
+    /* O NÚMERO CERTO NO TOPO DA LISTA (seção 116). "19 urgentes" com 22
+       no sino parecia conta errada: os dois números aparecem -- "19
+       urgentes de 22" --, e o segundo é o do selo do sino. */
     var texto = document.querySelector('[data-selo="urgentes-texto"]');
     if (texto) {
       var quantos = Number(dados.urgentes) || 0;
-      texto.textContent = quantos + " urgente" + (quantos === 1 ? "" : "s");
-      texto.hidden = quantos === 0;
+      texto.textContent = quantos
+        ? quantos + " urgente" + (quantos === 1 ? "" : "s")
+          + (pendentes > quantos ? " de " + pendentes : "")
+        : pendentes + " pendente" + (pendentes === 1 ? "" : "s");
+      texto.hidden = pendentes === 0;
     }
 
+    /* O sino e o "O que precisa de você" do Início desenham a MESMA
+       lista, do mesmo estado: os dois nunca discordam. */
+    var html = montarLista(dados.avisos || []);
     var lista = document.getElementById("avisosLista");
-    if (lista) lista.innerHTML = montarLista(dados.avisos || []);
+    if (lista) lista.innerHTML = html;
+    document.querySelectorAll("[data-avisos-lista]").forEach(function (outra) {
+      if (outra !== lista) outra.innerHTML = html;
+    });
   }
 
   function escapar(texto) {
@@ -2221,14 +2233,28 @@
         '<i class="bi bi-check2-circle"></i> Nada pendente agora.</div>'
       );
     }
+    /* O MESMO DESENHO de partes/aviso_item.html (o Início sem JavaScript).
+       Aviso com conserto pequeno leva `data-resolver`: o toque abre a
+       folha (avisos-resolver.js) e o `href` continua sendo a tela, para
+       o Ctrl+clique e para quem está sem o script. A ação aparece escrita
+       no próprio aviso -- é o que o dedo procura. */
     return itens.map(function (aviso) {
+      var resolver = aviso.resolver
+        ? ' data-resolver="' + escapar(aviso.chave) + '" aria-haspopup="dialog"'
+        : "";
+      var acao = aviso.acao
+        ? '<span class="ls-aviso-acao">' + escapar(aviso.acao) +
+          '<i class="bi ' + (aviso.resolver ? "bi-chevron-right" : "bi-arrow-right") + '" aria-hidden="true"></i></span>'
+        : "";
       return (
-        '<a class="ls-aviso ' + escapar(aviso.nivel) + '" href="' + escapar(aviso.url) + '">' +
+        '<a class="ls-aviso ' + escapar(aviso.nivel) + (aviso.resolver ? " resolvivel" : "") +
+        '" href="' + escapar(aviso.url) + '" data-aviso="' + escapar(aviso.chave) + '"' + resolver + ">" +
         '<span class="ls-aviso-icone"><i class="bi ' + escapar(aviso.icone) + '"></i></span>' +
         '<span class="ls-aviso-corpo">' +
         '<span class="ls-aviso-titulo">' + escapar(aviso.titulo) +
         '<span class="ls-aviso-quantidade">' + escapar(aviso.quantidade) + "</span></span>" +
         '<span class="ls-aviso-detalhe">' + escapar(aviso.detalhe) + "</span>" +
+        acao +
         "</span></a>"
       );
     }).join("");

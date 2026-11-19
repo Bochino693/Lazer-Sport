@@ -539,6 +539,16 @@ class LembrarClienteView(InternoRequiredMixin, View):
         from .notificacoes_cliente import lembrar_validade
         from .permissoes import limitar_orcamentos
 
+        # A MESMA REGRA DO "ENVIAR" DA LISTA (seção 116): falar com o
+        # cliente é do Comercial. O atalho também aparece na folha do sino,
+        # e uma conta só do Financeiro (que vê o aviso pelo bloco de preço)
+        # não manda lembrete -- como não manda a proposta.
+        if not capacidades(request.user)["orcamentos_editar_comercial"]:
+            return JsonResponse({
+                "status": "erro",
+                "msg": "Somente o Comercial fala com o cliente sobre a proposta.",
+            }, status=403)
+
         orcamento = get_object_or_404(
             limitar_orcamentos(request.user, Orcamento.objects.all()), pk=pk,
         )

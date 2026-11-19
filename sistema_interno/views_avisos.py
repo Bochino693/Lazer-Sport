@@ -104,6 +104,10 @@ class EstadoAvisosView(View):
                     "nivel": aviso.nivel,
                     "icone": aviso.icone,
                     "urgente": aviso.urgente,
+                    # O botão do próprio aviso e se ele abre a folha que
+                    # resolve ali mesmo (seção 116, `resolver_avisos.py`).
+                    "acao": aviso.acao,
+                    "resolver": aviso.resolvivel,
                 }
                 for aviso in apurado["avisos"]
             ],

@@ -252,6 +252,8 @@
   {% endcomment %}
   <link rel="stylesheet" href="{% estatico 'site/ls-aviso.css' %}">
   <script src="{% estatico 'site/ls-aviso.js' %}" defer></script>
+  {# A folha que resolve o aviso ali mesmo (seção 116): a casca é a do ls-aviso, o resto mora aqui. #}
+  <link rel="stylesheet" href="{% estatico 'interno/avisos-resolver.css' %}">
 </head>
 {% comment %}
   `data-ls-economia` é o freio de mão da banda, ligado na hospedagem por
@@ -264,6 +266,7 @@
 <body class="ls-body {% block body_class %}{% endblock %}"
       data-avisos="{% url 'avisos_estado' %}"
       data-aparelho="{% url 'avisos_aparelho' %}"
+      data-resolver-url="{% url 'resolver_aviso' 'CHAVE' %}"
       data-presenca="{% url 'presenca_agora_json' %}"
       data-ls-economia="{% if economia_de_dados %}1{% else %}0{% endif %}">
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
@@ -596,6 +599,13 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
 <script src="{% estatico 'interno/vendor/bootstrap.bundle.min.js' %}"></script>
 <script src="{% estatico 'interno/painel.js' %}"></script>
 <script src="{% estatico 'interno/ls-atalhos.js' %}"></script>
+{% comment %}
+  A folha que resolve o aviso ali mesmo (LEIA-ME-V10, seção 116): o toque
+  num aviso com `data-resolver`, no sino ou no Início, abre a lista do que
+  falta com as ações das telas. Uma vez por aba, por delegação -- o sino
+  não é trocado na navegação suave e o item do Início é redesenhado.
+{% endcomment %}
+<script src="{% estatico 'interno/avisos-resolver.js' %}"></script>
 {% comment %}
   Campo de busca do painel (catálogo, clientes, colaboradores). Carrega
   em toda tela porque o mesmo componente é usado em orçamento, produção e

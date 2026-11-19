@@ -60,6 +60,7 @@ from core.models import Manutencao, Pedido, Venda
 from .models import (
     AtividadeOrcamento,
     Cliente,
+    DocumentoAssinatura,
     EstoqueMaterial,
     Orcamento,
     OrdemProducao,
@@ -75,6 +76,8 @@ FONTES = (
     (OrdemServico, "atualizado"),
     (OrdemProducao, "atualizado"),
     (Cliente, "atualizado"),
+    # O contrato gerado tira a proposta aprovada do sino (seção 116).
+    (DocumentoAssinatura, "atualizado"),
     (EstoqueMaterial, "atualizado"),
     (Manutencao, "atualizada_em"),
     (Pedido, "atualizado"),

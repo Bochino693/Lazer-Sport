@@ -37,7 +37,11 @@ from core.models import Estabelecimentos
 
 from . import cartao_cliente
 from . import clientes as svc
-from .completude_clientes import filtro_incompletos, pendencias_do_cliente
+from .completude_clientes import (
+    faltas_do_cliente,
+    filtro_incompletos,
+    pendencias_do_cliente,
+)
 from .busca_local import montar_indice
 from .models import Cliente, EnderecoCliente, Orcamento
 from .exclusoes import forcando, remover
@@ -93,7 +97,10 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             consulta = consulta.filter(parceiro_id=int(parceiro))
 
         if apenas_incompletos:
-            consulta = consulta.filter(filtro_incompletos()).distinct()
+            # Só os ATIVOS, como o número do sino (seção 116): o aviso dizia
+            # 19 e a lista abria com os arquivados junto -- dois números
+            # para a mesma pergunta. Arquivado não precisa ser completado.
+            consulta = consulta.filter(filtro_incompletos(), ativo=True).distinct()
 
         # O índice cobre o filtro inteiro; a página é só o que se desenha.
         # É por ele que o navegador filtra sem ir ao servidor, e é ele que
@@ -135,7 +142,7 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
                 distinct=True,
             ),
             no_mapa=Count("id", filter=(Q(publicar_no_mapa=True) | Q(_proposta_mapa=True)) & Q(ativo=True, enderecos__latitude__isnull=False, enderecos__longitude__isnull=False), distinct=True),
-            incompletos=Count("id", filter=filtro_incompletos(), distinct=True),
+            incompletos=Count("id", filter=filtro_incompletos() & Q(ativo=True), distinct=True),
         )
 
         ids_da_pagina = [cliente.pk for cliente in pagina.object_list]
@@ -353,6 +360,11 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         # O que ainda falta volta junto: é com isso que a linha atualiza
         # (ou apaga) o aviso sem recarregar a tela.
         faltando = pendencias_do_cliente(cliente)
+        # A REGRA DA CONTAGEM VAI JUNTO (seção 116). `pendencias` também
+        # lembra o "WhatsApp não confirmado", que não deixa ninguém
+        # incompleto; `faltas` é o que ainda segura este cliente no número
+        # do sino -- é por ela que a folha do aviso decide se a linha sai.
+        faltas = faltas_do_cliente(cliente)
         return self.sucesso(
             request,
             (
@@ -363,6 +375,8 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             ),
             id=cliente.id,
             pendencias=faltando,
+            faltas=faltas,
+            incompleto=bool(faltas),
             resumo=svc.opcao_de_busca(cliente),
         )
 

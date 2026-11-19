@@ -1,0 +1,8 @@
+{% comment %}
+  UM AVISO DA CENTRAL, desenhado pelo servidor (o Início sem JavaScript e
+  a primeira pintura). É o MESMO desenho de `montarLista` em painel.js,
+  que redesenha a lista a cada estado novo: mudou um, muda o outro.
+  O aviso com conserto pequeno leva `data-resolver` (seção 116): o toque
+  abre a folha (avisos-resolver.js) e o `href` continua sendo a tela.
+{% endcomment %}
+<a class="ls-aviso {{ aviso.nivel }}{% if aviso.resolvivel %} resolvivel{% endif %}" href="{{ aviso.url }}" data-aviso="{{ aviso.chave }}"{% if aviso.resolvivel %} data-resolver="{{ aviso.chave }}" aria-haspopup="dialog"{% endif %}><span class="ls-aviso-icone"><i class="bi {{ aviso.icone }}"></i></span><span class="ls-aviso-corpo"><span class="ls-aviso-titulo">{{ aviso.titulo }}<span class="ls-aviso-quantidade">{{ aviso.quantidade }}</span></span><span class="ls-aviso-detalhe">{{ aviso.detalhe }}</span>{% if aviso.acao %}<span class="ls-aviso-acao">{{ aviso.acao }}<i class="bi {% if aviso.resolvivel %}bi-chevron-right{% else %}bi-arrow-right{% endif %}" aria-hidden="true"></i></span>{% endif %}</span></a>

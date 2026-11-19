@@ -79,6 +79,9 @@ SO_DE_UM_REGISTRO = {
     # a nota fiscal de entrada e o arquivo dela (tests_nota_entrada.py abre de verdade)
     "nota_entrada": "uma nota fiscal de entrada lida",
     "nota_entrada_arquivo": "o arquivo de uma nota guardada",
+    # a folha de um aviso: a chave precisa ser de um aviso com conserto
+    # (tests_resolver_avisos.py abre cada uma de verdade)
+    "resolver_aviso": "a chave de um aviso que tem folha",
     # RH: a ficha, o documento, o comprovante, o espelho e o termo de um
     # colaborador que precisa existir (rh/tests_*.py abrem de verdade); o
     # link do termo é um token de 5 minutos.

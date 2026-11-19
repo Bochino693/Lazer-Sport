@@ -21,16 +21,17 @@ from dataclasses import dataclass
 from datetime import timedelta
 
 from django.db import DatabaseError, transaction
-from django.db.models import Count, Max
+from django.db.models import Count, Exists, Max, OuterRef
 from django.urls import reverse
 from django.utils import timezone
 
 from core.models import Manutencao, Pedido, Venda
 
-from .completude_clientes import filtro_incompletos
+from .completude_clientes import filtro_incompletos, partes_incompletas
 from .models import (
     AtividadeOrcamento,
     Cliente,
+    DocumentoAssinatura,
     EstadoNotificacao,
     EstoqueMaterial,
     Orcamento,
@@ -165,15 +166,62 @@ class Aviso:
     # primeira versão da cadeia, portanto v1, v2 e v3 compartilham a mesma
     # referência. Vazio nos avisos que não pertencem a Orçamentos.
     orcamentos: frozenset = frozenset()
+    # O QUE FAZER, EM DUAS PALAVRAS (LEIA-ME-V10, seção 116): o rótulo do
+    # botão que aparece no próprio aviso ("Completar", "Combinar entrega").
+    # O detalhe explica; a ação é o que o dedo procura.
+    acao: str = ""
 
     @property
     def urgente(self):
         return self.nivel in ("critico", "atencao")
 
+    @property
+    def resolvivel(self):
+        """Abre a folha de conserto em vez de levar para outra tela."""
+        return self.chave in RESOLVIVEIS
+
 
 #: Peso de cada nível na ordenação. Fora do dataclass porque é regra de
 #: apresentação, não dado do aviso.
 PESO = {"critico": 0, "atencao": 1, "novidade": 2, "info": 3}
+
+# ----------------------------------------------------------------------
+# OS AVISOS QUE SE RESOLVEM ALI MESMO (LEIA-ME-V10, seção 116)
+#
+# "Melhore as notificações, deixe modais para solucionar problemas
+# pequenos." Cada chave abaixo abre uma folha no próprio sino (e no
+# Início) com a lista do que falta e as ações que já existem nas telas.
+# O valor é a capacidade de `permissoes.capacidades` que abre a folha --
+# a MESMA que decide quem recebe o aviso, para nunca existir aviso com
+# folha que a pessoa não abre. As ações de dentro da folha conferem, cada
+# uma, a regra da tela de onde vêm (ver `resolver_avisos.py`).
+#
+# O que fica de fora continua levando para a tela: produção, O.S.,
+# manutenção, vendas a confirmar, projetos 3D e as movimentações de
+# colegas não têm um conserto de um toque.
+# ----------------------------------------------------------------------
+RESOLVIVEIS = {
+    "clientes_incompletos": "clientes",
+    "orcamentos_aprovados": "orcamentos",
+    "orcamentos_em_aberto": "orcamentos",
+    "orcamentos_vencendo": "orcamentos",
+    "orcamentos_vencidos": "orcamentos",
+    "orcamentos_recusados": "orcamentos",
+    "pedidos": "pedidos",
+    "estoque": "estoque",
+}
+
+
+def _plural(numero, um, varios):
+    return f"{numero} {um if numero == 1 else varios}"
+
+
+def _lista_em_frase(partes):
+    """["a", "b", "c"] -> "a, b e c"."""
+    partes = [p for p in partes if p]
+    if len(partes) <= 1:
+        return "".join(partes)
+    return ", ".join(partes[:-1]) + " e " + partes[-1]
 
 
 def eh_gestor(user):
@@ -189,9 +237,19 @@ def _grupos_de_versoes(orcamento_ids):
     diz que os dois registros são versões do mesmo documento. A busca dos
     pais é feita em lotes por nível, evitando uma consulta para cada evento.
     """
+    return frozenset(mapa_de_negociacoes(orcamento_ids).values())
+
+
+def mapa_de_negociacoes(orcamento_ids):
+    """Cada versão -> a primeira versão da cadeia (a negociação).
+
+    É o mesmo cálculo de `_grupos_de_versoes`, devolvendo de qual
+    negociação cada id veio. A folha de propostas (seção 116) usa para
+    mostrar UMA linha por negociação -- o mesmo número que o sino conta.
+    """
     originais = {int(pk) for pk in orcamento_ids if pk}
     if not originais:
-        return frozenset()
+        return {}
 
     pais = {}
     fronteira = set(originais)
@@ -209,15 +267,74 @@ def _grupos_de_versoes(orcamento_ids):
                 proxima.add(pai)
         fronteira = proxima
 
-    grupos = set()
+    grupos = {}
     for original in originais:
         atual = original
         vistos = set()
         while pais.get(atual) and atual not in vistos and len(vistos) < 50:
             vistos.add(atual)
             atual = pais[atual]
-        grupos.add(atual)
-    return frozenset(grupos)
+        grupos[original] = atual
+    return grupos
+
+
+def _sem_contrato():
+    """Quem já tem o contrato sai da fila das aprovadas.
+
+    A parte da equipe está feita: o prazo vai na Cláusula 3ª e o link de
+    assinatura sai do cartão. O documento substituído não conta.
+    """
+    return ~Exists(
+        DocumentoAssinatura.objects
+        .filter(orcamento_id=OuterRef("pk"))
+        .exclude(situacao=DocumentoAssinatura.Situacao.SUBSTITUIDO)
+    )
+
+
+def consulta_do_aviso(user, chave, hoje=None, agora=None):
+    """As VERSÕES que cada aviso comercial cobre, já na carteira de quem vê.
+
+    Uma consulta só para os dois lados: o número do sino (`_orcamentos`,
+    `_respostas_de_cliente`) e a lista da folha que resolve o aviso
+    (`resolver_avisos.py`, seção 116). Se a regra de "a vencer" mudar,
+    muda aqui, e a folha nunca mostra uma lista com outro tamanho que o
+    número que a abriu.
+    """
+    hoje = hoje or timezone.localdate()
+    agora = agora or timezone.now()
+
+    if chave in ("orcamentos_em_aberto", "orcamentos_vencidos", "orcamentos_vencendo"):
+        abertos = limitar_orcamentos(
+            user,
+            Orcamento.objects.filter(status__in=Orcamento.EM_ABERTO),
+        )
+        if chave == "orcamentos_vencidos":
+            return abertos.filter(validade__lt=hoje)
+        if chave == "orcamentos_vencendo":
+            return abertos.filter(
+                validade__gte=hoje,
+                validade__lte=hoje + timedelta(days=DIAS_PARA_COBRAR),
+            )
+        return abertos
+
+    if chave in ("orcamentos_aprovados", "orcamentos_recusados"):
+        respondidos = limitar_orcamentos(
+            user,
+            Orcamento.objects.filter(
+                respondido_em__gte=agora - timedelta(days=DIAS_DE_NOVIDADE),
+            ),
+        )
+        if chave == "orcamentos_recusados":
+            return respondidos.filter(status=Orcamento.Status.RECUSADO)
+        # APROVADA QUE JÁ TEM CONTRATO NÃO PRECISA MAIS DE VOCÊ. O aviso
+        # dizia "combine data e montagem" por sete dias, mesmo depois de o
+        # prazo combinado e o contrato gerado -- e um aviso que não some
+        # quando se faz o que ele pede ensina a ignorar o sino.
+        return respondidos.filter(status=Orcamento.Status.APROVADO).filter(
+            _sem_contrato()
+        )
+
+    raise KeyError(chave)
 
 
 def _orcamentos(user, hoje):
@@ -232,26 +349,38 @@ def _orcamentos(user, hoje):
     dois motivos continuam separados na central, mas a mesma negociação
     ocupa uma única unidade no total, inclusive quando já foi refeita.
     """
-    abertos = limitar_orcamentos(
-        user,
-        Orcamento.objects.filter(status__in=Orcamento.EM_ABERTO),
-    )
+    abertos = consulta_do_aviso(user, "orcamentos_em_aberto", hoje)
 
-    em_aberto = _grupos_de_versoes(
-        abertos.values_list("pk", flat=True)
-    )
+    # Uma ida ao banco traz a situação de cada versão aberta: é dela que
+    # sai o "1 rascunho e 1 esperando o cliente" do detalhe, contado por
+    # negociação, como o número.
+    situacao_por_versao = dict(abertos.values_list("pk", "status"))
+    negociacao = mapa_de_negociacoes(situacao_por_versao)
+    em_aberto = frozenset(negociacao.values())
     vencidos = _grupos_de_versoes(
-        abertos.filter(validade__lt=hoje).values_list("pk", flat=True)
+        consulta_do_aviso(user, "orcamentos_vencidos", hoje)
+        .values_list("pk", flat=True)
     )
-    a_vencer = _grupos_de_versoes(abertos.filter(
-        validade__gte=hoje,
-        validade__lte=hoje + timedelta(days=DIAS_PARA_COBRAR),
-    ).values_list("pk", flat=True))
+    a_vencer = _grupos_de_versoes(
+        consulta_do_aviso(user, "orcamentos_vencendo", hoje)
+        .values_list("pk", flat=True)
+    )
 
     avisos = []
 
     if em_aberto:
         quantidade = len(em_aberto)
+        por_situacao = {}
+        for versao, situacao in situacao_por_versao.items():
+            por_situacao.setdefault(situacao, set()).add(negociacao[versao])
+        rascunhos = len(por_situacao.get(Orcamento.Status.RASCUNHO, ()))
+        esperando = len(por_situacao.get(Orcamento.Status.AGUARDANDO_RESPOSTA, ()))
+        negociando = len(por_situacao.get(Orcamento.Status.EM_NEGOCIACAO, ()))
+        partes = _lista_em_frase([
+            _plural(rascunhos, "rascunho por enviar", "rascunhos por enviar") if rascunhos else "",
+            _plural(esperando, "esperando o cliente", "esperando o cliente") if esperando else "",
+            _plural(negociando, "em negociação", "em negociação") if negociando else "",
+        ])
         avisos.append(Aviso(
             chave="orcamentos_em_aberto",
             titulo=(
@@ -259,14 +388,15 @@ def _orcamentos(user, hoje):
                 if quantidade == 1 else "Propostas em aberto"
             ),
             detalhe=(
-                "Rascunhos, propostas aguardando resposta e negociações "
-                "ainda precisam de acompanhamento."
+                f"{partes[:1].upper()}{partes[1:]}. "
+                "Reenvie, lembre o cliente ou registre a resposta."
             ),
             quantidade=quantidade,
             url=reverse("orcamentos_inner", urlconf=URLCONF),
             nivel="info",
             icone="bi-file-earmark-text",
             orcamentos=em_aberto,
+            acao="Acompanhar",
         ))
 
     if vencidos:
@@ -274,12 +404,16 @@ def _orcamentos(user, hoje):
         avisos.append(Aviso(
             chave="orcamentos_vencidos",
             titulo="Orçamento vencido" if quantidade == 1 else "Orçamentos vencidos",
-            detalhe="Passou da validade sem resposta do cliente.",
+            detalhe=(
+                "Passou da validade sem resposta. Marque como expirada, "
+                "registre a recusa ou faça uma versão nova."
+            ),
             quantidade=quantidade,
             url=reverse("orcamentos_inner", urlconf=URLCONF),
             nivel="critico",
             icone="bi-calendar-x",
             orcamentos=vencidos,
+            acao="Resolver",
         ))
 
     if a_vencer:
@@ -287,12 +421,16 @@ def _orcamentos(user, hoje):
         avisos.append(Aviso(
             chave="orcamentos_vencendo",
             titulo="Orçamento a vencer" if quantidade == 1 else "Orçamentos a vencer",
-            detalhe=f"Vence em até {DIAS_PARA_COBRAR} dias. Dá tempo de ligar.",
+            detalhe=(
+                f"Vence em até {DIAS_PARA_COBRAR} dias. Lembre o cliente "
+                "agora, enquanto a proposta vale."
+            ),
             quantidade=quantidade,
             url=reverse("orcamentos_inner", urlconf=URLCONF),
             nivel="atencao",
             icone="bi-hourglass-split",
             orcamentos=a_vencer,
+            acao="Lembrar cliente",
         ))
 
     return avisos
@@ -304,18 +442,12 @@ def _respostas_de_cliente(user, agora):
     É o aviso mais importante da lista em termos de dinheiro: uma proposta
     aprovada que fica parada é uma venda esfriando.
     """
-    desde = agora - timedelta(days=DIAS_DE_NOVIDADE)
-    respondidos = limitar_orcamentos(
-        user,
-        Orcamento.objects.filter(respondido_em__gte=desde),
-    )
-
     aprovados = _grupos_de_versoes(
-        respondidos.filter(status=Orcamento.Status.APROVADO)
+        consulta_do_aviso(user, "orcamentos_aprovados", agora=agora)
         .values_list("pk", flat=True)
     )
     recusados = _grupos_de_versoes(
-        respondidos.filter(status=Orcamento.Status.RECUSADO)
+        consulta_do_aviso(user, "orcamentos_recusados", agora=agora)
         .values_list("pk", flat=True)
     )
 
@@ -326,12 +458,16 @@ def _respostas_de_cliente(user, agora):
         avisos.append(Aviso(
             chave="orcamentos_aprovados",
             titulo="Proposta aprovada" if quantidade == 1 else "Propostas aprovadas",
-            detalhe="O cliente aprovou. Combine data e montagem.",
+            detalhe=(
+                "O cliente aprovou pelo link. Combine o prazo de entrega e "
+                "mande o contrato para assinar."
+            ),
             quantidade=quantidade,
             url=reverse("orcamentos_inner", urlconf=URLCONF) + "?filtro=aprovados",
             nivel="novidade",
             icone="bi-patch-check",
             orcamentos=aprovados,
+            acao="Combinar entrega",
         ))
 
     if recusados:
@@ -339,12 +475,13 @@ def _respostas_de_cliente(user, agora):
         avisos.append(Aviso(
             chave="orcamentos_recusados",
             titulo="Proposta recusada" if quantidade == 1 else "Propostas recusadas",
-            detalhe="Vale ler o motivo antes de refazer.",
+            detalhe="Leia o motivo do cliente antes de fazer a versão nova.",
             quantidade=quantidade,
             url=reverse("orcamentos_inner", urlconf=URLCONF) + "?filtro=recusados",
             nivel="info",
             icone="bi-emoji-frown",
             orcamentos=recusados,
+            acao="Ver motivos",
         ))
 
     return avisos
@@ -453,6 +590,7 @@ def _atividades_orcamento(user):
         nivel="novidade",
         icone="bi-bell-fill",
         orcamentos=grupos,
+        acao="Ver orçamentos",
     )]
 
 
@@ -495,11 +633,15 @@ def _operacao(acesso):
             avisos.append(Aviso(
                 chave="pedidos",
                 titulo="Pedido em aberto" if pedidos == 1 else "Pedidos em aberto",
-                detalhe="Ainda não finalizados nem cancelados.",
+                detalhe=(
+                    "Ainda não finalizados nem cancelados. Atualize o "
+                    "andamento de cada um sem sair daqui."
+                ),
                 quantidade=pedidos,
                 url=reverse("pedidos_inner", urlconf=URLCONF),
                 nivel="info",
                 icone="bi-box2-heart",
+                acao="Atualizar andamento",
             ))
 
     if acesso["vendas_financeiro"]:
@@ -508,11 +650,12 @@ def _operacao(acesso):
             avisos.append(Aviso(
                 chave="vendas",
                 titulo="Venda a confirmar" if vendas == 1 else "Vendas a confirmar",
-                detalhe="Pagamento registrado, confirmação pendente.",
+                detalhe="Pagamento registrado, confirmação pendente. Confira na tela de Vendas.",
                 quantidade=vendas,
                 url=reverse("vendas_inner", urlconf=URLCONF),
                 nivel="atencao",
                 icone="bi-receipt",
+                acao="Conferir vendas",
             ))
 
     if acesso["manutencoes"]:
@@ -521,11 +664,12 @@ def _operacao(acesso):
             avisos.append(Aviso(
                 chave="manutencoes",
                 titulo="Manutenção aberta" if manutencoes == 1 else "Manutenções abertas",
-                detalhe="Chamado do cliente esperando resposta.",
+                detalhe="Chamado do cliente esperando resposta. Faça a triagem.",
                 quantidade=manutencoes,
                 url=reverse("manutencao_inner", urlconf=URLCONF),
                 nivel="atencao",
                 icone="bi-wrench-adjustable",
+                acao="Atender",
             ))
 
     if acesso["ordens_servico"]:
@@ -547,6 +691,7 @@ def _operacao(acesso):
                 url=reverse("ordens_servico_inner", urlconf=URLCONF),
                 nivel="atencao",
                 icone="bi-clipboard2-pulse",
+                acao="Abrir O.S.",
             ))
 
     return avisos
@@ -567,33 +712,60 @@ def _estoque():
     return [Aviso(
         chave="estoque",
         titulo="Material para repor",
-        detalhe="No mínimo ou abaixo dele.",
+        detalhe="No mínimo ou abaixo dele. Veja a lista de compra e dê entrada no estoque.",
         quantidade=criticos,
         url=reverse("estoque_inner", urlconf=URLCONF),
         nivel="critico",
         icone="bi-box-seam",
+        acao="Ver o que comprar",
     )]
 
 
 def _clientes_incompletos():
-    """Cadastros que ainda não sustentam orçamento, contato e deslocamento."""
-    total = (
+    """Cadastros que ainda não sustentam orçamento, contato e deslocamento.
+
+    UMA consulta, com o total e o que falta em cada parte: o detalhe diz
+    "falta CPF/CNPJ em 12, endereço em 5" em vez de "falta contato, CPF/CNPJ
+    ou endereço" -- quem lê sabe o tamanho de cada conserto antes de abrir.
+    As três partes são as mesmas de `filtro_incompletos`, e um cliente
+    pode faltar em mais de uma (por isso as partes somam mais que o total).
+    """
+    sem_contato, sem_documento, sem_endereco = partes_incompletas()
+    numeros = (
         Cliente.objects
         .filter(ativo=True)
-        .filter(filtro_incompletos())
-        .distinct()
-        .count()
+        .aggregate(
+            total=Count("pk", filter=filtro_incompletos(), distinct=True),
+            contato=Count("pk", filter=sem_contato, distinct=True),
+            documento=Count("pk", filter=sem_documento, distinct=True),
+            endereco=Count("pk", filter=sem_endereco, distinct=True),
+        )
     )
+    total = numeros["total"] or 0
     if not total:
         return []
+    faltas = [
+        (numeros["documento"], "CPF/CNPJ válido"),
+        (numeros["endereco"], "endereço"),
+        (numeros["contato"], "contato"),
+    ]
+    if total == 1:
+        detalhe = "Falta " + _lista_em_frase(
+            [rotulo for numero, rotulo in faltas if numero]
+        ) + "."
+    else:
+        detalhe = "Falta " + _lista_em_frase(
+            [f"{rotulo} em {numero}" for numero, rotulo in faltas if numero]
+        ) + "."
     return [Aviso(
         chave="clientes_incompletos",
         titulo="Cadastro de cliente incompleto" if total == 1 else "Cadastros de clientes incompletos",
-        detalhe="Falta contato, CPF/CNPJ ou endereço. Toque para corrigir.",
+        detalhe=detalhe + " Complete aqui mesmo, um por um.",
         quantidade=total,
         url=reverse("clientes_inner", urlconf=URLCONF) + "?incompletos=1",
         nivel="atencao",
         icone="bi-person-exclamation",
+        acao="Completar",
     )]
 
 
@@ -614,6 +786,7 @@ def _producao(user, gestor):
         url=reverse("minha_producao", urlconf=URLCONF),
         nivel="info",
         icone="bi-hammer",
+        acao="Acompanhar",
     )]
 
 
@@ -634,11 +807,12 @@ def _projetos_3d():
     return [Aviso(
         chave="projetos_3d",
         titulo="Projeto 3D novo do site" if novos == 1 else "Projetos 3D novos do site",
-        detalhe="O cliente montou o espaço em 3D e pediu o projeto.",
+        detalhe="O cliente montou o espaço em 3D e pediu o projeto. Abra e responda.",
         quantidade=novos,
         url=reverse("pedidos_projeto_3d", urlconf=URLCONF) + "?status=novo",
         nivel="novidade",
         icone="bi-badge-3d",
+        acao="Ver projetos",
     )]
 
 
