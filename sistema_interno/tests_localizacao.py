@@ -74,6 +74,7 @@ class ProcurarTests(TestCase):
     def test_nenhuma_fonte_achou_nao_grava_nada(self):
         e = _endereco()
         with mock.patch(L + "_rua_e_cidade", return_value=(None, None, None)), \
+                mock.patch(L + "_municipio", return_value=(None, None)), \
                 mock.patch(L + "_centro_da_cidade", return_value=(None, None)):
             self.assertIs(localizacao.localizar_um(e.pk), False)
         e.refresh_from_db()
@@ -100,6 +101,50 @@ class ProcurarTests(TestCase):
         e.refresh_from_db()
         self.assertEqual(e.precisao, "manual")
         self.assertEqual(e.latitude, Decimal("-1"))
+
+
+class TabelaDoIbgeTests(TestCase):
+    """A rede de segurança: o centro da cidade sai da tabela que está no site, sem rede."""
+
+    def test_sem_nenhuma_fonte_de_fora_a_cidade_ainda_ganha_ponto(self):
+        e = _endereco(cep="", cidade="Campinas", estado="SP")
+        with mock.patch(L + "_rua_e_cidade", return_value=(None, None, None)), \
+                mock.patch(L + "_centro_da_cidade") as de_fora:
+            self.assertTrue(localizacao.localizar_um(e.pk))
+        de_fora.assert_not_called()
+        e.refresh_from_db()
+        self.assertEqual(e.precisao, EnderecoCliente.Precisao.CIDADE)
+        self.assertAlmostEqual(float(e.latitude), -22.9053, places=3)
+
+    def test_os_jeitos_de_escrever_a_cidade(self):
+        sp = geo.centro_do_municipio("São Paulo", "SP")
+        self.assertAlmostEqual(sp[0], -23.53, places=1)
+        self.assertEqual(geo.centro_do_municipio("SAO PAULO - SP"), sp)
+        self.assertEqual(geo.centro_do_municipio("São Paulo/SP"), sp)
+        self.assertEqual(geo.centro_do_municipio("São Paulo", "São Paulo"), sp)
+        self.assertIsNotNone(geo.centro_do_municipio("Rio de Janeiro", "Rio de Janeiro")[0])
+        # nome repetido em vários estados: sem a UF, nada de chute
+        self.assertEqual(geo.centro_do_municipio("Bom Jesus"), (None, None))
+        self.assertIsNotNone(geo.centro_do_municipio("Bom Jesus", "PI")[0])
+        self.assertEqual(geo.centro_do_municipio("Cidade Que Não Existe", "SP"), (None, None))
+
+    def test_tudo_numa_linha_so(self):
+        """O cadastro importado com o endereço inteiro na linha da rua."""
+        e = _endereco(cep="", cidade="", estado="",
+                      endereco="Rua das Flores, 10 - Centro, Campinas - SP, 13010-000")
+        onde = localizacao._onde_procurar(e)
+        self.assertEqual(onde["cep"], "13010-000")
+        self.assertEqual((onde["cidade"], onde["estado"]), ("Campinas", "SP"))
+        with mock.patch(L + "_ponto_do_cep", return_value=(None, None)), \
+                mock.patch(L + "_cep_e_numero", return_value=(None, None, None)), \
+                mock.patch(L + "_rua_e_cidade", return_value=(None, None, None)):
+            self.assertTrue(localizacao.localizar_um(e.pk))
+
+    def test_so_o_cep_a_cidade_vem_dele(self):
+        e = _endereco(cep="13010-000", cidade="", estado="")
+        with mock.patch(L + "_dados_do_cep", return_value={"cidade": "Campinas", "estado": "SP"}):
+            onde = localizacao._onde_procurar(e)
+        self.assertEqual((onde["cidade"], onde["estado"]), ("Campinas", "SP"))
 
 
 class FilaTests(TestCase):

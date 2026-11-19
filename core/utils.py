@@ -564,6 +564,78 @@ def buscar_cidade_open_meteo(cidade, estado="", pais="Brasil"):
         return None, None
 
 
+_MUNICIPIOS = None
+_RE_CIDADE_UF = re.compile(r"^\s*(.+?)\s*(?:[-/,(]|\s)\s*([A-Za-z]{2})\s*\)?\s*$")
+
+
+def _municipios():
+    """As 5.570 cidades do Brasil com o centro de cada uma (IBGE), lidas uma vez."""
+    global _MUNICIPIOS
+    if _MUNICIPIOS is None:
+        import json
+        from pathlib import Path
+
+        caminho = Path(__file__).resolve().parent / "dados" / "municipios_br.json"
+        try:
+            _MUNICIPIOS = json.loads(caminho.read_text(encoding="utf-8"))["municipios"]
+        except (OSError, ValueError, KeyError):
+            logger.exception("[GEO] Tabela de municípios ilegível: %s", caminho)
+            _MUNICIPIOS = {}
+    return _MUNICIPIOS
+
+
+def _nome_de_cidade(texto):
+    nome = _sem_acento(texto).replace("-", " ").replace("'", " ").replace(".", " ")
+    return " ".join(nome.split())
+
+
+def separar_cidade_uf(cidade, estado=""):
+    """("São Paulo", "SP") de "São Paulo - SP", "Campinas/SP", "Santos (SP)"...
+
+    O cadastro importado às vezes traz a UF grudada na cidade, e o estado
+    escrito por extenso ("São Paulo"). Aqui sai a sigla quando dá.
+    """
+    from core.mapa_estados import UFS
+
+    cidade = str(cidade or "").strip()
+    estado = str(estado or "").strip()
+    casou = _RE_CIDADE_UF.match(cidade)
+    if casou and casou.group(2).upper() in UFS:
+        cidade, sigla = casou.group(1).strip(" ,-/"), casou.group(2).upper()
+        estado = estado or sigla
+    if estado and estado.upper() not in UFS:
+        por_nome = {_sem_acento(nome): sigla for sigla, nome in UFS.items()}
+        estado = por_nome.get(_sem_acento(estado), estado)
+    return cidade, estado.upper() if estado.upper() in UFS else estado
+
+
+def centro_do_municipio(cidade, estado=""):
+    """(latitude, longitude) do centro da cidade pela tabela do IBGE, sem rede.
+
+    A ÚLTIMA REDE DE SEGURANÇA DO MAPA (LEIA-ME-V10, seção 121). As buscas
+    de fora (Nominatim, Open-Meteo) podem recusar ou demorar; esta tabela
+    está no próprio site (core/dados/municipios_br.json, 5.570 cidades,
+    dados do IBGE) e responde sempre. Com a UF, a cidade daquela UF; sem
+    UF, só quando o nome existe em um único estado (há dezenas de "Bom
+    Jesus" no Brasil -- sem a UF, nada de chute).
+    """
+    tabela = _municipios()
+    original = _nome_de_cidade(cidade)
+    cidade, estado = separar_cidade_uf(cidade, estado)
+    # o nome inteiro primeiro: uma cidade cujo nome termina em duas letras
+    # não pode ser "corrigida" para outra
+    for nome in dict.fromkeys(n for n in (original, _nome_de_cidade(cidade)) if n):
+        if estado in tabela:
+            ponto = tabela[estado].get(nome)
+            if ponto:
+                return ponto[0], ponto[1]
+            continue
+        achados = [pontos[nome] for pontos in tabela.values() if nome in pontos]
+        if len(achados) == 1:
+            return achados[0][0], achados[0][1]
+    return None, None
+
+
 def distancia_km(lat1, lon1, lat2, lon2):
     """Distância geodésica em linha reta; usada somente como fallback."""
     if None in (lat1, lon1, lat2, lon2):

@@ -8183,6 +8183,30 @@ Dependência nova: rjsmin (requirements.txt).
      * endereço que nenhuma fonte acha volta à fila só 6 h depois (ou na
        hora, se for editado). Na tela, ele continua "no mapa, sem local":
        aí é conferir o CEP e a cidade.
+   A TABELA DAS CIDADES NO PRÓPRIO SITE (a segunda rodada, no mesmo dia):
+   depois do primeiro deploy só um alfinete apareceu (26 -> 27). As buscas
+   de fora recusam/demoram, e o cadastro importado às vezes guarda tudo na
+   linha da rua ("Rua X, 10 - Centro, Campinas - SP, 13010-000"), a UF
+   grudada na cidade ("Campinas/SP") ou o estado por extenso. Agora:
+     * core/dados/municipios_br.json: as 5.570 cidades do Brasil com o
+       centro de cada uma (dados do IBGE, compilados por
+       kelvins/municipios-brasileiros, licença MIT em
+       municipios_br.LICENSE; 190 KB). core/utils.centro_do_municipio
+       responde sem rede; nome repetido em vários estados só com a UF;
+     * core/utils.separar_cidade_uf entende "Cidade - UF", "Cidade/UF",
+       "Cidade (UF)" e o estado por extenso;
+     * localizacao._onde_procurar tira o CEP e a cidade da linha da rua
+       quando os campos estão vazios, e a cidade/UF do CEP (ViaCEP/
+       BrasilAPI) quando só há CEP. Nada disso é regravado no cadastro:
+       só o ponto;
+     * a ordem ficou: ponto do CEP, CEP + número, rua + cidade, centro da
+       cidade pela TABELA, e só então as buscas de fora pela cidade;
+     * a fila agora pega todo endereço sem ponto (antes, só com CEP ou
+       cidade preenchidos).
+   O SELO NA LISTA DE CLIENTES diz por que o cliente marcado não está
+   desenhado: "arquivado, fora do mapa" (cadastro inativo -- antes ele
+   aparecia como "sem local" mesmo com ponto), "no mapa, falta o
+   endereço" ou "no mapa, localizando o endereço".
    NÃO liga o "Aparece no mapa do site" de ninguém: o que vai ao site
    continua sendo decisão do cadastro (e da proposta em andamento, como
    antes). Ligar/desligar: LOCALIZAR_ENDERECOS_NO_SITE (padrão ligado;
