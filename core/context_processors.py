@@ -158,25 +158,54 @@ def estabelecimentos_globais(request):
     return {"estabelecimentos_globais": SimpleLazyObject(_buscar)}
 
 
+#: Quantos clientes a faixa do rodapé mostra, e quantos ela lê para escolher (seção 133).
+CLIENTES_NA_FAIXA = 6
+CLIENTES_CANDIDATOS = 18
+
+
+def escolher_clientes_da_faixa(candidatos, quantos=CLIENTES_NA_FAIXA):
+    """Os clientes que a faixa mostra, cada um com `logo_no_ar` marcado (seção 133).
+
+    O LOGO QUE NÃO SAI DE LUGAR NENHUM (o que só o Cloudinary tinha, fora do
+    ar) não vira um quadro vazio na faixa. No lugar dele, um selo com o nome
+    -- MAS SÓ O NOME DE CASA (`Cliente.nome_no_site`: o estabelecimento, ou o
+    cadastro que é de empresa). Nome de pessoa nunca vai para o site: sem
+    nome de casa, o cliente fica fora da faixa até o logo voltar. Conta de
+    texto (core.fotos.foto_disponivel): nenhuma consulta a mais.
+    """
+    from .fotos import foto_disponivel
+
+    escolhidos = []
+    for cliente in candidatos:
+        cliente.logo_no_ar = foto_disponivel(cliente.logo)
+        if cliente.logo_no_ar or cliente.nome_no_site:
+            escolhidos.append(cliente)
+        if len(escolhidos) == quantos:
+            break
+    return escolhidos
+
+
 def clientes_rodape(request):
-    """Seis primeiros clientes ativos com logo, para o base.html.
+    """Até seis clientes ativos com logo, para o base.html.
 
     Sai do cadastro do painel, como o mapa: quem entra na faixa do rodapé
     é o mesmo cliente que a fábrica atende, e não uma lista à parte que
-    alguém precisava lembrar de manter.
+    alguém precisava lembrar de manter. O logo que não sai de lugar nenhum
+    vira o selo com o nome da casa, ou o cliente sai (escolher_clientes_da_faixa);
+    sem ninguém, a faixa some.
     """
     def _buscar():
         from sistema_interno.models import Cliente
 
         dados = cache.get(CHAVE_CLIENTES_RODAPE)
         if dados is None:
-            dados = list(
+            dados = escolher_clientes_da_faixa(
                 Cliente.objects
                 .filter(ativo=True)
                 .exclude(logo__isnull=True)
                 .exclude(logo="")
                 .only("id", "nome_cliente", "nome_estabelecimento", "documento", "logo", "criacao")
-                .order_by("-criacao", "-id")[:6]
+                .order_by("-criacao", "-id")[:CLIENTES_CANDIDATOS]
             )
             cache.set(CHAVE_CLIENTES_RODAPE, dados, TTL_GLOBAL)
         return dados

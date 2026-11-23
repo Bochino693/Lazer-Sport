@@ -77,14 +77,14 @@
              style="cursor:pointer" data-scroll-reveal>
 
         <div class="ls-cartao-media ls-cartao-media--alta">
-            {% with capa=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all|first %}
+            {# só as fotos que saem de algum lugar; sem nenhuma, a capa desenhada (título e tipo), nunca o quadro #}
+            {% with capa=projeto.brinquedo_projetado.fotos_no_site|first %}
                 {% if capa %}
                     <img src="{{ capa.imagem|foto:400 }}" class="ls-cartao-media-bg" alt="" aria-hidden="true">
                     <img src="{{ capa.imagem|foto:900 }}" class="ls-cartao-media-fg ls-cartao-media-fg--preenche"
                          alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
                 {% else %}
-                    <img src="{% static 'images/sem-imagem.svg' %}" class="ls-cartao-media-fg"
-                         alt="Projeto {{ projeto.titulo }} ainda sem fotos" loading="lazy" decoding="async">
+                    {% include "partials/capa_desenhada.html" with titulo=projeto.titulo tipo="Projeto sob medida" icone="fa-compass-drafting" %}
                 {% endif %}
             {% endwith %}
         </div>
@@ -93,7 +93,7 @@
             <h2 class="ls-cartao-titulo">{{ projeto.titulo }}</h2>
             <p class="ls-cartao-desc">{{ projeto.descricao|resumo_ficha:140 }}</p>
 
-            {% with fotos=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all|length %}
+            {% with fotos=projeto.brinquedo_projetado.fotos_no_site|length %}
                 {% if fotos %}
                 <span class="ls-cartao-meta">
                     <i class="fa-solid fa-images" aria-hidden="true"></i>
@@ -131,7 +131,7 @@
   com `overflow: hidden` seria recortada por ele.
 {% endcomment %}
 {% for projeto in projetos %}{% with pid=projeto.id|stringformat:"s" o3d=projeto.brinquedo_projetado|objeto_3d_do_projeto %}
-{% include "partials/ficha_galeria.html" with janela="galeria-projeto-"|add:pid titulo=projeto.titulo texto=projeto.descricao fotos=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all objeto3d=o3d tipo="projeto" selo="Projeto sob medida" selo_icone="fa-compass-drafting" convite="Quero um projeto assim" mensagem="Olá! Vi no site o projeto “"|add:projeto.titulo|add:"” e quero um parecido." %}
+{% include "partials/ficha_galeria.html" with janela="galeria-projeto-"|add:pid titulo=projeto.titulo texto=projeto.descricao fotos=projeto.brinquedo_projetado.fotos_no_site objeto3d=o3d tipo="projeto" selo="Projeto sob medida" selo_icone="fa-compass-drafting" convite="Quero um projeto assim" mensagem="Olá! Vi no site o projeto “"|add:projeto.titulo|add:"” e quero um parecido." %}
 {% endwith %}{% endfor %}
 
 <script src="{% estatico 'site/ls-galeria.js' %}" defer></script>

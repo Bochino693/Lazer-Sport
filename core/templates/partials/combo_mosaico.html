@@ -1,0 +1,20 @@
+{% load fotos %}{% comment %}
+  O MOSAICO DO COMBO (LEIA-ME-V10, seção 133): o combo cuja foto ainda não voltou (a que só o
+  Cloudinary tinha) mostra as capas dos brinquedos que vêm nele -- fotos nossas, de verdade --,
+  lado a lado (1 a 4). Sem nenhuma capa disponível, a capa desenhada com o nome do combo.
+  Preenche a caixa da foto (o pai já é `position: relative`). Estilo: site/ls-base-fim.css.
+
+    {% include "partials/combo_mosaico.html" with brinquedos=combo.fotos_do_mosaico titulo=combo.descricao largura=480 %}
+
+  `brinquedos`: os Brinquedos (Combos.fotos_do_mosaico); ou `urls`: os endereços já prontos (a loja).
+{% endcomment %}{% with l=largura|default:480 %}{% if brinquedos %}
+<div class="ls-mosaico ls-mosaico--{{ brinquedos|length }}" role="img" aria-label="{{ titulo }}: os brinquedos do combo">
+    {% for b in brinquedos %}<span class="ls-mosaico-celula"><img src="{{ b.imagem_brinquedo|foto:l }}" alt="" loading="lazy" decoding="async"></span>{% endfor %}
+</div>
+{% elif urls %}
+<div class="ls-mosaico ls-mosaico--{{ urls|length }}" role="img" aria-label="{{ titulo }}: os brinquedos do combo">
+    {% for url in urls %}<span class="ls-mosaico-celula"><img src="{{ url|foto:l }}" alt="" loading="lazy" decoding="async"></span>{% endfor %}
+</div>
+{% else %}
+{% include "partials/capa_desenhada.html" with titulo=titulo tipo="Combo" icone="fa-layer-group" %}
+{% endif %}{% endwith %}

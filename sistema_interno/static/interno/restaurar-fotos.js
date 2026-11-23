@@ -178,6 +178,10 @@
       (json[chave] || []).forEach(function (item) { acumulado[chave].push(item); });
     });
     acumulado.ja += json.ja || 0;
+    // os cards da tela "Fotos que faltam" (fotos-que-faltam.js) viram "Pronto", com a foto nova
+    if (json.restaurados && json.restaurados.length) {
+      raiz.dispatchEvent(new CustomEvent("fq:voltaram", { detail: json.restaurados }));
+    }
   }
 
   function desenharResultado() {
@@ -224,6 +228,11 @@
           var alvo = raiz.querySelector('[data-rf-n="' + chave + '"]');
           if (alvo) alvo.textContent = String(d[chave]);
         });
+        // a tela "Fotos que faltam" (seção 133): o número do site e os cards que não faltam mais
+        if (raiz.querySelector("[data-fq]")) {
+          raiz.dispatchEvent(new CustomEvent("fq:numeros", { detail: d }));
+          return;
+        }
         var nota = raiz.querySelector("[data-rf-nota-faltando]");
         if (nota) {
           nota.textContent = (d.faltando_nomes === 1 ? "arquivo" : "arquivos") + " só no Cloudinary, em " +
@@ -329,6 +338,8 @@
   if (entrada) {
     entrada.addEventListener("change", function () { enviarTodos(entrada.files || []); });
   }
+  // o ZIP solto em qualquer lugar da tela (fotos-que-faltam.js) vem para cá
+  raiz.__rfEnviarTodos = enviarTodos;
   var escolher = raiz.querySelector("[data-rf-escolher]");
   if (escolher && entrada) escolher.addEventListener("click", function () { entrada.click(); });
 

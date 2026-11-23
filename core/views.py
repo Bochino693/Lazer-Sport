@@ -790,9 +790,12 @@ class ReposicaoDetalheView(View):
             ),
             pk=pk,
         )
+        from .fotos import foto_disponivel
+
         return {
             'peca': peca,
-            'imagens_peca': list(peca.imagens_ordenadas),
+            # só as fotos que saem de algum lugar (seção 133): sem nenhuma, a página mostra o cartão desenhado
+            'imagens_peca': [foto for foto in peca.imagens_ordenadas if foto_disponivel(foto.imagem)],
             'categorias_peca': list(peca.categoria_peca.all()),
             'curtidas': servico_favoritos.contagem_curtidas([peca]).get(peca.pk, 0),
         }
@@ -2169,7 +2172,7 @@ class LojaView(View):
     @staticmethod
     def _montar():
         """Os cartões da loja como todo visitante os vê (vai para o cache)."""
-        from .fotos import url_da_imagem
+        from .fotos import foto_disponivel, url_da_imagem
 
         itens = []
 
@@ -2199,15 +2202,26 @@ class LojaView(View):
                 item['maquina'] = brinquedo.maquina.nome_brinquedo if brinquedo.maquina_id else ''
             itens.append(item)
 
-        # O cartão do combo não lista os brinquedos dele: sem prefetch.
-        combos = Combos.objects.filter(ativo=True)
+        # O cartão do combo não lista os brinquedos dele: sem prefetch. Só o
+        # combo cuja foto ainda não voltou (a que só o Cloudinary tinha, seção
+        # 133) busca os brinquedos -- numa consulta, para todos -- e mostra o
+        # mosaico das capas deles no lugar da foto.
+        combos = list(Combos.objects.filter(ativo=True))
+        sem_foto = [combo for combo in combos if not combo.tem_foto_propria]
+        if sem_foto:
+            from django.db.models import Prefetch, prefetch_related_objects
+
+            prefetch_related_objects(sem_foto, Prefetch(
+                'brinquedos', queryset=Brinquedos.objects.only('id', 'nome_brinquedo', 'imagem_brinquedo')))
         for combo in combos:
+            mosaico = [url_da_imagem(b.imagem_brinquedo) for b in combo.fotos_do_mosaico] if combo in sem_foto else []
             itens.append({
                 'id': combo.id,
                 'tipo': 'combo',
                 'tipo_label': 'Combo',
                 'titulo': combo.descricao,
-                'imagem': url_da_imagem(combo.imagem_combo) or None,
+                'imagem': None if combo in sem_foto else (url_da_imagem(combo.imagem_combo) or None),
+                'mosaico': [url for url in mosaico if url],
                 'preco': combo.valor_combo,
                 'sem_juros': combo.sem_juros_no_cartao,
                 'url': reverse('combo', args=[combo.id]),
@@ -2249,7 +2263,8 @@ class LojaView(View):
                 'tipo': 'peca',
                 'tipo_label': 'Peça de Reposição',
                 'titulo': peca.nome,
-                'imagem': (url_da_imagem(imagem_obj.imagem) or None) if imagem_obj else None,
+                # a foto que não sai de lugar nenhum (seção 133) vira o cartão desenhado, não o quadro
+                'imagem': (url_da_imagem(imagem_obj.imagem) or None) if imagem_obj and foto_disponivel(imagem_obj.imagem) else None,
                 'preco': peca.preco_venda,
                 'sem_juros': peca.sem_juros_no_cartao,
                 'url': reverse('reposicao_detalhe', args=[peca.id]),

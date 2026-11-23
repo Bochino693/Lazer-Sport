@@ -18,10 +18,11 @@
 <div class="pc-card{% if not peca.preco_venda %} pc-card--consulta{% endif %}">
   <a href="{% url 'reposicao_detalhe' peca.id %}#breadcrumb" class="pc-media" aria-label="Ver detalhes de {{ peca.nome }}">
     {% with img=peca.imagem_principal %}
-      {% if img and img.imagem %}
+      {% if img and img.imagem|tem_foto %}
         <img class="pc-foto" src="{{ img.imagem|foto:720 }}" alt="{{ peca.nome }}" loading="lazy" decoding="async" width="720" height="720">
       {% else %}
-        <img class="pc-foto pc-foto--vazia" src="{% static 'images/sem-imagem.svg' %}" alt="Imagem indisponível para {{ peca.nome }}" loading="lazy" decoding="async">
+        {# sem foto que saia de algum lugar (seção 133): o cartão desenhado com o ícone e o nome, nunca uma foto falsa #}
+        {% include "partials/capa_desenhada.html" with titulo=peca.nome tipo="Peça de reposição" icone="fa-gears" %}
       {% endif %}
     {% endwith %}
     <span class="pc-selo" title="Peça original de fábrica"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> <span class="pc-longo">Original de fábrica</span></span>

@@ -28,6 +28,17 @@ voltar sem esperar a conta:
        recortadas por ferramentas/categorias/recortar.py, que registra de
        QUAL foto do Cloudinary cada recorte saiu (PECAS) -- só nas fotos de
        peça.
+     * A SUBSTITUTA DECLARADA (`exata=False`, seção 133): as fotos que nunca
+       estiveram no repositório e cujo lugar uma foto NOSSA ocupa com
+       honestidade, cada uma pelo nome exato que tinha no Cloudinary e só no
+       campo dela (SUBSTITUTAS): a capa do Boliche Virtual e o adesivo Rosa
+       (as duas fotos no showroom feitas do recorte da foto Rosa; o Preto não
+       tem foto nossa e fica de fora) e os seis tipos de estabelecimento (a
+       foto do ambiente da categoria que mostra aquele lugar);
+     * O RECORTE AUTOMÁTICO DA ORIGINAL (`exata=False`, seção 133): a foto de
+       peça "<base>-sem-fundo_<sufixo>" é o recorte que o site fez
+       (core/recorte_peca.py) da original "<base>" -- e a original está em
+       site/reserva/. O mesmo recorte é refeito dela, com a mesma rotina.
    A cópia que não é exata é servida com cache de um dia (não de um ano) e o
    espelho a troca pela original quando o Cloudinary voltar.
 
@@ -72,6 +83,42 @@ EXTENSOES_CONHECIDAS = EXTENSOES_DE_FOTO + (".avif", ".glb", ".pdf", ".xml", ".d
 PRODUTO = frozenset({"core.ImagemBrinquedo.imagem", "core.Brinquedos.imagem_brinquedo"})
 CATEGORIA = frozenset({"core.CategoriasBrinquedos.imagem_categoria"})
 PECA = frozenset({"core.ImagemPeca.imagem", "core.ImagemPeca.imagem_original"})
+ESTABELECIMENTO = frozenset({"core.Estabelecimentos.imagem_estabelecimento"})
+
+#: AS SUBSTITUTAS DECLARADAS (seção 133): {public id antigo (minúsculo, sem extensão): (arquivo em
+#: core/static/site, campos onde vale, o porquê)}. Cada uma é uma foto NOSSA que mostra o mesmo:
+#: nada de arte de outra empresa, nada de item que não existe. Entram com exata=False -- a
+#: original (o dono pela tela "Fotos que faltam", ou o Cloudinary de volta) toma o lugar.
+SUBSTITUTAS = {
+    # O Boliche Virtual (o produto 34): a capa era a foto de verdade no showroom, que só o
+    # Cloudinary tinha. A foto nossa dele no repositório é o recorte do adesivo ROSA
+    # (ferramentas/categorias/maquinas-alta/boliche-virtual.webp, saído da foto Rosa); o
+    # gerar.cjs ("reservas") o põe no showroom duas vezes, em cantos diferentes: a capa em cena
+    # do produto e a foto do adesivo Rosa. O adesivo PRETO não tem foto nossa: sai da galeria
+    # (core.models.galeria_publica) até o dono enviar.
+    "imagens_brinquedos/boliche_virtual_lazer_sport_igkeus": (
+        "capas_catalogo/boliche-virtual.webp", PRODUTO, "a capa em cena do próprio Boliche Virtual (o recorte da foto Rosa)"),
+    "imagens_brinquedos/galeria/boliche_virtual_rosa_r17hzv": (
+        "capas_catalogo/boliche-virtual-rosa.webp", PRODUTO, "o adesivo Rosa no showroom (o recorte da mesma foto)"),
+    # Os "estabelecimentos" do site são TIPOS de lugar (a página /estabelecimentos/): cada um
+    # ganha a foto de ambiente nossa que mostra aquele lugar (core/static/site/categorias/).
+    "estabelecimentos/acad_rvluu1": (
+        "categorias/esportivos.webp", ESTABELECIMENTO, "Academias: as máquinas esportivas na quadra"),
+    "estabelecimentos/buffet_w4xhtf": (
+        "categorias/brinquedao.webp", ESTABELECIMENTO, "Buffets: o brinquedão no salão de festas"),
+    "estabelecimentos/condo_gsr5rb": (
+        "categorias/jogos-de-mesa.webp", ESTABELECIMENTO, "Condomínios: o salão de jogos"),
+    "estabelecimentos/parquees_d2dkwm": (
+        "categorias/mecanicos.webp", ESTABELECIMENTO, "Parques: o carrossel e a roda na praça"),
+    "estabelecimentos/quios_lcst9n": (
+        "categorias/simuladores.webp", ESTABELECIMENTO, "Quiosques: os simuladores no corredor do shopping"),
+    "estabelecimentos/shopp_oyopn2": (
+        "categorias/famosos.webp", ESTABELECIMENTO, "Shoppings: as máquinas dos personagens no palco do shopping"),
+}
+
+#: O nome que o recorte automático dá (core/recorte_peca._nome_do_recorte): a base da original
+#: cortada em 48 letras, "-sem-fundo", e o sufixo do Cloudinary (que `partes` já tirou).
+_RECORTE_AUTOMATICO = re.compile(r"(.+)-sem-fundo")
 
 _SUFIXO = re.compile(r"_[a-z0-9]{6}$")
 _HEX = r"[0-9a-f]{8,12}"
@@ -112,6 +159,17 @@ class Achado:
     caminho: Path
     regra: str
     exata: bool
+    #: "recorte": o arquivo é a original; o que volta é o recorte dela (core/recorte_peca.py)
+    transformar: str = ""
+
+    def conteudo(self) -> bytes:
+        dados = self.caminho.read_bytes()
+        if self.transformar == "recorte":
+            from .recorte_peca import recortar
+
+            # a original que não é "peça no branco" (None) volta como está: a foto real, sem recorte
+            dados = recortar(dados) or dados
+        return dados
 
 
 @dataclass
@@ -121,6 +179,8 @@ class Indice:
     media: dict = field(default_factory=dict)  # (pasta, base) -> caminho
     regras: list = field(default_factory=list)  # (regex, caminho, campos, rótulo)
     recortes: dict = field(default_factory=dict)  # public id (minúsculo) -> caminho
+    reserva_48: dict = field(default_factory=dict)  # base da original cortada em 48 -> caminho (único)
+    substitutas: dict = field(default_factory=dict)  # public id -> (caminho, campos, rótulo)
 
     def achar(self, nome, rotulos) -> Achado | None:
         rotulos = set(rotulos)
@@ -145,6 +205,15 @@ class Indice:
             recorte = self.recortes.get(chave) or self.recortes.get(re.sub(r"-sem-fundo(_[a-z0-9]{6})?$", "", chave))
             if recorte is not None:
                 return Achado(recorte, "o recorte da mesma foto (ferramentas/categorias/reposicao)", False)
+            # o recorte que o site fez da original (seção 133): a original está na reserva
+            automatico = _RECORTE_AUTOMATICO.fullmatch(curta)
+            if automatico:
+                original = self.reserva.get(automatico.group(1)) or self.reserva_48.get(automatico.group(1))
+                if original is not None:
+                    return Achado(original, "o recorte automático da original (site/reserva)", False, "recorte")
+        substituta = self.substitutas.get(f"{pasta}/{base}" if pasta else base)
+        if substituta is not None and rotulos <= substituta[1]:
+            return Achado(substituta[0], substituta[2], False)
         return None
 
 
@@ -193,8 +262,16 @@ def montar_indice() -> Indice:
             continue
         vistos.add(sha)
         indice.por_prefixo.setdefault(sha[:8], []).append((sha, caminho))
+    cortadas = {}
     for caminho in _fotos(RESERVA, recursivo=True):
         indice.reserva[caminho.stem.lower()] = caminho
+        cortadas.setdefault(caminho.stem.lower()[:48], []).append(caminho)
+    # (a base cortada que duas originais dividem não diz qual é: fica de fora)
+    indice.reserva_48 = {base: caminhos[0] for base, caminhos in cortadas.items() if len(caminhos) == 1}
+    for public_id, (relativo, campos, rotulo) in SUBSTITUTAS.items():
+        caminho = SITE / relativo
+        if caminho.is_file():
+            indice.substitutas[public_id] = (caminho, campos, rotulo)
     for caminho in _fotos(MEDIA, recursivo=True):
         pasta = caminho.parent.relative_to(MEDIA).as_posix().lower()
         indice.media.setdefault((pasta, caminho.stem.lower()), caminho)
@@ -268,7 +345,7 @@ def restaurar_das_copias(*, simular=False, avisar=None) -> Resultado:
                 "exata": achado.exata, "onde": _onde(grupo)}
         if not simular:
             item["para"], _houve = espelho_midia.gravar_conteudo(
-                nome, grupo, achado.caminho.read_bytes(), origem="copia_local", exata=achado.exata,
+                nome, grupo, achado.conteudo(), origem="copia_local", exata=achado.exata,
             )
         resultado.restaurados.append(item)
         avisar(f"Restaurada: {nome} <- {item['de']} ({achado.regra})")

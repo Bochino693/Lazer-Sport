@@ -776,6 +776,21 @@ const CATALOGO = {
   "kid-play": { ...v("vitrine", 0.8, 107), giro: 10, altura: 14, ocupa: 0.86 },
 };
 
+/* AS RESERVAS DO BOLICHE VIRTUAL (LEIA-ME seção 133). O Cloudinary desativou a conta e a
+   capa do Boliche Virtual (a foto de verdade no showroom, que ficava FORA da lista acima por
+   ser a referência) e as fotos dos adesivos só existiam lá. A única foto nossa dele que mora no
+   repositório é o recorte do adesivo ROSA (maquinas-alta/boliche-virtual.webp, tirado da
+   foto "Boliche_Virtual_Rosa" do Cloudinary pelo recortar.py). Daqui saem duas fotos no
+   showroom, como as capas do catálogo: a capa do produto (`boliche-virtual`, na placa do logo)
+   e a do adesivo Rosa na galeria (`boliche-virtual-rosa`, na parede de fliperama), em cantos diferentes
+   para a galeria não repetir a mesma foto. O core/restaurar_midia.py as põe no banco no lugar
+   das que faltam (exata=False: a original entra quando o dono a enviar). `alta` é o recorte. */
+const RESERVAS_DO_CATALOGO = {
+  "boliche-virtual": { ...v("logo", 0, 111), giro: 22, altura: 12, alta: "boliche-virtual", pisada: true },
+  "boliche-virtual-rosa": { ...v("fliperama", -0.8, 113), giro: -26, altura: 12, alta: "boliche-virtual", pisada: true },
+};
+window.RESERVAS_DO_CATALOGO = Object.keys(RESERVAS_DO_CATALOGO).map((chave) => "produto:" + chave);
+
 // os recortes em alta (maquinas-alta/<chave>.webp), carregados quando a capa pede
 const altas = new Map();
 async function carregarAlta(chave) {
@@ -1005,6 +1020,89 @@ function semContato(raiz) {
   return () => escondidas.forEach((o) => { o.visible = true; });
 }
 
+/* A PISADA (as reservas do Boliche Virtual, seção 133). A foto de 3/4 de uma máquina comprida
+   -- a pista do boliche vem para a frente e o pino fica lá atrás -- tem a base em DIAGONAL na
+   foto, e o plano de pé no chão só encosta nela na ponta da frente: a sombra que o plano projeta
+   e a de contato ficavam embaixo da frente e o pino parecia flutuar. Aqui a base de verdade vai
+   ao chão: cada ponto do contorno de baixo do recorte, visto da câmera, cai no piso ATRÁS do plano
+   (onde a máquina pisa de verdade); ali entra a sombra de contato, numa faixa que escurece na
+   linha da base e se apaga para trás, e o plano deixa de projetar a sombra que caía no lugar
+   errado. Só para quem pede (`pisada: true`): as outras capas seguem como estão. */
+const texturaPisada = (() => {
+  const c = document.createElement("canvas");
+  c.width = 8;
+  c.height = 256;
+  const g = c.getContext("2d");
+  const r = g.createLinearGradient(0, 0, 0, 256);
+  r.addColorStop(0, "rgba(0,0,0,0)");
+  r.addColorStop(0.08, "rgba(0,0,0,.82)");
+  r.addColorStop(0.2, "rgba(0,0,0,.6)");
+  r.addColorStop(0.55, "rgba(0,0,0,.24)");
+  r.addColorStop(1, "rgba(0,0,0,0)");
+  g.fillStyle = r;
+  g.fillRect(0, 0, 8, 256);
+  return new T.CanvasTexture(c);
+})();
+function pisar(maquinas, { atras = 0.85, frente = 0.06 } = {}) {
+  const C = camera.position;
+  const novas = [];
+  maquinas.traverse((o) => {
+    if (!o.isMesh || !o.userData.recorte || !o.geometry.parameters) return;
+    const img = o.userData.recorte.image;
+    const W = 320, H = Math.round((W * img.height) / img.width);
+    const tela = document.createElement("canvas");
+    tela.width = W;
+    tela.height = H;
+    const g2 = tela.getContext("2d", { willReadFrequently: true });
+    g2.drawImage(img, 0, 0, W, H);
+    const px = g2.getImageData(0, 0, W, H).data;
+    const l = o.geometry.parameters.width, a = o.geometry.parameters.height;
+    let pontos = [];
+    for (let x = 0; x < W; x++) {
+      let base = -1;
+      for (let y = H - 1; y >= 0; y--) {
+        if (px[(y * W + x) * 4 + 3] > 128) { base = y; break; }
+      }
+      if (base < 0) continue;
+      const P = o.localToWorld(new T.Vector3(((x + 0.5) / W - 0.5) * l, a / 2 - ((base + 1) / H) * a, 0));
+      if (C.y <= P.y + 0.02) continue; // a câmera abaixo da base: o raio nunca chega ao chão
+      const F = C.clone().addScaledVector(P.clone().sub(C), C.y / (C.y - P.y));
+      pontos.push(F.setY(0.006));
+    }
+    if (pontos.length < 4) return;
+    // a linha da base, alisada (o contorno do recorte tem degraus de pixel)
+    pontos = pontos.map((_, i) => {
+      const viz = pontos.slice(Math.max(0, i - 4), i + 5);
+      return viz.reduce((s, p) => s.add(p), new T.Vector3()).multiplyScalar(1 / viz.length);
+    });
+    const pos = [], uv = [], idx = [];
+    pontos.forEach((F, i) => {
+      const fundo = F.clone().sub(C).setY(0).normalize();
+      const a0 = F.clone().addScaledVector(fundo, -frente), a1 = F.clone().addScaledVector(fundo, atras);
+      pos.push(a0.x, 0.006, a0.z, a1.x, 0.006, a1.z);
+      uv.push(i / (pontos.length - 1), 0, i / (pontos.length - 1), 1);
+      if (i) idx.push(2 * i - 2, 2 * i - 1, 2 * i, 2 * i - 1, 2 * i + 1, 2 * i);
+    });
+    const geo = new T.BufferGeometry();
+    geo.setAttribute("position", new T.Float32BufferAttribute(pos, 3));
+    geo.setAttribute("uv", new T.Float32BufferAttribute(uv, 2));
+    geo.setIndex(idx);
+    const faixa = new T.Mesh(geo, new T.MeshBasicMaterial({
+      color: "#000000", alphaMap: texturaPisada, transparent: true, depthWrite: false, toneMapped: false,
+      side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2,
+    }));
+    faixa.userData.sombraContato = true;
+    novas.push(faixa);
+    // o plano não projeta mais a sombra (caía embaixo da frente); a de contato de antes sai
+    o.castShadow = false;
+    o.parent.children.forEach((irmao) => { if (irmao !== o && irmao.userData.sombraContato) irmao.visible = false; });
+  });
+  novas.forEach((faixa) => maquinas.add(faixa));
+  // (a faixa já está no mundo: o grupo da máquina não a gira de novo)
+  novas.forEach((faixa) => faixa.applyMatrix4(maquinas.matrixWorld.clone().invert()));
+  return novas.length;
+}
+
 /**
  * O acerto fino pelo que se VÊ das máquinas (a silhueta, num render pequeno
  * só com elas), e não pela caixa: a caixa de um brinquedão em L sobra nos
@@ -1227,9 +1325,11 @@ window.renderizar = async (chave, ajustes = {}) => {
     c = { maquinas: () => area(tipo, { largura, profundidade, altura }, "#" + cor, Number(semente), { porte, estilo }), giro: 30, altura: 30, lente: 26 };
   }
   // "produto:<chave>", a capa do catálogo (a foto da máquina no lugar dela: quadrada, sem gente)
-  if (chave.startsWith("produto:") && CATALOGO[chave.slice(8)]) {
-    const qual = chave.slice(8);
-    c = Object.assign({ quadrado: true, ocupa: 0.8, desce: 0.05, rampa: 2.2, lente: 38 }, CATALOGO[qual], {
+  if (chave.startsWith("produto:") && (CATALOGO[chave.slice(8)] || RESERVAS_DO_CATALOGO[chave.slice(8)])) {
+    const ficha = CATALOGO[chave.slice(8)] || RESERVAS_DO_CATALOGO[chave.slice(8)];
+    // o recorte: o da própria chave ou, nas reservas, o `alta` (o Rosa serve às duas fotos do Boliche)
+    const qual = ficha.alta || chave.slice(8);
+    c = Object.assign({ quadrado: true, ocupa: 0.8, desce: 0.05, rampa: 2.2, lente: 38 }, ficha, {
       maquinas: async () => {
         await carregarAlta(qual);
         return maquinaAlta(qual);
@@ -1351,7 +1451,10 @@ window.renderizar = async (chave, ajustes = {}) => {
   if (lugar && lugar.frente && c.frente === true) atualLugar.add(lugar.frente(chaoNaTela, camera));
   // as crianças da frente (as capas): no chão livre da foto, já enquadrada
   if (lugar && c.naTela) atualLugar.add(c.naTela(chaoNaTela));
-  if (lugar && lugar.reflexo) {
+  // a base em diagonal da foto de 3/4 vai ao chão (as reservas do Boliche, seção 133)
+  if (c.pisada) pisar(atual);
+  // (com a pisada, o reflexo do plano de pé cairia embaixo da frente, como a sombra: sai)
+  if (lugar && lugar.reflexo && !c.pisada) {
     const espelho = atual.clone(true);
     // (o clone copia o userData em JSON: a textura do recorte volta a ser a de verdade)
     const originais = [];
