@@ -661,3 +661,30 @@ class PaginaFechaAFileiraTests(SimpleTestCase):
                     _re.findall(r"POR_PAGINA = (\d+)", texto):
                 with self.subTest(arquivo=arquivo.name, numero=numero):
                     self.assertEqual(int(numero) % 12, 0)
+
+
+class FolhaDeAcoesNosDoisModosTests(TestCase):
+    """O "⋮" da Lista abre a mesma folha de app dos Cards (seção 129).
+
+    O dono pediu as ações "tudo estilo app"; a folha (nome no topo,
+    Cancelar, o que apaga no fim) era só do modo Cards. Na Lista ela vale
+    também, mostrando todas as ações (nenhuma está numa barra).
+    """
+
+    def setUp(self):
+        from pathlib import Path
+
+        self.js = (Path(__file__).resolve().parent / "static" / "interno" / "ls-listas.js").read_text(encoding="utf-8")
+
+    def test_a_folha_e_vestida_nos_dois_modos(self):
+        self.assertIn("function vestirFolha(fab, menu, resto, linha)", self.js)
+        self.assertIn('menu.setAttribute("data-folha", "1");', self.js)
+        self.assertIn('menu.setAttribute("data-folha-modo", emCards ? "cards" : "lista");', self.js)
+        self.assertNotIn('else menu.removeAttribute("data-folha");', self.js)
+
+    def test_na_lista_nada_fica_escondido_como_se_estivesse_na_barra(self):
+        self.assertIn('filhos[k].setAttribute("data-na-barra-guardado", "1");', self.js)
+        self.assertIn('filhos[k].setAttribute("data-na-barra", "1");', self.js)
+
+    def test_vestir_uma_vez_so(self):
+        self.assertIn('if (menu.getAttribute("data-vestida") === "1") return;', self.js)

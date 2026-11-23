@@ -9,6 +9,7 @@ os antigos.
 """
 
 from decimal import Decimal
+from pathlib import Path
 from io import StringIO
 from unittest import mock
 
@@ -243,3 +244,25 @@ class FontesTests(TestCase):
         self.assertEqual(fora, 1)
         self.assertEqual(len(esperas), 1)
         self.assertGreater(esperas[0], 0.5)
+
+
+class EnderecoLocalizavelTests(TestCase):
+    """O painel diz o que falta quando o endereço não tem como virar ponto (seção 129)."""
+
+    def test_cidade_reconhecida_ou_cep_e_localizavel(self):
+        self.assertTrue(_endereco().localizavel)
+        self.assertTrue(_endereco(nome="B", cidade="Cidadezinha Que Nao Existe", cep="13010-000").localizavel)
+        self.assertTrue(_endereco(nome="C", cidade="", endereco="Rua X, 10, 13010-000").localizavel)
+
+    def test_cidade_desconhecida_sem_cep_nao_e(self):
+        self.assertFalse(_endereco(cidade="Cidadezinha Que Nao Existe", estado="SP").localizavel)
+        self.assertFalse(_endereco(nome="D", cidade="", estado="").localizavel)
+
+    def test_com_ponto_ou_fora_do_brasil_conta_como_localizavel(self):
+        self.assertTrue(_endereco(cidade="Xyz", latitude=Decimal("-22.9"), longitude=Decimal("-47.0")).localizavel)
+        self.assertTrue(_endereco(nome="E", cidade="Lisboa", estado="", pais="Portugal").localizavel)
+
+    def test_a_tela_de_clientes_mostra_o_que_conferir(self):
+        texto = (Path(__file__).resolve().parent / "templates" / "clientes_inner.html").read_text(encoding="utf-8")
+        self.assertIn("cliente.endereco_principal.localizavel", texto)
+        self.assertIn("no mapa, confira cidade ou CEP", texto)

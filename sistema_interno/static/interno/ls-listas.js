@@ -230,6 +230,18 @@
     );
     gatilho.setAttribute("aria-label", "Mais ações deste registro");
     gatilho.setAttribute("aria-haspopup", "menu");
+    vestirFolha(fab, menu, resto, linha);
+  }
+
+  /* A FOLHA DE AÇÕES DE APP, NOS DOIS MODOS. Era só dos cartões: na Lista o
+     "⋮" ainda abria o menu antigo (o dono: "eu falei tudo estilo app"). O
+     topo com o nome, o "Cancelar", o que apaga no fim e o foco ficam iguais
+     na Lista e nos Cards; muda só o gatilho (na Lista, o "⋮"). Uma vez por
+     menu: trocar de modo não veste de novo. */
+  function vestirFolha(fab, menu, resto, linha) {
+    if (menu.getAttribute("data-vestida") === "1") return;
+    menu.setAttribute("data-vestida", "1");
+    var gatilho = fab.querySelector(".ls-action-fab-trigger");
 
     /* O TOPO DA FOLHA É O DO APP: a bolinha com as iniciais, o nome
        inteiro (até duas linhas, nunca uma barra de rolagem) e "Ações"
@@ -277,7 +289,7 @@
     }
 
     vigiarFolha(menu);
-    gatilho.addEventListener("click", function () {
+    if (gatilho) gatilho.addEventListener("click", function () {
       if (!ehFolha(menu) || !fab.classList.contains("is-open")) return;
       window.requestAnimationFrame(function () {
         var itens = visiveis(menu);
@@ -366,12 +378,26 @@
       else alvo.removeAttribute("data-barra-cheia");
     }
     // O menu mora no <body>: é por este atributo que ele sabe em que modo a lista está.
+    if (!emCards && window.Painel && window.Painel.organizarAcoesTabelas) window.Painel.organizarAcoesTabelas(alvo);
     var fabs = alvo.querySelectorAll(".ls-action-fab");
     for (var j = 0; j < fabs.length; j += 1) {
       var menu = fabs[j]._lsMenu;
       if (!menu) continue;
-      if (emCards) menu.setAttribute("data-folha", "1");
-      else menu.removeAttribute("data-folha");
+      if (!emCards) vestirFolha(fabs[j], menu, acoesDe(menu), fabs[j].closest("tr,[data-visao-item]"));
+      menu.setAttribute("data-folha", "1");
+      menu.setAttribute("data-folha-modo", emCards ? "cards" : "lista");
+      /* Na Lista nada está na barra: o que a folha dos cartões esconde
+         (`data-na-barra`) aparece de novo, e volta a se esconder nos Cards. */
+      var filhos = menu.children;
+      for (var k = 0; k < filhos.length; k += 1) {
+        if (emCards && filhos[k].hasAttribute("data-na-barra-guardado")) {
+          filhos[k].removeAttribute("data-na-barra-guardado");
+          filhos[k].setAttribute("data-na-barra", "1");
+        } else if (!emCards && filhos[k].hasAttribute("data-na-barra")) {
+          filhos[k].removeAttribute("data-na-barra");
+          filhos[k].setAttribute("data-na-barra-guardado", "1");
+        }
+      }
     }
   }
 

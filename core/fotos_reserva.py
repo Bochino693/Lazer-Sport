@@ -58,9 +58,11 @@ def montar_indice():
             capa = pasta / "capa.webp"
             if capa.is_file():
                 produtos.setdefault(pasta.name, _url(capa))
-    # artes dos kits
+    # artes dos kits e as fotos reais dos itens que existem (o cabo HDMI)
     for arquivo in _arquivos(site / "kits"):
         produtos[arquivo.stem] = _url(arquivo)
+    for arquivo in _arquivos(site / "kits" / "itens"):
+        produtos.setdefault(arquivo.stem, _url(arquivo))
     categorias = {a.stem: _url(a) for a in _arquivos(site / "categorias")}
     black_friday = {a.stem: _url(a) for a in _arquivos(site / "black_friday")}
     return {

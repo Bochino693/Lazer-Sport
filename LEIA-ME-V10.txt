@@ -9025,3 +9025,29 @@ Dependência nova: rjsmin (requirements.txt).
    conta reativada. Ao acrescentar capa/arte/categoria nova, rode
    `python manage.py fotos_reserva` (o teste reprova a lista atrasada).
    Testes: core/tests_foto_reserva.py.
+129) REVISÃO DOS PEDIDOS: CADA PONTO CONFERIDO CONTRA O CÓDIGO
+   O pedido do dono (23/11/2026): "reveja os pontos que pedi, analise os
+   trechos atuais e corresponda 100% com o pedido pois são os requisitos do
+   sistema." Conferência ponto a ponto, com o que faltava corrigido aqui:
+   - "veja que feio esta ação, eu falei tudo estilo app": a folha de ações
+     de app (seção 121) valia só no modo Cards; no modo Lista o "⋮" ainda
+     abria o menu antigo. Agora a Lista abre a MESMA folha (nome no topo com
+     as iniciais, ações com ícone, o que apaga no fim, "Cancelar"), no PC e
+     no celular. ls-listas.js: vestirMais() separado em vestirMais (o botão
+     "Mais" dos cartões) + vestirFolha (a folha, uma vez por menu);
+     prepararAcoes() marca data-folha="1" e data-folha-modo (lista/cards); na
+     Lista o que os cartões escondem por estar na barra (data-na-barra) volta
+     a aparecer (data-na-barra-guardado) e se esconde de novo nos Cards.
+     Conferido no navegador (Clientes em Lista, 1366 e 390): Editar,
+     Histórico, Nova proposta, Excluir (no fim, em vermelho) e Cancelar.
+     Teste: tests_cartao_cliente.FolhaDeAcoesNosDoisModosTests.
+   - "tem endereço e deve estar no mapa tudo que tiver" (seção 121): o
+     cadastro com endereço que NÃO tem como virar ponto (sem CEP e com a
+     cidade que a tabela do IBGE não reconhece -- erro de digitação, cidade
+     vazia) aparecia como "no mapa, localizando o endereço" para sempre.
+     Agora aparece "no mapa, confira cidade ou CEP" (aviso), dizendo o que
+     acertar; o resto segue "localizando" até o ponto entrar.
+     EnderecoCliente.localizavel (models.py, sem migração); clientes_inner.html.
+     Teste: tests_localizacao.EnderecoLocalizavelTests.
+   - Fotos: a reserva da seção 128 também usa a foto real do cabo HDMI
+     (site/kits/itens/cabo-hdmi.webp) para a peça "Cabo HDMI".
