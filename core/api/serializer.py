@@ -49,6 +49,13 @@ def _url_cloudinary(campo_imagem, transformacao=THUMB):
     if not url:
         return None
 
+    if "/midia/banco/" in url:
+        # a foto guardada no nosso banco (seção 130): a largura vai por ?w=
+        from core.fotos import reduzir_imagem
+
+        largura = re.search(r"\bw_(\d+)", transformacao)
+        return reduzir_imagem(url, int(largura.group(1)) if largura else 960)
+
     if "/upload/" not in url:
         return url
 

@@ -1,0 +1,121 @@
+{% extends "base_inner.html" %}
+{% load static interno_extras %}
+
+{% block title %}Restaurar fotos | Lazer & Sport{% endblock %}
+{% block top_title %}Restaurar fotos{% endblock %}
+
+{% block extra_css %}
+  <link rel="stylesheet" data-ls-tela="1" href="{% estatico 'interno/restaurar-fotos.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ls-rf" data-rf data-rf-url="{% url 'restaurar_fotos' %}" data-rf-pedaco="{{ pedaco }}" data-rf-limite="{{ limite_zip }}">
+  {% csrf_token %}
+
+  <section class="ls-rf-hero">
+    <div class="ls-rf-hero-cabeca">
+      <span class="ls-rf-hero-icone" aria-hidden="true"><i class="bi bi-images"></i></span>
+      <div>
+        <span class="ls-rf-eyebrow">Administração · fotos e arquivos</span>
+        <h1>Restaurar fotos</h1>
+      </div>
+    </div>
+    <p>As fotos agora moram no banco do sistema. O que ainda estava só no Cloudinary volta por aqui: envie a exportação da Media Library (o ZIP) ou as fotos soltas, e cada uma volta para todo cadastro que a usava. O que tem cópia no repositório volta sozinho a cada publicação.</p>
+    <div class="ls-rf-hero-acoes">
+      <button type="button" class="ls-rf-botao ls-rf-botao--principal" data-rf-escolher><i class="bi bi-cloud-arrow-up" aria-hidden="true"></i> Enviar exportação ou fotos</button>
+      <button type="button" class="ls-rf-botao" data-rf-copias><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Restaurar das cópias do repositório</button>
+    </div>
+  </section>
+
+  <section class="ls-metrics ls-rf-numeros" aria-label="Situação das fotos">
+    <article class="ls-metric-card red">
+      <div class="ls-metric-head"><span class="ls-metric-label">Ainda faltam</span><span class="ls-metric-icon"><i class="bi bi-image-alt"></i></span></div>
+      <strong class="ls-metric-value" data-rf-n="faltando_nomes">{{ dados.faltando_nomes }}</strong>
+      <span class="ls-metric-note" data-rf-nota-faltando>arquivo{{ dados.faltando_nomes|pluralize }} só no Cloudinary, em {{ dados.faltando_total }} cadastro{{ dados.faltando_total|pluralize }}</span>
+    </article>
+    <article class="ls-metric-card green">
+      <div class="ls-metric-head"><span class="ls-metric-label">No banco</span><span class="ls-metric-icon"><i class="bi bi-database-check"></i></span></div>
+      <strong class="ls-metric-value" data-rf-n="no_banco">{{ dados.no_banco }}</strong>
+      <span class="ls-metric-note">fotos e arquivos públicos, sempre no ar</span>
+    </article>
+    <article class="ls-metric-card yellow">
+      <div class="ls-metric-head"><span class="ls-metric-label">Cópias de reserva</span><span class="ls-metric-icon"><i class="bi bi-life-preserver"></i></span></div>
+      <strong class="ls-metric-value" data-rf-n="reserva">{{ dados.reserva }}</strong>
+      <span class="ls-metric-note">a mesma foto do repositório; a original entra no lugar quando chegar</span>
+    </article>
+    <article class="ls-metric-card blue">
+      <div class="ls-metric-head"><span class="ls-metric-label">Espelho do Cloudinary</span><span class="ls-metric-icon"><i class="bi bi-cloud-slash"></i></span></div>
+      <strong class="ls-metric-value ls-rf-espelho" data-rf-espelho>{% if dados.espelho.resultado.fora_do_ar %}Fora do ar{% elif dados.espelho.resultado %}Respondendo{% else %}Aguardando{% endif %}</strong>
+      <span class="ls-metric-note">copia sozinho o que faltar assim que a conta for reativada</span>
+    </article>
+  </section>
+
+  <section class="ls-panel ls-rf-envio" aria-labelledby="rfEnvioTitulo">
+    <div class="ls-panel-header">
+      <div>
+        <h2 id="rfEnvioTitulo"><i class="bi bi-file-earmark-zip" aria-hidden="true"></i> Enviar a exportação do Cloudinary</h2>
+        <p>No Cloudinary: Media Library → selecione as pastas ou fotos → Download. Até 500 MB por ZIP; vários ZIPs ou fotos de uma vez.</p>
+      </div>
+    </div>
+    <div class="ls-panel-body">
+      <label class="ls-rf-zona" data-rf-zona data-campo="arquivos">
+        <input type="file" name="arquivos" multiple accept=".zip,application/zip,image/*,.glb,.pdf" data-rf-arquivos hidden>
+        <span class="ls-rf-zona-icone" aria-hidden="true"><i class="bi bi-cloud-arrow-up-fill"></i></span>
+        <strong>Arraste o ZIP ou as fotos para cá</strong>
+        <span class="ls-rf-zona-dica">ou toque para escolher · cada arquivo volta pelo nome que tinha no Cloudinary</span>
+      </label>
+      <ol class="ls-rf-fila" data-rf-fila aria-live="polite"></ol>
+    </div>
+  </section>
+
+  <section class="ls-panel ls-rf-resultado" data-rf-resultado hidden aria-labelledby="rfResultadoTitulo">
+    <div class="ls-panel-header">
+      <div>
+        <h2 id="rfResultadoTitulo"><i class="bi bi-check2-circle" aria-hidden="true"></i> O que voltou</h2>
+        <p data-rf-resumo></p>
+      </div>
+    </div>
+    <div class="ls-panel-body ls-rf-colunas">
+      <div class="ls-rf-coluna ok">
+        <h3><i class="bi bi-image" aria-hidden="true"></i> Restauradas <b data-rf-c="restaurados">0</b></h3>
+        <ul data-rf-lista="restaurados"></ul>
+      </div>
+      <div class="ls-rf-coluna aviso">
+        <h3><i class="bi bi-question-circle" aria-hidden="true"></i> Ninguém usa <b data-rf-c="nao_referenciados">0</b></h3>
+        <ul data-rf-lista="nao_referenciados"></ul>
+      </div>
+      <div class="ls-rf-coluna erro">
+        <h3><i class="bi bi-x-octagon" aria-hidden="true"></i> Recusados <b data-rf-c="recusados">0</b></h3>
+        <ul data-rf-lista="recusados"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="ls-rf-faltando" aria-labelledby="rfFaltandoTitulo">
+    <div class="ls-rf-secao-topo">
+      <h2 id="rfFaltandoTitulo"><i class="bi bi-hourglass-split" aria-hidden="true"></i> O que ainda falta</h2>
+      <p>Cada cartão é um tipo de cadastro; abra para ver o nome que o arquivo tinha no Cloudinary.</p>
+    </div>
+    <div class="ls-rf-grade" data-rf-grupos>
+      {% for grupo in dados.grupos %}
+      <article class="ls-rf-grupo{% if grupo.privado %} privado{% endif %}">
+        <div class="ls-rf-grupo-topo">
+          <strong>{{ grupo.titulo }}</strong>
+          <span class="ls-rf-selo">{{ grupo.quantos }}</span>
+        </div>
+        <details>
+          <summary>Ver os nomes</summary>
+          <ul>{% for nome in grupo.nomes %}<li>{{ nome }}</li>{% endfor %}{% if grupo.mais %}<li class="mais">e mais {{ grupo.mais }}</li>{% endif %}</ul>
+        </details>
+      </article>
+      {% empty %}
+      <div class="ls-rf-tudo-certo"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Tudo no banco: nenhuma foto depende do Cloudinary.</div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% estatico 'interno/restaurar-fotos.js' %}"></script>
+{% endblock %}

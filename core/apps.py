@@ -14,3 +14,9 @@ class CoreConfig(AppConfig):
         from core import sempre_pronto
 
         sempre_pronto.ligar()
+
+        # O que ainda está só no Cloudinary (e o que tem cópia no
+        # repositório) vem para o banco sozinho, no Render (seção 130).
+        from core import espelho_midia
+
+        espelho_midia.ligar()

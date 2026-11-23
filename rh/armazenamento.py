@@ -16,19 +16,27 @@ COMO O PROJETO GUARDA O QUE É PRIVADO HOJE. A assinatura do termo de compra
 servida só por view. Para um traço de 40 KB é o ideal; para documentos de
 até 10 MB por colaborador, o banco do Supabase encheria rápido. Então:
 
-  * PRODUÇÃO (Render): Cloudinary com `type="authenticated"` e
-    `resource_type="raw"`. O arquivo não tem endereço de entrega público:
-    só se baixa com uma URL ASSINADA pela API (api_key + api_secret), que o
-    servidor gera na hora, usa uma vez para ler e descarta -- ela nunca
-    chega ao navegador. "raw" porque é documento, não imagem: nada de
-    transformação, miniatura ou derivado público.
+  * PRODUÇÃO (Render): NO NOSSO BANCO (LEIA-ME-V10, seção 130), numa
+    linha de `core.ArquivoNoBanco` com `publico=False` -- a rota pública
+    /midia/banco/ não a entrega nunca. Antes era o Cloudinary autenticado; em
+    23/11/2026 a conta foi desativada e TODO envio do RH voltava 500 ("não
+    consigo gerar o ponto para os funcionários"). O banco já é o ponto único
+    de verdade: guardar o documento nele não cria um ponto de falha novo.
+    O nome novo começa com "banco/" (ex.: banco/rh/ab/ab12....pdf).
+  * O DOCUMENTO ANTIGO (o nome sem "banco/"): em produção continua sendo
+    lido do Cloudinary autenticado -- `type="authenticated"`,
+    `resource_type="raw"`, só por URL ASSINADA que o servidor gera, usa uma
+    vez e descarta (nunca chega ao navegador). O espelho
+    (core/espelho_midia.py) o copia para o banco assim que a conta voltar.
   * DESENVOLVIMENTO E TESTES: pasta local FORA do MEDIA_ROOT (que é servido
     em /media/ no DEBUG). Padrão `<projeto>/privado/rh/`, ou o que estiver em
     `RH_ARQUIVOS_PRIVADOS_DIR`. A pasta `privado/` está no .gitignore.
 
-Quem decide é `RH_ARMAZENAMENTO` ("cloudinary" ou "local"); sem ela, é
-Cloudinary em produção e local no resto. A escolha é feita a cada operação
-(e não ao importar o modelo), para os testes poderem trocar a pasta.
+Quem decide é `RH_ARMAZENAMENTO` ("banco", "cloudinary" ou "local"); sem ela,
+é o banco em produção e a pasta local no resto. A escolha é feita a cada
+operação (e não ao importar o modelo), para os testes poderem trocar. A
+LEITURA vai pelo nome: "banco/..." é do banco; o resto é do legado
+(Cloudinary em produção, a pasta local no computador).
 """
 
 from __future__ import annotations
@@ -57,12 +65,24 @@ class ArquivoSemEnderecoPublico(Exception):
     """Documento de colaborador não tem URL: sirva pela view."""
 
 
+def _em_producao() -> bool:
+    return str(getattr(settings, "ENVIRONMENT", "") or "").lower() == "production"
+
+
 def modo() -> str:
+    """Onde o documento NOVO vai: "banco", "cloudinary" ou "local"."""
     escolhido = str(getattr(settings, "RH_ARMAZENAMENTO", "") or "").strip().lower()
-    if escolhido in ("cloudinary", "local"):
+    if escolhido in ("banco", "cloudinary", "local"):
         return escolhido
-    ambiente = str(getattr(settings, "ENVIRONMENT", "") or "").lower()
-    return "cloudinary" if ambiente == "production" else "local"
+    return "banco" if _em_producao() else "local"
+
+
+def legado_e_cloudinary() -> bool:
+    """O nome antigo (sem "banco/") mora no Cloudinary? Em produção, sim (salvo o modo "local")."""
+    escolhido = modo()
+    if escolhido == "cloudinary":
+        return True
+    return escolhido == "banco" and _em_producao()
 
 
 def pasta_privada() -> Path:
@@ -115,6 +135,12 @@ class _CloudinaryPrivado(Storage):
             **self.OPCOES,
         )
         resposta = requests.get(link, timeout=PRAZO_DE_LEITURA)
+        if resposta.status_code in (401, 403) or "disabled" in (resposta.headers.get("x-cld-error") or "").lower():
+            from core.arquivos_no_banco import CloudinaryForaDoAr
+
+            raise CloudinaryForaDoAr(
+                f"O Cloudinary recusou o documento (HTTP {resposta.status_code}): a conta está fora do ar."
+            )
         if resposta.status_code != 200:
             raise FileNotFoundError(
                 f"O armazenamento privado não entregou o documento (HTTP {resposta.status_code})."
@@ -145,30 +171,140 @@ class _CloudinaryPrivado(Storage):
         )
 
 
-@deconstructible(path="rh.armazenamento.ArmazenamentoPrivado")
-class ArmazenamentoPrivado(Storage):
-    """O armazenamento dos documentos: escolhe Cloudinary ou pasta local."""
+class _BancoPrivado(Storage):
+    """O documento no nosso banco, como linha PRIVADA (`publico=False`): sem endereço."""
 
-    def _real(self) -> Storage:
-        return _CloudinaryPrivado() if modo() == "cloudinary" else _LocalPrivado()
+    def get_available_name(self, name, max_length=None):
+        from core.arquivos_no_banco import PREFIXO
+
+        # os nomes já são aleatórios (uuid4): conferir se existe custaria uma
+        # ida ao banco por uma colisão que não acontece
+        name = str(name).lstrip("/")
+        nome = name if name.startswith(PREFIXO) else PREFIXO + name
+        if max_length and len(nome) > max_length:
+            nome = nome[:max_length]
+        return nome
 
     def _save(self, name, content):
-        return self._real()._save(name, content)
+        from django.db import DatabaseError
+
+        from core.arquivos_no_banco import ArmazenamentoIndisponivel, guardar, tipo_do_conteudo
+
+        try:
+            if hasattr(content, "seek"):
+                content.seek(0)
+            dados = content.read()
+        except Exception as erro:  # noqa: BLE001
+            raise ArmazenamentoIndisponivel("O arquivo enviado não pôde ser lido. Envie de novo.") from erro
+        try:
+            guardar(name, dados, publico=False, tipo=tipo_do_conteudo(dados, name))
+        except DatabaseError as erro:  # IntegrityError incluso: o nome sorteado repetido
+            log.exception("Documento privado: o banco não guardou %s", name)
+            raise ArmazenamentoIndisponivel() from erro
+        return name
 
     def _open(self, name, mode="rb"):
-        return self._real()._open(name, mode)
+        from core.arquivos_no_banco import ler
+
+        linha = ler(name)
+        if linha is None:
+            raise FileNotFoundError("O documento não está no banco.")
+        return ContentFile(linha[0], name=name)
+
+    def delete(self, name):
+        from core.arquivos_no_banco import apagar
+
+        if name:
+            apagar(name)
+
+    def exists(self, name):
+        from core.models import ArquivoNoBanco
+
+        return ArquivoNoBanco.objects.filter(nome=name).exists()
+
+    def size(self, name):
+        from core.models import ArquivoNoBanco
+
+        tamanho = ArquivoNoBanco.objects.filter(nome=name).values_list("tamanho", flat=True).first()
+        if tamanho is None:
+            raise FileNotFoundError(name)
+        return tamanho
+
+    def url(self, name):
+        raise ArquivoSemEnderecoPublico(
+            "Documento de colaborador não tem endereço: abra pela ficha."
+        )
+
+
+@deconstructible(path="rh.armazenamento.ArmazenamentoPrivado")
+class ArmazenamentoPrivado(Storage):
+    """O armazenamento dos documentos: o banco (produção), o Cloudinary antigo ou a pasta local.
+
+    O que é NOVO vai para onde `modo()` manda. O que se LÊ vai pelo nome:
+    "banco/..." é do banco; o resto, do legado (`_legado`). As subclasses
+    (O.S., notas) só trocam a pasta local (`_local`).
+    """
+
+    #: o espelho (core/espelho_midia.py) copia para o banco os nomes antigos
+    guarda_publico = False
+
+    @property
+    def espelha_no_banco(self):
+        return modo() == "banco"
+
+    def _local(self) -> Storage:
+        return _LocalPrivado()
+
+    def _banco(self) -> Storage:
+        return _BancoPrivado()
+
+    def _legado(self) -> Storage:
+        return _CloudinaryPrivado() if legado_e_cloudinary() else self._local()
+
+    def _real(self) -> Storage:
+        """Onde o documento novo vai."""
+        escolhido = modo()
+        if escolhido == "banco":
+            return self._banco()
+        if escolhido == "cloudinary":
+            return _CloudinaryPrivado()
+        return self._local()
+
+    def _para(self, name) -> Storage:
+        """Onde o documento `name` mora."""
+        from core.arquivos_no_banco import e_do_banco
+
+        return self._banco() if e_do_banco(name) else self._legado()
+
+    def baixar_legado(self, name) -> bytes:
+        with self._legado()._open(name, "rb") as arquivo:
+            return arquivo.read()
+
+    def _save(self, name, content):
+        from core.arquivos_no_banco import ArmazenamentoIndisponivel
+
+        try:
+            return self._real()._save(name, content)
+        except ArmazenamentoIndisponivel:
+            raise
+        except Exception as erro:  # noqa: BLE001 -- o Cloudinary (forçado) ou o disco: janela, nunca 500
+            log.exception("Documento privado: o armazenamento (%s) recusou %s", modo(), name)
+            raise ArmazenamentoIndisponivel() from erro
+
+    def _open(self, name, mode="rb"):
+        return self._para(name)._open(name, mode)
 
     def get_available_name(self, name, max_length=None):
         return self._real().get_available_name(name, max_length=max_length)
 
     def delete(self, name):
-        return self._real().delete(name)
+        return self._para(name).delete(name)
 
     def exists(self, name):
-        return self._real().exists(name)
+        return self._para(name).exists(name)
 
     def size(self, name):
-        return self._real().size(name)
+        return self._para(name).size(name)
 
     def url(self, name):
         raise ArquivoSemEnderecoPublico(
@@ -176,10 +312,10 @@ class ArmazenamentoPrivado(Storage):
         )
 
     def path(self, name):
-        real = self._real()
+        real = self._para(name)
         if isinstance(real, FileSystemStorage):
             return real.path(name)
-        raise NotImplementedError("No Cloudinary o documento não tem caminho local.")
+        raise NotImplementedError("No banco (ou no Cloudinary) o documento não tem caminho local.")
 
 
 armazenamento_privado = ArmazenamentoPrivado()

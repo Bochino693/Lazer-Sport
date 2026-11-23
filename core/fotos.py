@@ -6,7 +6,9 @@ que vai ser encolhido no próprio celular. O Cloudinary (onde as fotos
 moram em produção) entrega a foto já reduzida e no formato mais leve que
 o navegador aceita (WebP/AVIF) só de mudar o endereço: é o que
 `reduzir_imagem` faz. Fora do Cloudinary (desenvolvimento) a URL volta
-como está.
+como está. DESDE A SEÇÃO 130 as fotos novas moram no nosso banco
+(/midia/banco/...): a mesma conta pede `?w=<largura da lista>` e a entrega
+(core/arquivos_no_banco.py) devolve o WebP reduzido, guardado no disco.
 
 O ENDEREÇO DO CLOUDINARY É MONTADO UMA VEZ POR FOTO E POR PROCESSO.
 Montar a URL não vai à rede, mas passa pela configuração inteira do SDK
@@ -27,7 +29,18 @@ _LIMITE_DE_URLS = 20000
 
 
 def reduzir_imagem(url, largura=768):
-    """A mesma foto do Cloudinary, com no máximo `largura` px de largura."""
+    """A mesma foto, com no máximo `largura` px de largura.
+
+    A foto do NOSSO banco (/midia/banco/, seção 130) ganha `?w=` com a
+    largura da lista que cobre a pedida (core.arquivos_no_banco.LARGURAS);
+    a do Cloudinary (o nome antigo), a transformação dele.
+    """
+    if url and "/midia/banco/" in url:
+        if "?" in url:
+            return url
+        from .arquivos_no_banco import largura_permitida
+
+        return f"{url}?w={largura_permitida(largura)}"
     if not url or "res.cloudinary.com" not in url or "/upload/" not in url:
         return url
     antes, depois = url.split("/upload/", 1)
@@ -39,11 +52,15 @@ def reduzir_imagem(url, largura=768):
 def _url_do_arquivo(imagem):
     storage = getattr(imagem, "storage", None)
     nome = getattr(imagem, "name", None)
-    if not nome or storage is None or not type(storage).__module__.startswith("cloudinary_storage"):
+    modulo = type(storage).__module__ if storage is not None else ""
+    if not nome or not (modulo.startswith("cloudinary_storage") or modulo == "core.arquivos_no_banco"):
         return imagem.url
     import cloudinary
 
-    chave = (type(storage), getattr(storage, "RESOURCE_TYPE", ""), cloudinary.config().cloud_name, nome)
+    tipo = getattr(storage, "RESOURCE_TYPE", "") or getattr(storage, "legado", "")
+    from django.conf import settings
+
+    chave = (type(storage), tipo, cloudinary.config().cloud_name, getattr(settings, "MIDIA_BANCO_URL_BASE", ""), nome)
     url = _URLS.get(chave)
     if url is None:
         url = imagem.url

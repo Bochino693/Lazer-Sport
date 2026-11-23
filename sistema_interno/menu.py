@@ -134,6 +134,10 @@ BLOCOS = {
         Item("Objetos 3D", "objetos_3d_inner", "bi-box", "usuarios"),
         Item("Montar em 3D", "montar_3d_inner", "bi-bricks", "usuarios", sem_navegacao_suave=True),
     ),
+    # as fotos guardadas no banco: o que ainda falta e a exportação do Cloudinary (seção 130)
+    "Fotos e arquivos": (
+        Item("Restaurar fotos", "restaurar_fotos", "bi-images", "usuarios"),
+    ),
     # DE CADA UM (toda a equipe)
     "Meu dia": (
         Item("Meu ponto", "rh_ponto", "bi-fingerprint", "equipe", ativo=("rh_comprovante", "rh_ajuste_pedir")),
@@ -174,7 +178,7 @@ BLOCOS_DA_FUNCAO = {
 #: ícone, blocos, a chave que mostra o grupo, aparece no topo?)
 GRUPOS_EXTRAS = (
     ("admin", "Administração", "bi-shield-lock-fill",
-     ("Equipe e acessos", "Lazer & Sport Games", "Estúdio 3D"), "usuarios", True),
+     ("Equipe e acessos", "Lazer & Sport Games", "Estúdio 3D", "Fotos e arquivos"), "usuarios", True),
     ("pessoal", "Minha área", "bi-person-circle", ("Meu dia", "Loja"), "equipe", False),
 )
 

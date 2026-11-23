@@ -72,6 +72,11 @@ class CartaoEnviarView(BaseRH):
             except cartao_ponto.CartaoIlegivel as erro:
                 problemas.append((nome, str(erro), erro.titulo))
                 continue
+            except ErroDeFormulario as erro:
+                # o PDF não foi guardado (o armazenamento recusou ou caiu,
+                # seção 130): nada dele entrou -- janela, nunca 500
+                problemas.append((nome, str(erro), erro.titulo or "Arquivo não guardado"))
+                continue
             (recebidos if nova else ja).append(importacao)
 
         todos = recebidos + ja

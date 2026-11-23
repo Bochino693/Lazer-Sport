@@ -9533,3 +9533,288 @@ Dependência nova: rjsmin (requirements.txt).
      como texto vermelho no quadro; agora abre também a janela de app
      "Confira os arquivos do jogo" com a lista (uma vez por conjunto de
      arquivos), e a lista usa a cor do tema (emulador-envio.js, games.css).
+130) AS FOTOS E OS ARQUIVOS MORAM NO NOSSO BANCO: O CLOUDINARY VIROU SÓ LEGADO
+   O PEDIDO DO DONO (23/11/2026), com o Cloudinary desativado (seção 128):
+   "isso não pode ser vulnerável, eu desenvolvo pras empresas, deve ser as
+   fotos fixas e sempre disponíveis, sem deixar os micro serviços quebrar
+   tudo ou atrapalhar tudo." / "não consigo gerar o ponto para os
+   funcionários" / "temos fotos por todo site, clientes e etc, vc deve
+   pegar, são imagens minhas" / "vc vai ter que pegar as imagens e depois
+   salvar novamente".
+   A CAUSA. A conta do Cloudinary responde "401 cloud_name dgikjmki8 is
+   disabled" a TUDO: entrega, envio, exclusão. Além das fotos sumidas, TODO
+   ENVIO DE ARQUIVO VOLTAVA 500 -- o cartão de ponto do RH
+   (rh/views_cartao.py -> rh/armazenamento.py -> _CloudinaryPrivado._save),
+   os documentos do RH, os documentos da O.S., as notas de entrada e toda
+   foto enviada pelo painel (o armazenamento padrão de produção era o
+   MediaCloudinaryStorage, e 13 campos de imagem apontavam DIRETO para ele
+   no modelo). A janela do dono dizia "Não deu para salvar -- O servidor
+   encontrou um erro ... Informe a referência ao suporte" SEM referência
+   nenhuma: o código ia só no campo `request_id` do JSON, que a janela não
+   lê.
+
+   A DECISÃO. O banco (PostgreSQL do Supabase) já é o ponto único de
+   verdade: sem ele nada abre. Guardar os arquivos nele não acrescenta ponto
+   de falha nenhum -- tira um. O Cloudinary ficou SÓ PARA LER O QUE JÁ ESTAVA
+   LÁ (o endereço do nome antigo continua sendo montado sem ida à rede) e o
+   espelho copia cada nome antigo para cá assim que a conta voltar.
+
+   COMO FICOU
+   * core.ArquivoNoBanco (migração core/0216_arquivos_no_banco, SÓ ESQUEMA):
+     nome único (SEMPRE "banco/" + o caminho de antes: as conferências
+     antigas pelo nome continuam valendo), conteudo (bytea), tipo, tamanho,
+     sha256, publico, origem (envio, cloudinary, copia_local, zip), exata e
+     criado_em. A mesma migração troca o armazenamento dos 13 campos que
+     apontavam direto para o Cloudinary (AlterField: no PostgreSQL não gera
+     SQL, o armazenamento não é coluna).
+   * core/arquivos_no_banco.py -- MidiaNoBanco, o armazenamento padrão de
+     produção (settings.STORAGES) e o dos 13 campos:
+       - salvar: grava a linha pública; nome SEMPRE sorteado
+         (banco/<pasta>/<nome>_<6 letras><ext>, sem ida ao banco para
+         conferir se existe -- e um nome nunca é reaproveitado, o que deixa o
+         cache de um ano ser seguro); a foto (jpg/png/webp) com mais de
+         2400 px ou de ~700 KB entra como WebP de até 2400 px (qualidade 86,
+         orientação do celular aplicada, transparência mantida) e o nome
+         passa a .webp; o banco que falha vira ArmazenamentoIndisponivel
+         (um ErroDeFormulario: "Arquivo não guardado"), nunca 500;
+       - url(): "banco/..." -> <MIDIA_BANCO_URL_BASE>/midia/banco/... (em
+         produção o endereço do site, SITE_URL, para o e-mail levar a foto;
+         no computador, relativo); o nome antigo -> o endereço do Cloudinary
+         como antes. Conta de texto: NENHUMA consulta por foto (há teste);
+       - abrir/existe/tamanho/apagar vão pelo nome; o nome antigo é lido do
+         Cloudinary com prazo (25 s), e "401/disabled" vira
+         CloudinaryForaDoAr (um FileNotFoundError: quem trata OSError trata
+         este também); apagar no Cloudinary é melhor esforço.
+       - o .glb dos objetos 3D (objetos_3d.armazenamento) também vai para o
+         banco (MidiaNoBanco(legado="raw")).
+   * A ENTREGA: /midia/banco/<caminho> nos DOIS endereços (www. e interno.).
+     Quem atende é o MidiaNoBancoMiddleware, logo depois do
+     SecurityMiddleware: antes do GZip, da sessão, do login, da presença e do
+     "telefone obrigatório" -- uma foto não custa a consulta da sessão nem a
+     do usuário (há teste: zero consultas logado). A rota também está em
+     lazer/urls.py e em sistema_interno/urls.py ("/midia/" nas ROTAS_GLOBAIS).
+       - só a linha PÚBLICA sai; a privada é 404 (há teste);
+       - Cache-Control "public, max-age=31536000, immutable"; ETag = o
+         SHA-256; If-None-Match -> 304; Access-Control-Allow-Origin * (o
+         canvas do ls-fotos.js lê os pixels de qualquer um dos endereços);
+       - ?w= só da lista 160, 240, 320, 480, 720, 960, 1200, 1600 (fora dela,
+         404): WebP reduzido pelo Pillow; core/fotos.reduzir_imagem e a API
+         (core/api/serializer) pedem a largura da lista que cobre a pedida;
+       - o original e cada largura ficam no disco da instância
+         (<tmp>/ls-midia-banco, MIDIA_CACHE_DIR, teto MIDIA_CACHE_MAX_MB =
+         1024): a segunda vez, o banco nem fica sabendo (há teste: zero
+         consultas). Documento privado nunca vai para o disco;
+       - o que não é seguro na tela (um .html, um .svg) sai como download,
+         com "Content-Security-Policy: sandbox": nada enviado roda com os
+         cookies do site.
+   * OS DOCUMENTOS PRIVADOS (rh/armazenamento.py, e as subclasses da O.S. e
+     das notas, que agora só trocam a pasta local `_local`): modo "banco", o
+     PADRÃO EM PRODUÇÃO (RH_ARMAZENAMENTO ainda força "cloudinary" ou
+     "local"). O novo vai para uma linha PRIVADA (publico=False, url()
+     continua levantando, só sai pelas views que conferem a permissão). A
+     leitura vai pelo nome: "banco/..." do banco; o resto, do legado (o
+     Cloudinary autenticado em produção, a pasta local no computador). Os
+     limites de tamanho continuam os dos formulários (10 MB).
+   * O ESPELHO (core/espelho_midia.py, `python manage.py espelhar_midia`):
+     todo campo de arquivo dos nossos armazenamentos cujo nome não começa
+     com "banco/" é baixado do Cloudinary (a foto pelo endereço público; o
+     documento privado pela URL assinada), guardado como banco/<nome de
+     antes> e o campo é trocado com update() -- só onde ainda está o nome de
+     antes (quem trocou a foto nesse meio-tempo ganha), e o `recorte_de` das
+     peças acompanha. O mesmo nome em vários campos é baixado UMA vez.
+     "401/disabled" para a rodada; 404 vai para a lista do que o Cloudinary
+     não tem; arquivo acima de MIDIA_ESPELHO_LIMITE_MB (25) fica de fora. No
+     RENDER roda sozinho numa linha de fundo (CoreConfig.ready -> ligar(),
+     só no processo do site: nunca nos testes nem em `manage.py`), com
+     advisory lock no PostgreSQL (dois processos não espelham juntos):
+     primeiro a restauração das cópias do repositório (abaixo), depois o
+     espelho; com o Cloudinary fora do ar, tenta de novo a cada
+     MIDIA_ESPELHO_ESPERA_MIN (30) minutos. NO INSTANTE EM QUE O DONO
+     REATIVAR A CONTA, TUDO É COPIADO SOZINHO e o Cloudinary deixa de fazer
+     falta. A cópia de reserva (exata=False) é trocada pela original nessa
+     mesma rodada.
+   * AS FOTOS DE VOLTA SEM ESPERAR O CLOUDINARY (core/restaurar_midia.py):
+     1. AS CÓPIAS DO REPOSITÓRIO, sozinhas a cada publicação no Render
+        (idempotente, nunca derruba a publicação), e
+        `python manage.py restaurar_midia [--simular]`. Só o que se tem
+        CERTEZA:
+          - EXATA PELO CONTEÚDO: o nome que as rotinas de publicação deram
+            carrega o SHA-1 do arquivo daqui ("cena-air-game-home-
+            10bb33e058_ik4fg5"): o arquivo de core/static/site, media/ ou
+            ferramentas/categorias/reposicao cujo SHA-1 começa assim é a
+            foto, byte a byte;
+          - EXATA PELO NOME: core/static/site/reserva/ guarda as 9 fotos
+            originais das peças recuperadas, com o public id do Cloudinary
+            no nome ("cabo-hdmi_ci5liw.png" = pecas_reposicao/cabo-hdmi_ci5liw);
+          - A MESMA FOTO NUMA VERSÃO MAIS NOVA (exata=False): o nome segue a
+            regra de uma rotina de publicação com a chave EXATA de um arquivo
+            daqui (cena-<produto>-<assinatura> -> capas_catalogo/<produto>;
+            a vista do 3D <pasta>-<vista>[-vN]; capa-<chave>-...;
+            estudio-...; o kit; a categoria; a Black Friday), e SÓ no campo
+            que aquela rotina preenche: a foto de categoria nunca vira foto
+            de produto; "contém a chave" não basta (há teste);
+          - O MESMO NOME EM media/ (exata=False): a mídia antiga do
+            repositório, mesma pasta e mesmo nome;
+          - O RECORTE DA MESMA FOTO (exata=False, só nas fotos de peça): o
+            ferramentas/categorias/recortar.py registra (PECAS, lido como
+            texto) de qual foto do Cloudinary cada recorte da reposicao/
+            saiu.
+        A cópia que não é exata sai com cache de um dia (não de um ano) e é
+        trocada pela original quando ela chegar (espelho ou exportação).
+        O log diz o que voltou e o que falta (modelo, pk, campo, nome);
+        `python manage.py restaurar_midia --relatorio` lista o que falta.
+     2. A EXPORTAÇÃO DO CLOUDINARY: a tela "Restaurar fotos"
+        (/restaurar-fotos/, Administração -> Fotos e arquivos, SÓ o
+        superadministrador; há teste da função Gestão barrada) e
+        `python manage.py restaurar_midia --zip <arquivo>`. O dono baixa da
+        Media Library (selecionar -> Download) o ZIP, ou junta as fotos, e
+        envia: cada arquivo casa pelo public id (pasta + nome sem extensão;
+        a pasta de cima do ZIP é tolerada; o ZIP "achatado" casa pelo nome
+        com o sufixo do Cloudinary) e volta para TODO campo que o usava. A
+        foto que não é foto para um campo de imagem é recusada; o que
+        nenhum cadastro usa é listado. O navegador manda o arquivo em
+        pedaços de 8 MB (até 500 MB por ZIP; pedaço fora de ordem -> 409 com
+        a posição certa, e ele continua dali; três tentativas na rede que
+        oscila) e depois pede "processar" até acabar: cada ida lê ~20 s de
+        ZIP, entrada por entrada, sem extrair nada no disco nem pôr o ZIP
+        na memória. A tela: os números (ainda faltam, no banco, cópias de
+        reserva, o espelho), a fila com o progresso de cada arquivo, a
+        janela "Fotos de volta", as listas (restauradas / ninguém usa /
+        recusadas) e "o que ainda falta" em cartões por tipo de cadastro
+        (até 4 por fileira), e o botão "Restaurar das cópias do
+        repositório". CSS próprio (interno/restaurar-fotos.css, só
+        variáveis do tema); erro sempre na folha do LSAviso, com a área do
+        arquivo acesa.
+   * ERRO NUNCA É 500: ArmazenamentoIndisponivel é um ErroDeFormulario --
+     as telas que já tratam ErroDeFormulario (importar o cartão, cadastrar
+     pelo cartão, importar todos, as notas) mostram a janela sozinhas. O
+     envio do cartão de ponto e o "Enviar documento" do RH tratam à parte
+     (BaseRH.falhou, "Arquivo não guardado", o campo do arquivo aceso); o
+     automatizador da O.S. diz que o documento não foi guardado (e não "não
+     consegui ler"); o _CloudinaryPrivado forçado que recusa também vira a
+     janela; e o InternalResponseRecoveryMiddleware transforma o que
+     sobrar em JSON de janela (fetch) ou toast (formulário comum). O status
+     é 400, como todo ErroDeFormulario: 503 no painel é lido como "o
+     servidor oscilou" e a janela do motivo daria lugar ao "tente de novo"
+     genérico.
+   * A REFERÊNCIA DO 500 (sistema_interno/resiliencia.erro_interno): o JSON
+     traz agora a referência no próprio texto ("Se precisar do suporte,
+     informe a referência 3f9a..."), e sem referência a frase sai; a página
+     HTML continua mostrando "Referência:" embaixo.
+   * A RESERVA DA SEÇÃO 128 CONTINUA (ls-foto-reserva.js e o
+     FotoReservaMiddleware só tocam endereço do Cloudinary): o nome antigo
+     ainda no Cloudinary continua caindo na cópia local ou no quadro "Foto
+     em atualização" até ser restaurado (conferido no navegador).
+   * FOTO ÓRFÃ: a foto trocada no painel fica no banco (o Cloudinary também
+     guardava). `python manage.py restaurar_midia --orfaos` lista o que
+     nenhum campo usa (com mais de 24 h) e `--orfaos --apagar` apaga.
+
+   O QUE O DONO PRECISA FAZER: NADA para o site voltar a aceitar envios
+   (publicar já basta: a migração 0216 roda sozinha e o padrão de produção
+   passa a ser o banco). Para as fotos que só existiam no Cloudinary: OU
+   reativar a conta (o espelho copia tudo sozinho em até 30 min), OU baixar
+   a exportação da Media Library e enviar em Administração -> Restaurar
+   fotos. Variáveis novas, todas OPCIONAIS: MIDIA_BANCO_URL_BASE (padrão:
+   SITE_URL em produção), MIDIA_CACHE_DIR, MIDIA_CACHE_MAX_MB (1024),
+   MIDIA_ESPELHO (1 no Render; 0 desliga a linha de fundo),
+   MIDIA_ESPELHO_LIMITE_MB (25), MIDIA_ESPELHO_ESPERA_MIN (30),
+   RH_ARMAZENAMENTO (banco/cloudinary/local). A falta das variáveis do
+   Cloudinary não derruba mais a publicação (só os nomes antigos ficam sem
+   endereço).
+
+   O TAMANHO DO BANCO: a foto entra no máximo com 2400 px em WebP -- uma
+   capa típica fica entre 150 e 500 KB (a de 3000 px e 1,6 MB da conferência
+   virou 370 KB); mil fotos, uns 300 MB. Documento do RH/O.S./nota até
+   10 MB cada. As larguras do ?w= NÃO vão para o banco (só para o disco da
+   instância). O espelho pula o arquivo acima de 25 MB. O plano gratuito do
+   Supabase tem 500 MB de banco; o Pro, 8 GB incluídos -- conferir o plano
+   e o tamanho (Database -> Usage) depois do espelho; os órfãos saem com
+   `restaurar_midia --orfaos --apagar`.
+
+   O QUE AINDA DEPENDE DO CLOUDINARY (e o que levaria para sair):
+     1. Os pedaços dos discos dos jogos de console (core/
+        armazenamento_pedacos.py): o navegador manda direto para o
+        Cloudinary. Ficaram como estavam (centenas de MB não vão para o
+        banco). Para sair: ligar o balde S3/R2 que já existe
+        (core/armazenamento_grande.py, as cinco variáveis JOGOS_S3_*).
+     2. Os arquivos dos jogos (o .html único, o APK, a versão para
+        computador e os arquivos pequenos do emulador:
+        objetos_3d.armazenamento_de_jogo, RawMediaCloudinaryStorage). Um
+        .html servido do NOSSO endereço rodaria com os cookies do site, e o
+        APK/.zip passa do que cabe bem no banco. Para sair: um domínio só de
+        arquivos, sem cookie do site (ex.: arquivos.lazersport.com.br
+        apontando para o mesmo Render e servindo /midia/banco/ com caixa de
+        areia), ou o mesmo balde S3/R2. Enquanto o Cloudinary está fora, o
+        envio desses arquivos volta com a janela "O armazenamento de
+        arquivos recusou o envio" (views_jogos), nunca 500.
+     3. As rotinas de publicação que subiram capas pelo modelo histórico
+        das migrações já aplicadas (0157, 0161, 0180, 0208, 0214, 0215...):
+        não rodam de novo; as migrações novas já nascem com o MidiaNoBanco
+        (o estado da 0216), e os comandos (capas_em_cena, etc.) usam o
+        modelo de verdade -- vão para o banco. Num banco NOVO, do zero,
+        aquelas migrações tentariam o Cloudinary e seguiriam (elas pegam o
+        erro); depois, `python manage.py restaurar_midia` traz as cópias.
+     4. Os nomes antigos ainda não restaurados (o relatório) -- até o
+        espelho ou a exportação; a reserva da seção 128 cobre a tela.
+     5. Ferramentas de quem desenvolve: ferramentas/categorias/recortar.py
+        baixa as fotos do Cloudinary; o <link rel="preconnect"> do
+        base.html (inofensivo).
+
+   ARQUIVOS: core/arquivos_no_banco.py, core/espelho_midia.py,
+   core/restaurar_midia.py (novos); core/models.py (ArquivoNoBanco e os 13
+   campos); core/migrations/0216_arquivos_no_banco.py; core/management/
+   commands/espelhar_midia.py e restaurar_midia.py (novos); core/apps.py (a
+   linha de fundo); core/fotos.py (?w=); core/api/serializer.py;
+   core/objetos_3d.py (o .glb no banco; armazenamento_de_jogo);
+   core/armazenamento_pedacos.py (os pedaços continuam no Cloudinary);
+   core/middleware.py (/midia/ global e livre; o erro do armazenamento
+   vira janela); core/views_app_jogos.py (o cofre do app guarda
+   /midia/banco/); lazer/settings.py (STORAGES, o middleware, MIDIA_*,
+   RH_ARMAZENAMENTO); lazer/urls.py; rh/armazenamento.py (modo banco,
+   _BancoPrivado, o legado pelo nome); rh/views.py e rh/views_cartao.py (a
+   janela); sistema_interno/importacao_os/{armazenamento,gravar}.py,
+   sistema_interno/notas_entrada/armazenamento.py,
+   sistema_interno/views_importacao_os.py, sistema_interno/resiliencia.py
+   (a referência), sistema_interno/views_restaurar_fotos.py,
+   templates/restaurar_fotos_inner.html, static
+   interno/restaurar-fotos.{js,css} (novos), sistema_interno/menu.py e
+   urls.py; core/static/site/reserva/ (as 9 fotos originais das peças).
+   COMANDOS:
+       python manage.py migrate core
+       python manage.py restaurar_midia [--simular | --relatorio | --zip X | --orfaos [--apagar]]
+       python manage.py espelhar_midia [--simular] [--limite-mb N]
+   TESTES: core/tests_arquivos_no_banco.py (nomes e tipos; a redução para
+   WebP com a transparência; salvar/abrir/url/apagar; url sem consulta; o
+   nome antigo no Cloudinary e o 401 "disabled"; o banco que falha vira
+   ErroDeFormulario; a entrega com cache de um ano, ETag/304, as larguras da
+   lista, 404, o privado que nunca sai, os dois endereços, zero consultas
+   logado e na segunda vez, o .html em caixa de areia, a reserva com cache
+   curto; o espelho com o Cloudinary de volta e desativado, o 404, a reserva
+   trocada pela original, quem trocou no meio-tempo, o recorte_de da peça,
+   os órfãos; as cópias do repositório regra por regra, inclusive a
+   categoria que nunca vira foto de produto e o "contém" que não basta; o
+   recorte só na peça; o ZIP pelo public id, achatado, ninguém usa,
+   recusado, em partes, a reserva trocada e o comando; a tela só do
+   superadministrador, sem <select>, o envio em pedaços (inclusive fora de
+   ordem), o ZIP quebrado e o grande demais em janela; o middleware e a
+   referência do 500) e rh/tests_armazenamento_banco.py (o cartão de ponto
+   entra e é importado com o Cloudinary recusando tudo, o PDF original só
+   pela view e nunca pela rota pública, o documento entra/abre/sai, o banco
+   que falha vira janela no cartão e no documento, o Cloudinary forçado que
+   recusa, o legado pelo nome, o padrão de produção, o 401 do autenticado e
+   o espelho do documento antigo como privado). Ajustado:
+   sistema_interno/tests_urls.py (a rota nova na varredura).
+       DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test core sistema_interno contas rh --parallel 1
+   CONFERIDO NO CHROMIUM (servidor local com o armazenamento de produção:
+   MidiaNoBanco padrão, RH no banco e o Cloudinary recusando envio e
+   exclusão; dados sintéticos), PC 1366 e celular 390: a foto de 3000 px
+   enviada no painel (Brinquedos -> Editar -> Perfil) virou WebP de 370 KB e
+   aparece no card do site com ?w=720 (cache de um ano, ETag); o cartão de
+   ponto sintético (rh.apoio_testes.cartao_ponto_pdf) enviado, conferido e
+   importado ("Cartão importado", 78 marcações); o PDF original abre pela
+   view (no-store); o documento do RH guardado ("Pronto") e aberto (PDF,
+   no-store); "Restaurar das cópias do repositório" (a categoria e a capa em
+   cena de volta) e a exportação em ZIP ("Fotos de volta": a capa trocada
+   pela exata, a que ninguém usa listada); o card do nome antigo seguiu com
+   a reserva da seção 128 enquanto não voltava; nenhuma foto quebrada,
+   nenhum diálogo nativo, nenhuma rolagem lateral, nenhum erro de JS.

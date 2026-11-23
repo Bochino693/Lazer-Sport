@@ -104,7 +104,30 @@ def armazenamento():
     testes), vale o armazenamento padrão do projeto.
     """
     padrao = settings.STORAGES.get("default", {}).get("BACKEND", "")
+    if "arquivos_no_banco" in padrao:
+        # o .glb novo vai para o nosso banco (seção 130); o nome antigo é do
+        # Cloudinary "raw" (e o espelho o traz para cá quando a conta voltar)
+        from .arquivos_no_banco import armazenamento_raw
+
+        return armazenamento_raw()
     if "cloudinary" in padrao.lower():
+        from cloudinary_storage.storage import RawMediaCloudinaryStorage
+
+        return RawMediaCloudinaryStorage()
+    return default_storage
+
+
+def armazenamento_de_jogo():
+    """Onde o arquivo do jogo (.html, .apk, a versão para computador) fica.
+
+    CONTINUA NO CLOUDINARY "raw" em produção (seção 130): um .html enviado e
+    servido do NOSSO endereço rodaria com os cookies do site, e o APK e o .zip
+    do computador passam do que cabe bem no banco. O que falta para sair de
+    lá: um domínio só de arquivos (sem cookie do site) ou um balde S3/R2 --
+    ver o LEIA-ME. Fora da produção, o armazenamento padrão.
+    """
+    padrao = settings.STORAGES.get("default", {}).get("BACKEND", "")
+    if "cloudinary" in padrao.lower() or "arquivos_no_banco" in padrao:
         from cloudinary_storage.storage import RawMediaCloudinaryStorage
 
         return RawMediaCloudinaryStorage()

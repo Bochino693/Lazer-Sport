@@ -47,13 +47,28 @@ def resposta_temporaria(request, motivo="temporario"):
 
 def erro_interno(request):
     # Erro de aplicação não é conexão oscilando: não sinalizar retry.
-    return erro_de_pagina(request, 500, "Não foi possível concluir a operação", "O servidor encontrou um erro. Nenhum formulário será reenviado automaticamente. Informe a referência ao suporte.")
+    #
+    # A REFERÊNCIA VAI NO PRÓPRIO TEXTO (seção 130). A janela do painel
+    # mostra o `msg`; o "Informe a referência ao suporte" chegava à tela sem
+    # referência nenhuma (ela ia só no campo `request_id`, que a janela não
+    # lê). Agora o texto traz o código quando ele existe, e sem código a frase
+    # nem aparece. A página HTML continua mostrando a referência embaixo.
+    referencia = getattr(request, "ls_request_id", "")
+    base = "O servidor encontrou um erro. Nenhum formulário será reenviado automaticamente."
+    return erro_de_pagina(
+        request, 500, "Não foi possível concluir a operação",
+        base + (" Se precisar do suporte, informe a referência abaixo." if referencia else ""),
+        mensagem_json=base + (f" Se precisar do suporte, informe a referência {referencia}." if referencia else ""),
+    )
 
 
-def erro_de_pagina(request, status, titulo, mensagem):
+def erro_de_pagina(request, status, titulo, mensagem, mensagem_json=None):
     referencia = getattr(request, "ls_request_id", "")
     if _pede_json(request):
-        resposta = JsonResponse({"status": "erro", "msg": mensagem, "request_id": referencia}, status=status)
+        resposta = JsonResponse(
+            {"status": "erro", "msg": mensagem_json or mensagem, "titulo": titulo, "request_id": referencia},
+            status=status,
+        )
     else:
         template = engines["django"].get_template("erro_navegacao_inner.html")
         resposta = HttpResponse(template.render({

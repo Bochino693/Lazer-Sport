@@ -181,6 +181,10 @@ MIDDLEWARE = [
     "core.middleware.RequestTimingMiddleware",
     "core.middleware.BandwidthEconomyMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    # /midia/banco/ (as fotos e arquivos públicos guardados no banco, seção
+    # 130): atendido aqui, antes do GZip, da sessão e do login -- uma foto
+    # não custa a consulta da sessão nem a do usuário.
+    "core.arquivos_no_banco.MidiaNoBancoMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     # Robôs de IA, programas de cópia e quem caiu na armadilha ficam fora dos
     # jogos (antes do WhiteNoise: os arquivos dos jogos da casa passam por ele).
@@ -615,17 +619,25 @@ _cloudinary_faltando = [
     if nome != "PREFIX" and not valor
 ]
 
+# OS ARQUIVOS MORAM NO NOSSO BANCO (LEIA-ME-V10, seção 130). Em 23/11/2026
+# o Cloudinary desativou a conta e todo envio voltava 500. Em produção, o
+# armazenamento padrão guarda no PostgreSQL (core.arquivos_no_banco.
+# MidiaNoBanco); o Cloudinary ficou só para LER os nomes antigos (e para o
+# espelho copiá-los para cá quando a conta voltar). Por isso a falta das
+# variáveis dele não derruba mais a publicação: só os nomes antigos ficam
+# sem endereço.
 if ENVIRONMENT == "production" and _cloudinary_faltando:
-    raise RuntimeError(
-        "Cloudinary não configurado em produção. Faltando: "
-        f"{', '.join(_cloudinary_faltando)}. "
-        "Confira essas variáveis de ambiente na Vercel."
+    import logging as _logging
+
+    _logging.getLogger("lazer.midia").warning(
+        "Cloudinary sem configuração (%s): os arquivos antigos de lá ficam sem endereço; "
+        "os novos vão para o banco.", ", ".join(_cloudinary_faltando),
     )
 
 STORAGES = {
     "default": {
         "BACKEND": (
-            "cloudinary_storage.storage.MediaCloudinaryStorage"
+            "core.arquivos_no_banco.MidiaNoBanco"
             if ENVIRONMENT == "production"
             else "django.core.files.storage.FileSystemStorage"
         )
@@ -645,6 +657,38 @@ STORAGES = {
 # WhiteNoise; apenas os uploads de mídia usam o Cloudinary em produção.
 STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 DEFAULT_FILE_STORAGE = STORAGES["default"]["BACKEND"]
+
+# ------------------------------------------------------------
+# OS ARQUIVOS NO BANCO (core/arquivos_no_banco.py, seção 130)
+# ------------------------------------------------------------
+# O endereço das fotos guardadas no banco. Em produção é absoluto (o do
+# site), para o e-mail e o cartaz levarem a foto; no computador, relativo.
+MIDIA_BANCO_URL_BASE = os.getenv(
+    "MIDIA_BANCO_URL_BASE", SITE_URL if ENVIRONMENT == "production" else "",
+).strip().rstrip("/")
+# A cópia das fotos no disco da instância (o cache que poupa o banco).
+MIDIA_CACHE_DIR = os.getenv("MIDIA_CACHE_DIR", "").strip()
+try:
+    MIDIA_CACHE_MAX_MB = max(16, int(os.getenv("MIDIA_CACHE_MAX_MB", "1024")))
+except ValueError:
+    MIDIA_CACHE_MAX_MB = 1024
+# O espelho: copia para o banco o que ainda está só no Cloudinary (e as
+# cópias do repositório), sozinho, no Render. Desligável por MIDIA_ESPELHO=0.
+MIDIA_ESPELHO_AUTOMATICO = os.getenv(
+    "MIDIA_ESPELHO", "1" if IS_RENDER else "0",
+).strip().lower() in ("1", "true", "yes", "on")
+try:
+    MIDIA_ESPELHO_LIMITE_MB = max(1, int(os.getenv("MIDIA_ESPELHO_LIMITE_MB", "25")))
+except ValueError:
+    MIDIA_ESPELHO_LIMITE_MB = 25
+# Os documentos privados (RH, O.S., notas): "banco" (o padrão em produção),
+# "local" (o padrão no computador) ou "cloudinary" (o de antes). Ver rh/armazenamento.py.
+RH_ARMAZENAMENTO = os.getenv("RH_ARMAZENAMENTO", "").strip().lower()
+# Enquanto o Cloudinary responde "desativado", o espelho espera isto entre as tentativas.
+try:
+    MIDIA_ESPELHO_ESPERA_MIN = max(5, int(os.getenv("MIDIA_ESPELHO_ESPERA_MIN", "30")))
+except ValueError:
+    MIDIA_ESPELHO_ESPERA_MIN = 30
 
 WHITENOISE_AUTOREFRESH = DEBUG
 WHITENOISE_USE_FINDERS = DEBUG
@@ -985,6 +1029,13 @@ LOGGING = {
         "lazer.bandwidth": {
             "handlers": ["console"],
             "level": "WARNING",
+            "propagate": False,
+        },
+        # as fotos e arquivos no banco (seção 130): no Render, o log diz o que
+        # a restauração e o espelho trouxeram e o que ainda falta
+        "lazer.midia": {
+            "handlers": ["console"],
+            "level": "INFO" if IS_RENDER else "WARNING",
             "propagate": False,
         },
     },

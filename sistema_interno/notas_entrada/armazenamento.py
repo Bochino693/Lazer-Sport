@@ -2,10 +2,10 @@
 
 Nota fiscal é documento da empresa (preço pago, fornecedor, CNPJ): não
 tem endereço público. O armazenamento é o de `rh/armazenamento.py`,
-reaproveitado -- Cloudinary com entrega AUTENTICADA em produção, pasta
+reaproveitado -- o nosso banco em produção (linha privada, seção 130), pasta
 local fora do MEDIA no resto --, só que numa pasta própria:
 
-  * Cloudinary: o nome começa com "notas/" (os do RH, com "rh/");
+  * banco: o nome começa com "banco/notas/" (o antigo, do Cloudinary, com "notas/");
   * local: `<projeto>/privado/notas/`, ou NOTAS_ARQUIVOS_PRIVADOS_DIR
     (a pasta `privado/` está no .gitignore).
 
@@ -60,8 +60,8 @@ class _LocalDasNotas(FileSystemStorage):
 
 @deconstructible(path="sistema_interno.notas_entrada.armazenamento.ArmazenamentoDasNotas")
 class ArmazenamentoDasNotas(ArmazenamentoPrivado):
-    def _real(self):
-        return _CloudinaryPrivado() if modo() == "cloudinary" else _LocalDasNotas()
+    def _local(self):
+        return _LocalDasNotas()
 
     def url(self, name):
         raise ArquivoSemEnderecoPublico("Nota fiscal não tem endereço: abra pela tela da nota.")

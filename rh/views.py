@@ -23,7 +23,7 @@ from django.utils import timezone
 from django.views.generic import View
 
 from sistema_interno.permissoes import FINANCEIRO, GESTAO, NOMES_DOS_GRUPOS
-from sistema_interno.utils import pede_json
+from sistema_interno.utils import ErroDeFormulario, pede_json
 from sistema_interno.views import InternoRequiredMixin
 
 from . import acesso, servicos, termo as svc_termo
@@ -378,10 +378,15 @@ class DocumentoEnviarView(BaseRH):
         if not form.is_valid():
             return self.falhou_form(request, form, titulo="Documento recusado", voltar=voltar)
         dados = form.cleaned_data
-        documento = servicos.guardar_documento(
-            colaborador, form.conferido, tipo=dados["tipo"], descricao=dados.get("descricao", ""),
-            emissao=dados.get("emissao"), validade=dados.get("validade"), usuario=request.user,
-        )
+        try:
+            documento = servicos.guardar_documento(
+                colaborador, form.conferido, tipo=dados["tipo"], descricao=dados.get("descricao", ""),
+                emissao=dados.get("emissao"), validade=dados.get("validade"), usuario=request.user,
+            )
+        except ErroDeFormulario as erro:
+            # o armazenamento não guardou (seção 130): a janela de app, com o campo aceso
+            return self.falhou(request, str(erro), titulo=erro.titulo or "Arquivo não guardado", campo="arquivo",
+                               voltar=voltar, status=erro.status or 400)
         servicos.registrar(
             request, RegistroRH.Acao.DOC_ENVIADO, colaborador=colaborador, documento=documento,
             descricao=f"{documento.rotulo} · {documento.tamanho_texto} · SHA-256 {documento.sha256[:12]}…",

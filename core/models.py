@@ -5,7 +5,7 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 import requests
-from cloudinary_storage.storage import MediaCloudinaryStorage
+from core.arquivos_no_banco import MidiaNoBanco
 # As buscas de CEP e coordenada saíram junto com o cadastro de cliente:
 # quem geocodifica hoje é `sistema_interno.EnderecoCliente.localizar`.
 
@@ -17,6 +17,38 @@ class Prime(models.Model):
 
     class Meta:
         abstract = True
+
+
+class ArquivoNoBanco(models.Model):
+    """Um arquivo guardado no nosso banco (LEIA-ME-V10, seção 130): fotos, documentos, notas.
+
+    O nome SEMPRE começa com "banco/" e segue com o caminho de antes (o do
+    envio ou o do Cloudinary): o campo de arquivo guarda esse nome, e as
+    conferências antigas pelo nome continuam valendo. `publico` diz se sai
+    por /midia/banco/ (foto do site); o privado (RH, O.S., nota fiscal) só
+    sai pelas views que conferem a permissão. `exata` é falso na cópia de
+    reserva que só PARECE a original (a mesma capa, numa versão mais nova do
+    repositório): o espelho troca pela original quando o Cloudinary voltar.
+    Ver core/arquivos_no_banco.py.
+    """
+
+    nome = models.CharField(max_length=255, unique=True)
+    conteudo = models.BinaryField()
+    tipo = models.CharField(max_length=100, default="application/octet-stream")
+    tamanho = models.PositiveIntegerField(default=0)
+    sha256 = models.CharField(max_length=64, db_index=True)
+    publico = models.BooleanField(default=True)
+    origem = models.CharField(max_length=24, blank=True, default="",
+                              help_text="envio, cloudinary, copia_local, zip...")
+    exata = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Arquivo no banco"
+        verbose_name_plural = "Arquivos no banco"
+
+    def __str__(self):
+        return self.nome
 
 
 class EnderecoEmpresa(Prime):
@@ -141,7 +173,7 @@ class ImagensSite(Prime):
 class CategoriasBrinquedos(Prime):
     imagem_categoria = models.ImageField(upload_to='categorias/',
                                          null=True, blank=False,
-                                         unique=True, storage=MediaCloudinaryStorage())
+                                         unique=True, storage=MidiaNoBanco())
     nome_categoria = models.CharField(max_length=150, null=True, blank=True)
 
     def __str__(self):
@@ -168,7 +200,7 @@ class Estabelecimentos(Prime):
     imagem_estabelecimento = models.ImageField(upload_to='estabelecimentos/',
                                                null=True,
                                                blank=True,
-                                               storage=MediaCloudinaryStorage())
+                                               storage=MidiaNoBanco())
 
     def __str__(self):
         return self.nome_estabelecimento
@@ -213,7 +245,7 @@ class Brinquedos(Prime):
         upload_to="imagens_brinquedos",
         blank=True,
         null=True,
-        storage=MediaCloudinaryStorage(),
+        storage=MidiaNoBanco(),
     )
     descricao = models.CharField(max_length=999)
     valor_brinquedo = models.DecimalField(
@@ -637,7 +669,7 @@ class ImagemBrinquedo(Prime):
     )
     imagem = models.ImageField(
         upload_to="imagens_brinquedos/galeria/",
-        storage=MediaCloudinaryStorage(),
+        storage=MidiaNoBanco(),
         verbose_name="Imagem",
     )
     tipo = models.CharField(
@@ -961,10 +993,11 @@ class ObjetoTresD(Prime):
 
 def _armazenamento_jogo():
     # arquivos que não são imagem (o .html do jogo, o .apk): no Cloudinary
-    # vão como "raw"; fora da produção, o disco. (Mesma escolha do .glb.)
-    from .objetos_3d import armazenamento
+    # vão como "raw"; fora da produção, o disco. Ficaram no Cloudinary
+    # (seção 130): ver objetos_3d.armazenamento_de_jogo.
+    from .objetos_3d import armazenamento_de_jogo
 
-    return armazenamento()
+    return armazenamento_de_jogo()
 
 
 class JogoCadastrado(Prime):
@@ -1028,11 +1061,11 @@ class JogoCadastrado(Prime):
         validators=[RegexValidator(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$", "Use uma cor hexadecimal, como #ff3df2.")],
     )
     capa = models.ImageField(
-        upload_to="jogos/capas/", storage=MediaCloudinaryStorage(),
+        upload_to="jogos/capas/", storage=MidiaNoBanco(),
         verbose_name="Foto de capa", help_text="A imagem do card, de preferência quadrada.",
     )
     poster = models.ImageField(
-        upload_to="jogos/posters/", storage=MediaCloudinaryStorage(), blank=True,
+        upload_to="jogos/posters/", storage=MidiaNoBanco(), blank=True,
         verbose_name="Imagem grande (opcional)", help_text="A arte grande da tela do jogo. Sem ela, usa a capa.",
     )
     endereco = models.URLField(
@@ -1539,7 +1572,7 @@ class ImagemPeca(Prime):
         upload_to="pecas_reposicao/",
         verbose_name="Imagem",
         null=True,
-        storage=MediaCloudinaryStorage()
+        storage=MidiaNoBanco()
     )
 
     # O recorte automático (core/recorte_peca.py, LEIA-ME seção 102): a foto de
@@ -1550,7 +1583,7 @@ class ImagemPeca(Prime):
         verbose_name="Foto original (antes do recorte)",
         null=True,
         blank=True,
-        storage=MediaCloudinaryStorage(),
+        storage=MidiaNoBanco(),
     )
     recorte_de = models.CharField(
         max_length=255,
@@ -1664,7 +1697,7 @@ class ComponenteKit(models.Model):
 class Combos(Prime):
     descricao = models.CharField(max_length=90)
     imagem_combo = models.ImageField(upload_to='combos/', null=True,
-                                     blank=True, storage=MediaCloudinaryStorage())
+                                     blank=True, storage=MidiaNoBanco())
     brinquedos = models.ManyToManyField(
         Brinquedos,
         related_name='combos'
@@ -1708,11 +1741,11 @@ class Promocoes(Prime):
     descricao = models.CharField(max_length=120)
     # A foto do card (quadrada ou deitada, o produto bem enquadrado): o card
     # da home e da loja, o slide do topo e a miniatura saem dela.
-    imagem_promocao = models.ImageField(upload_to='promocoes/', null=True, storage=MediaCloudinaryStorage())
+    imagem_promocao = models.ImageField(upload_to='promocoes/', null=True, storage=MidiaNoBanco())
     # A arte inteira da campanha (o cartaz em pé, com o texto): aparece
     # inteira na página da promoção e é a imagem da divulgação.
     arte_promocao = models.ImageField(
-        upload_to='promocoes/artes/', null=True, blank=True, storage=MediaCloudinaryStorage(),
+        upload_to='promocoes/artes/', null=True, blank=True, storage=MidiaNoBanco(),
         verbose_name="Arte da campanha (cartaz inteiro)",
     )
     # O brinquedo PRINCIPAL: a foto da promoção (quando ela não tem arte
@@ -1890,7 +1923,7 @@ class ImagemProjetoBrinquedo(Prime):
         on_delete=models.CASCADE,
         related_name='imagens_brinquedo_projeto'
     )
-    imagem = models.ImageField(upload_to='projetos/', storage=MediaCloudinaryStorage())
+    imagem = models.ImageField(upload_to='projetos/', storage=MidiaNoBanco())
     legenda = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
@@ -1997,7 +2030,7 @@ class ImagemEvento(models.Model):
         null=True
 
     )
-    imagem = models.ImageField(upload_to='eventos/', storage=MediaCloudinaryStorage())
+    imagem = models.ImageField(upload_to='eventos/', storage=MidiaNoBanco())
     legenda = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):

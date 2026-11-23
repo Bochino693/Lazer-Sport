@@ -16,6 +16,7 @@ from core.views import (
     PromocaoAdminView,
     UserAdminView,
 )
+from core.arquivos_no_banco import midia_no_banco
 from core.views_gestao_produtos import EngajamentoAdminView, PecaAdminView
 from core.views_analises import AnalisesView, AtividadeView, DetalheView, PresencaAgoraView
 from contas.views import SegurancaContasView
@@ -106,6 +107,7 @@ from .views_jogos_vivo import JogosAoVivoView
 from .views_objetos_3d import Objetos3DInnerView
 from .views_montar_3d import MontarTresDView
 from .views_pedidos_projeto3d import PedidoProjeto3DView, PedidosProjeto3DView
+from .views_restaurar_fotos import RestaurarFotosView
 from .views_site import LinkSitePublicoView
 from .views_ordens_servico import (
     OrdemServicoPreviaInnerView,
@@ -138,6 +140,10 @@ def por_funcoes(view_class, *funcoes, somente_super=False):
 
 urlpatterns = [
     path('', HomeInnerView.as_view(), name='home_inner'),
+    # as fotos guardadas no banco (seção 130) também neste endereço
+    path('midia/banco/<path:caminho>', midia_no_banco, name='midia_no_banco'),
+    # o dono restaura as fotos de uma exportação do Cloudinary (seção 130)
+    path('restaurar-fotos/', RestaurarFotosView.as_view(), name='restaurar_fotos'),
     # O atalho da fila de urgências: lembrar o cliente sem sair da tela.
     path(
         'orcamentos/<int:pk>/lembrar/',

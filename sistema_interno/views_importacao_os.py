@@ -33,6 +33,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import View
 
+from core.arquivos_no_banco import ArmazenamentoIndisponivel
 from core.ls_aviso import avisar
 
 from .context_processors import invalidar_avisos
@@ -120,6 +121,11 @@ class ImportarDocumentosOSView(_Base):
             enviado.close()
         try:
             resposta = gravar.importar(request, nome, conteudo)
+        except ArmazenamentoIndisponivel as erro:
+            # o documento não foi guardado (seção 130): diz isso, e não "não consegui ler"
+            logger.warning("Automatizador da O.S.: o documento %s não foi guardado", nome)
+            return JsonResponse({"estado": "ilegivel", "arquivo": nome, "titulo": erro.titulo,
+                                 "motivo": str(erro)}, status=400)
         except Exception:  # noqa: BLE001 -- um documento estranho não para o lote
             logger.exception("Automatizador da O.S.: o documento %s quebrou a leitura", nome)
             return JsonResponse({"estado": "ilegivel", "arquivo": nome, "motivo": (

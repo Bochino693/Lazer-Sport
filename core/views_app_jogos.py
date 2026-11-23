@@ -93,7 +93,7 @@ self.addEventListener("message", function (e) {
 });
 
 function guardavel(url) {
-  if (url.origin === self.location.origin) return url.pathname.indexOf("/static/") === 0;
+  if (url.origin === self.location.origin) return url.pathname.indexOf("/static/") === 0 || url.pathname.indexOf("/midia/banco/") === 0;
   if (url.hostname === "res.cloudinary.com") return url.pathname.indexOf("/image/upload/") !== -1;
   if (url.hostname === "cdn.jsdelivr.net") return url.pathname.indexOf("/npm/@emulatorjs/") === 0;
   if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") return true;

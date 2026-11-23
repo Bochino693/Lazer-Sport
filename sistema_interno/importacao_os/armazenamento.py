@@ -3,12 +3,12 @@
 Ficha de O.S., laudo e pedido de serviço trazem nome, telefone, CPF e
 endereço do cliente: dado pessoal. Nada disso pode ter endereço público.
 O armazenamento é o de `rh/armazenamento.py`, reaproveitado como a nota
-fiscal já faz (`notas_entrada/armazenamento.py`) -- Cloudinary com entrega
-AUTENTICADA em produção, pasta local fora do MEDIA no resto --, numa pasta
+fiscal já faz (`notas_entrada/armazenamento.py`) -- o nosso banco em produção
+(linha privada, seção 130), pasta local fora do MEDIA no resto --, numa pasta
 própria:
 
-  * Cloudinary: o nome começa com "os/" (os do RH com "rh/", as notas com
-    "notas/");
+  * banco: o nome começa com "banco/os/" (o antigo, do Cloudinary, só com "os/";
+    os do RH com "rh/", as notas com "notas/");
   * local: `<projeto>/privado/os/`, ou OS_DOCUMENTOS_PRIVADOS_DIR (a pasta
     `privado/` está no .gitignore).
 
@@ -63,8 +63,8 @@ class _LocalDosDocumentos(FileSystemStorage):
 
 @deconstructible(path="sistema_interno.importacao_os.armazenamento.ArmazenamentoDosDocumentosOS")
 class ArmazenamentoDosDocumentosOS(ArmazenamentoPrivado):
-    def _real(self):
-        return _CloudinaryPrivado() if modo() == "cloudinary" else _LocalDosDocumentos()
+    def _local(self):
+        return _LocalDosDocumentos()
 
     def url(self, name):
         raise ArquivoSemEnderecoPublico("Documento de O.S. não tem endereço: abra pela tela da O.S.")

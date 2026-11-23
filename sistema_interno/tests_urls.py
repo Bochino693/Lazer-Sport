@@ -103,6 +103,7 @@ SO_DE_UM_REGISTRO = {
     "rh_termo_via": "um termo gerado",
     "rh_termo_publico": "token de 10 minutos inventado",
     "rh_cartao_arquivo": "o PDF original de um cartão de ponto recebido",
+    "midia_no_banco": "um arquivo guardado no banco (seção 130)",
 }
 
 

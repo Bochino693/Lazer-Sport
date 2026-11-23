@@ -186,6 +186,9 @@ class SubdomainURLMiddleware:
         # Ver `core.views.pronto` e `docs/RENDER_502.md`.
         "/pronto/",
         "/robots.txt",
+        # As fotos e os arquivos públicos no banco (seção 130): iguais nos
+        # dois endereços -- o painel mostra as mesmas fotos do site.
+        "/midia/",
     )
 
     def __init__(self, get_response):
@@ -241,6 +244,14 @@ class InternalResponseRecoveryMiddleware:
         a próxima requisição nascer limpa e devolvemos uma resposta curta,
         sem context processors que dependam do mesmo banco.
         """
+        # O ARQUIVO QUE NÃO FOI GUARDADO vira a janela de app, nunca 500
+        # (seção 130): a tela que não trata o erro do armazenamento recebe o
+        # mesmo JSON de ErroDeFormulario (msg, titulo), ou o recado no toast.
+        from core.arquivos_no_banco import ArmazenamentoIndisponivel
+
+        if isinstance(exception, ArmazenamentoIndisponivel):
+            return self._arquivo_nao_guardado(request, exception)
+
         if not getattr(request, "is_interno", False):
             return None
         if not isinstance(exception, (OperationalError, InterfaceError)):
@@ -258,6 +269,36 @@ class InternalResponseRecoveryMiddleware:
 
         return resposta_temporaria(request, motivo="banco-remoto")
 
+    @staticmethod
+    def _arquivo_nao_guardado(request, erro):
+        from django.contrib import messages
+        from django.http import JsonResponse
+        from django.shortcuts import redirect
+        from django.utils.http import url_has_allowed_host_and_scheme
+
+        logger_performance.warning(
+            "arquivo_nao_guardado id=%s method=%s path=%s",
+            getattr(request, "ls_request_id", ""), request.method, request.path,
+        )
+        titulo = getattr(erro, "titulo", "") or "Arquivo não guardado"
+        if (
+            request.headers.get("X-Requested-With") in ("XMLHttpRequest", "LS-Soft-Navigation")
+            or "application/json" in request.headers.get("Accept", "")
+            or request.POST.get("resposta") == "json"
+        ):
+            corpo = {"status": "erro", "msg": str(erro), "titulo": titulo}
+            if getattr(erro, "campo", ""):
+                corpo["campo"] = erro.campo
+            return JsonResponse(corpo, status=getattr(erro, "status", None) or 400)
+        try:
+            messages.error(request, str(erro), extra_tags=f"titulo:{titulo}")
+        except Exception:  # noqa: BLE001 -- sem o MessageMiddleware o recado se perde, a tela não
+            pass
+        voltar = request.META.get("HTTP_REFERER") or ""
+        if not url_has_allowed_host_and_scheme(voltar, allowed_hosts={request.get_host()}):
+            voltar = "/"
+        return redirect(voltar)
+
 
 class TelefoneObrigatorioMiddleware:
     """Impede cliente autenticado sem telefone de navegar pelo site."""
@@ -268,6 +309,7 @@ class TelefoneObrigatorioMiddleware:
         "/accounts/",
         "/static/",
         "/media/",
+        "/midia/",
         "/favicon.ico",
         "/system/",
         # Ligar o aviso no celular não é navegar pela loja: é um pedido

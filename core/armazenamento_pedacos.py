@@ -58,7 +58,10 @@ def destino():
         return forcado
     config = getattr(settings, "CLOUDINARY_STORAGE", {}) or {}
     padrao = settings.STORAGES.get("default", {}).get("BACKEND", "")
-    if all(config.get(c) for c in ("CLOUD_NAME", "API_KEY", "API_SECRET")) and "cloudinary" in padrao.lower():
+    # com as fotos no banco (seção 130) os pedaços do disco CONTINUAM no
+    # Cloudinary: 700 MB de disco de PS1 não vão para o banco
+    producao = "cloudinary" in padrao.lower() or "arquivos_no_banco" in padrao
+    if all(config.get(c) for c in ("CLOUD_NAME", "API_KEY", "API_SECRET")) and producao:
         return "cloudinary"
     return "site"
 

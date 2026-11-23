@@ -47,6 +47,8 @@ from django.db.models import Exists, OuterRef, Q
 from django.urls import reverse
 from django.utils import timezone
 
+from core.arquivos_no_banco import ArmazenamentoIndisponivel
+
 from ..importacao_word import catalogo as cat
 from ..importacao_word import deterministica as det
 from ..permissoes import capacidades
@@ -661,6 +663,8 @@ def _criar_ou_guardar(request, leitura, existente, *, lido=None, conteudo=None, 
             with transaction.atomic():
                 criado = _criar_ordem(request, leitura, existente, documento=documento,
                                       conteudo=conteudo, lido=lido)
+        except ArmazenamentoIndisponivel:
+            raise  # o documento não foi guardado (seção 130): a tela diz isso, não "cliente"
         except ErroDeFormulario as exc:
             # O cadastro de clientes tem a última palavra (nome repetido,
             # e-mail de outro cliente): a O.S. espera a pessoa decidir.
