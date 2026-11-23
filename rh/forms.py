@@ -81,7 +81,7 @@ class ColaboradorForm(forms.ModelForm):
             "ctps_uf", "cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf",
             "telefone", "email", "emergencia_nome", "emergencia_telefone", "emergencia_parentesco",
             "cargo", "setor", "especialidades", "data_admissao", "vinculo", "situacao",
-            "data_desligamento", "jornada_inicio", "jornada_fim", "jornada_intervalo_min",
+            "data_desligamento", "matricula", "jornada_inicio", "jornada_fim", "jornada_intervalo_min",
             "jornada_dias", "salario", "banco", "agencia", "conta", "tipo_conta", "pix_tipo",
             "pix_chave", "observacoes",
         )
@@ -129,6 +129,8 @@ class ColaboradorForm(forms.ModelForm):
         self.fields["conta_painel"].widget.attrs.update({"list": "rhContas", "autocomplete": "off"})
         self.fields["data_admissao"].widget.attrs["max"] = timezone.localdate().isoformat()
         self.fields["data_nascimento"].widget.attrs["max"] = timezone.localdate().isoformat()
+        self.fields["matricula"].widget.attrs.update({"inputmode": "numeric", "autocomplete": "off"})
+        self._ligar_jornada_semana()
 
     # ---------------- campos ----------------
     def clean_cpf(self):
@@ -182,16 +184,91 @@ class ColaboradorForm(forms.ModelForm):
             raise forms.ValidationError(f"Essa conta já está ligada à ficha de {outra.nome}.")
         return conta
 
+    # ---------------- a jornada dia a dia ----------------
+    def _ligar_jornada_semana(self):
+        """Quatro horas por dia (ENT. 1, SAÍ. 1, ENT. 2, SAÍ. 2), como o quadro do relógio de ponto."""
+        semana = {}
+        if self.instance and self.instance.pk and self.instance.jornada_semana:
+            semana = self.instance.jornada_semana
+        self.fields["jornada_por_dia"] = forms.BooleanField(
+            required=False, label="Horário diferente em cada dia",
+            initial=bool(semana), widget=forms.CheckboxInput(attrs={"data-rh-jornada-por-dia": ""}),
+        )
+        # Onde o erro do modelo sobre a jornada dia a dia (Colaborador.clean,
+        # "jornada_semana") pousa: um campo oculto, mostrado na seção da jornada.
+        self.fields["jornada_semana"] = forms.CharField(required=False, widget=forms.HiddenInput, label="Jornada dia a dia")
+        self.dias_da_jornada = []
+        for valor, rotulo in DIAS_DA_SEMANA:
+            horas = [h for par in (semana.get(valor) or []) for h in par][:4]
+            campos = []
+            for k in range(4):
+                nome = f"js_{valor}_{k}"
+                self.fields[nome] = forms.TimeField(
+                    required=False, label=f"{rotulo} · {('entrada', 'saída', 'volta', 'saída')[k]}",
+                    initial=horas[k] if k < len(horas) else None,
+                    widget=forms.TimeInput(attrs={"type": "time", "class": "form-control"}, format="%H:%M"),
+                )
+                campos.append(nome)
+            self.dias_da_jornada.append({"valor": valor, "rotulo": rotulo, "campos": campos})
+        if self.data and self.data.get("jornada_por_dia"):
+            self.fields["jornada_dias"].required = False
+            for nome in ("jornada_inicio", "jornada_fim", "jornada_intervalo_min"):
+                self.fields[nome].required = False
+
+    @property
+    def campos_da_semana(self):
+        curtos = ("Entrada", "Saída", "Volta", "Saída")
+        return [{"rotulo": d["rotulo"], "campos": [{"campo": self[nome], "curto": curtos[k]} for k, nome in enumerate(d["campos"])]}
+                for d in getattr(self, "dias_da_jornada", [])]
+
+    def _semana_digitada(self, dados):
+        semana = {}
+        for dia in self.dias_da_jornada:
+            horas = [dados.get(nome) for nome in dia["campos"]]
+            pares = []
+            for k in (0, 2):
+                entrada, saida = horas[k], horas[k + 1]
+                if entrada and saida:
+                    pares.append([f"{entrada:%H:%M}", f"{saida:%H:%M}"])
+                elif entrada or saida:
+                    vazio = dia["campos"][k + 1] if entrada else dia["campos"][k]
+                    self.add_error(vazio, f"{dia['rotulo']}: complete a {'saída' if entrada else 'entrada'} do período.")
+            if pares:
+                semana[dia["valor"]] = pares
+        if not semana:
+            self.add_error("jornada_por_dia", "Preencha o horário de ao menos um dia (ou desmarque “horário diferente em cada dia”).")
+        return semana
+
     def clean(self):
         dados = super().clean()
         if dados.get("setor") != Setor.PRODUCAO:
             dados["especialidades"] = []
+        if hasattr(self, "dias_da_jornada"):
+            if dados.get("jornada_por_dia"):
+                dados["jornada_semana"] = self._semana_digitada(dados)
+                if dados["jornada_semana"]:
+                    dados["jornada_dias"] = "".join(sorted(dados["jornada_semana"]))
+            else:
+                dados["jornada_semana"] = {}
         return dados
+
+    def _post_clean(self):
+        # A jornada dia a dia entra na instância ANTES da conferência do
+        # modelo, para `Colaborador.clean` olhar o horário de cada dia.
+        if hasattr(self, "dias_da_jornada") and "jornada_semana" in self.cleaned_data:
+            self.instance.jornada_semana = self.cleaned_data["jornada_semana"]
+            if self.cleaned_data["jornada_semana"]:
+                for nome in ("jornada_inicio", "jornada_fim", "jornada_intervalo_min"):
+                    if self.cleaned_data.get(nome) in (None, ""):
+                        self.cleaned_data.pop(nome, None)
+        super()._post_clean()
 
     def save(self, commit=True):
         colaborador = super().save(commit=False)
         colaborador.especialidades = list(self.cleaned_data.get("especialidades") or [])
         colaborador.jornada_dias = self.cleaned_data.get("jornada_dias") or ""
+        if hasattr(self, "dias_da_jornada"):
+            colaborador.jornada_semana = self.cleaned_data.get("jornada_semana") or {}
         colaborador.usuario = self.cleaned_data.get("conta_painel")
         if not colaborador.pk and getattr(self.usuario, "is_authenticated", False):
             colaborador.criado_por = self.usuario
@@ -210,8 +287,11 @@ class DocumentoForm(forms.Form):
     def __init__(self, *args, colaborador=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.colaborador = colaborador
-        # O termo assinado entra sozinho, pela assinatura: não se envia à mão.
-        self.fields["tipo"].choices = [c for c in TipoDocumento.choices if c[0] != TipoDocumento.TERMO]
+        # O termo assinado entra sozinho, pela assinatura, e o cartão de ponto
+        # pela importação (que lança o ponto junto): nenhum dos dois se envia à mão.
+        self.fields["tipo"].choices = [
+            c for c in TipoDocumento.choices if c[0] not in (TipoDocumento.TERMO, TipoDocumento.CARTAO_PONTO)
+        ]
         for nome in ("descricao", "emissao", "validade", "arquivo"):
             self.fields[nome].widget.attrs.setdefault("class", "form-control")
         self.fields["emissao"].widget.attrs["max"] = timezone.localdate().isoformat()
@@ -288,3 +368,66 @@ class TarefaForm(forms.ModelForm):
         self.fields["etapa"].widget.attrs.update({"list": "rhEtapas", "autocomplete": "off"})
         for nome in ("titulo", "descricao", "prazo", "etapa"):
             self.fields[nome].widget.attrs.setdefault("class", "form-control")
+
+
+class CadastroPeloCartaoForm(forms.ModelForm):
+    """O colaborador que o cartão de ponto trouxe e que não tem ficha.
+
+    O que o cartão já diz (nome, CPF, PIS quando é PIS, admissão, matrícula
+    e a jornada de cada dia) vem na instância, preenchido pela importação;
+    a equipe completa SÓ o que falta para a ficha fechar (as mesmas regras
+    de `Colaborador.clean`), na mesma folha. CPF não se digita: é o do
+    cartão, e é por ele que a importação casa.
+    """
+
+    cep = forms.CharField(max_length=9, label="CEP")
+    telefone = forms.CharField(max_length=16, label="Telefone")
+    emergencia_telefone = forms.CharField(max_length=16, label="Telefone de emergência")
+    pis = forms.CharField(max_length=14, required=False, label="PIS/NIS")
+
+    class Meta:
+        model = Colaborador
+        fields = (
+            "nome", "pis", "data_admissao", "data_nascimento", "rg", "rg_orgao", "cargo", "setor", "vinculo",
+            "telefone", "cep", "logradouro", "numero", "complemento", "bairro", "cidade", "uf",
+            "emergencia_nome", "emergencia_telefone", "emergencia_parentesco",
+        )
+        widgets = {
+            "data_nascimento": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "data_admissao": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for nome in ("setor", "vinculo"):
+            campo = self.fields[nome]
+            campo.widget = forms.RadioSelect(choices=[c for c in campo.choices if c[0] != ""])
+        self.initial.setdefault("vinculo", "clt")
+        for nome, campo in self.fields.items():
+            if not isinstance(campo.widget, forms.RadioSelect):
+                campo.widget.attrs.setdefault("class", "form-control")
+        for nome, mascara in {"cep": "cep", "telefone": "telefone", "emergencia_telefone": "telefone"}.items():
+            self.fields[nome].widget.attrs.update({"data-mascara": mascara, "inputmode": "numeric"})
+        self.fields["pis"].widget.attrs["inputmode"] = "numeric"
+        self.fields["uf"].widget.attrs.update({"list": "rhUfs", "maxlength": "2", "autocomplete": "off"})
+        hoje = timezone.localdate().isoformat()
+        self.fields["data_admissao"].widget.attrs["max"] = hoje
+        self.fields["data_nascimento"].widget.attrs["max"] = hoje
+
+    def clean_pis(self):
+        pis = somente_digitos(self.cleaned_data.get("pis")) or None
+        if pis and Colaborador.objects.filter(pis=pis).exists():
+            raise forms.ValidationError("Já existe uma ficha com este PIS/NIS.")
+        return pis
+
+    def clean_cep(self):
+        return somente_digitos(self.cleaned_data.get("cep"))
+
+    def clean_telefone(self):
+        return somente_digitos(self.cleaned_data.get("telefone"))
+
+    def clean_emergencia_telefone(self):
+        return somente_digitos(self.cleaned_data.get("emergencia_telefone"))
+
+    def clean_uf(self):
+        return (self.cleaned_data.get("uf") or "").strip().upper()

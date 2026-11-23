@@ -1,0 +1,47 @@
+{% comment %}
+  "Lançar abono" (Gestão): férias, atestado, folga, feriado local. Já entra
+  aprovado e fica no espelho como ajuste, com a justificativa. Os feriados
+  nacionais o espelho conta sozinho.
+{% endcomment %}
+<div class="modal fade rh-folha" id="rhFolhaAbono" tabindex="-1" aria-labelledby="rhFolhaAbonoTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <form class="modal-content" id="rhFormAbono" method="post" action="{% url 'rh_ajuste_pedir' %}" data-rh-ligar data-rh-carregando="Lançando…">
+      {% csrf_token %}
+      <input type="hidden" name="tipo" value="abono">
+      <input type="hidden" name="aprovar" value="1">
+      <input type="hidden" name="voltar" value="{{ request.get_full_path }}">
+      <div class="modal-header rh-folha-cabeca">
+        <span class="rh-folha-icone" aria-hidden="true"><i class="bi bi-calendar-plus"></i></span>
+        <div>
+          <h2 class="modal-title" id="rhFolhaAbonoTitulo">Lançar abono</h2>
+          <p>Férias, atestado, folga ou feriado local · entra aprovado</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="visually-hidden" id="rhFormAbonoErro" data-rh-erro role="alert"></div>
+        <div class="rh-campos">
+          <div class="rh-campo rh-campo--12" data-campo="colaborador">
+            <span class="rh-rotulo" id="rhAbQuem">Quem</span>
+            <div class="rh-busca"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" type="search" placeholder="Filtrar pelo nome" aria-label="Filtrar pessoas" data-rh-filtrar-chips="#rhAbonoPessoas" autocomplete="off"></div>
+            <div class="rh-chips rh-pessoas-chips" id="rhAbonoPessoas" role="radiogroup" aria-labelledby="rhAbQuem">
+              {% for p in pessoas %}<label class="rh-chip" data-nome="{{ p.nome|lower }}"><input type="radio" name="colaborador" value="{{ p.pk }}" required data-rotulo="Quem"><span>{{ p.nome }}</span></label>{% endfor %}
+            </div>
+          </div>
+          <div class="rh-campo rh-campo--3"><label for="rhAbData">Dia</label><input class="form-control" type="date" id="rhAbData" name="data" required></div>
+          <div class="rh-campo rh-campo--8">
+            <span class="rh-rotulo">Motivo</span>
+            <div class="rh-chips" role="radiogroup" aria-label="Motivo">
+              {% for valor, rotulo in motivos %}<label class="rh-chip"><input type="radio" name="motivo_abono" value="{{ valor }}"{% if forloop.first %} checked{% endif %}><span>{{ rotulo }}</span></label>{% endfor %}
+            </div>
+          </div>
+          <div class="rh-campo rh-campo--12"><label for="rhAbJust">Justificativa</label><input class="form-control" id="rhAbJust" name="justificativa" minlength="10" maxlength="1000" required placeholder="Ex.: atestado de 1 dia entregue no RH"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Lançar abono</button>
+      </div>
+    </form>
+  </div>
+</div>

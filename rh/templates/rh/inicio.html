@@ -70,6 +70,38 @@
   </a>
 </div>
 
+{% with p=painel.ponto %}
+<section class="rh-painel rh-painel--ponto" aria-labelledby="rhPontoAlertas">
+  <header>
+    <h2 id="rhPontoAlertas"><i class="bi bi-fingerprint" aria-hidden="true"></i> Ponto: o que pede atenção <small class="rh-nota">· {% if p.origem == "cartao" %}cartão do relógio de {{ p.de|date:"d/m" }} a {{ p.ate|date:"d/m/Y" }}{% else %}este mês, até ontem{% endif %}</small></h2>
+    <div class="rh-doc-acoes">
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_ponto_equipe' %}?{{ p.query }}"><i class="bi bi-graph-up me-1" aria-hidden="true"></i> Acompanhamento</a>
+      <button class="btn btn-sm btn-success" type="button" data-bs-toggle="modal" data-bs-target="#rhFolhaCartao"><i class="bi bi-file-earmark-arrow-up me-1" aria-hidden="true"></i> Enviar cartão de ponto</button>
+    </div>
+  </header>
+  {% if p.pendentes_importacao %}
+    <a class="rh-aviso rh-aviso--alerta rh-link-limpo" href="{% url 'rh_cartoes' %}">
+      <i class="bi bi-file-earmark-medical" aria-hidden="true"></i>
+      <div><strong>{{ p.pendentes_importacao }} cartão{{ p.pendentes_importacao|pluralize:"ões" }} de ponto esperando importação</strong><span>Toque para conferir e importar.</span></div>
+    </a>
+  {% endif %}
+  <ul class="rh-linhas">
+    {% for l in p.linhas %}
+      <li>
+        <a class="rh-pessoa rh-linha-principal" href="{% url 'rh_espelho' l.c.pk %}?{{ p.query }}">
+          <span class="rh-avatar" aria-hidden="true">{{ l.c.nome|iniciais }}</span>
+          <span><strong>{{ l.c.nome }}</strong><small>{{ l.alertas.0.texto|truncatechars:90 }}</small></span>
+        </a>
+        <span class="rh-selos-linha">{% for a in l.alertas|slice:":3" %}<span class="rh-selo rh-selo--{% if a.nivel == 'perigo' %}perigo{% else %}alerta{% endif %}"><i class="bi {{ a.icone }}" aria-hidden="true"></i> {{ a.titulo }}</span>{% endfor %}</span>
+      </li>
+    {% empty %}
+      <li class="rh-vazio"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Ninguém com falta, marcação faltando ou jornada longa no período.</li>
+    {% endfor %}
+    {% if p.total > p.linhas|length %}<li><a class="rh-link-limpo rh-nota" href="{% url 'rh_ponto_equipe' %}?{{ p.query }}">E mais {{ p.total|add:"-8" }} pessoa(s) — ver no acompanhamento</a></li>{% endif %}
+  </ul>
+</section>
+{% endwith %}
+
 <div class="rh-grade">
   <section class="rh-painel" aria-labelledby="rhAgora">
     <header><h2 id="rhAgora"><i class="bi bi-broadcast" aria-hidden="true"></i> No turno agora</h2></header>
@@ -179,4 +211,6 @@
   </section>
 </div>
 {% endwith %}
+{% include "rh/partes/folha_cartao.html" %}
+{% include "rh/partes/folha_recusa.html" %}
 {% endblock %}

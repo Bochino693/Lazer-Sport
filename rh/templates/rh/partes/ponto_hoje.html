@@ -9,7 +9,7 @@
   <div class="rh-relogio-hora" data-rh-hora aria-live="off">{% now "H:i:s" %}</div>
   <div class="rh-relogio-data">{{ dia.hoje|date:"l, j \d\e F"|lower|capfirst }}{% if dia.feriado %} · {{ dia.feriado }}{% endif %}</div>
   <small class="rh-relogio-nota"><i class="bi bi-hdd-network" aria-hidden="true"></i> Vale a hora do servidor, não a do aparelho.</small>
-  <small class="rh-relogio-nota"><i class="bi bi-clock" aria-hidden="true"></i> Jornada {{ dia.c.jornada_inicio|time:"H:i" }}–{{ dia.c.jornada_fim|time:"H:i" }}, intervalo {{ dia.c.jornada_intervalo_min }} min</small>
+  <small class="rh-relogio-nota"><i class="bi bi-clock" aria-hidden="true"></i> {% if dia.jornada_hoje %}Jornada de hoje: {{ dia.jornada_hoje }}{% else %}Hoje não é dia de jornada{% endif %}</small>
 
   {% if dia.pode %}
   <form class="rh-bater" method="post" action="{% url 'rh_ponto_marcar' %}" data-rh-bater>

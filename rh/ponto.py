@@ -236,6 +236,21 @@ class Evento:
     def rotulo(self):
         return TipoMarcacao(self.tipo).label
 
+    @property
+    def do_relogio(self):
+        return bool(self.marcacao is not None and self.marcacao.origem)
+
+
+#: Hora noturna (CLT, art. 73): das 22h às 5h. Aqui contada no relógio
+#: (minuto a minuto), como o cartão do relógio mostra "TOTAL NOTURNO".
+NOTURNO = ((0, 5 * 60), (22 * 60, 24 * 60))
+#: Acima disto num dia, a jornada é "longa" (8 h + 2 h extras, o teto da CLT).
+JORNADA_LONGA = 10 * 60
+
+
+def _noturno(inicio: int, fim: int) -> int:
+    return sum(max(0, min(fim, b) - max(inicio, a)) for a, b in NOTURNO)
+
 
 @dataclass
 class Dia:
@@ -244,6 +259,7 @@ class Dia:
     esperado: int = 0
     trabalhado: int = 0
     intervalo: int = 0
+    noturno: int = 0
     atraso: int = 0
     extra: int = 0
     extra_100: int = 0
@@ -257,6 +273,8 @@ class Dia:
     futuro: bool = False
     fora_do_contrato: bool = False
     pendentes: int = 0
+    previsto: list = field(default_factory=list)   # [(time, time)] da jornada do dia
+    segmentos: list = field(default_factory=list)  # [(início, fim, "trabalho"|"intervalo"|"aberto")] em minutos
 
     @property
     def semana(self):
@@ -271,8 +289,62 @@ class Dia:
         return self.extra + self.extra_100 - self.debito
 
     @property
+    def normais(self):
+        """O que foi trabalhado dentro da jornada (o "TOTAL NORMAIS" do relógio)."""
+        return min(self.trabalhado, self.esperado) if self.esperado else 0
+
+    @property
+    def jornada_longa(self):
+        return self.trabalhado > JORNADA_LONGA
+
+    @property
     def efetivos(self):
-        return [e for e in self.eventos if not e.desconsiderada and not e.pendente]
+        return [e for e in self.efetivos_todos if not e.pendente]
+
+    @property
+    def efetivos_todos(self):
+        return [e for e in self.eventos if not e.desconsiderada]
+
+    @property
+    def do_relogio(self):
+        return any(e.do_relogio for e in self.eventos)
+
+    @property
+    def falta_texto(self):
+        """O que falta no dia incompleto, numa frase curta."""
+        if not self.incompleto:
+            return ""
+        efetivos = self.efetivos
+        if efetivos and efetivos[-1].tipo in ABRE:
+            return "sem a saída"
+        if efetivos and efetivos[-1].tipo == TipoMarcacao.SAIDA_INTERVALO:
+            return "sem a volta do intervalo e a saída"
+        return "marcação faltando"
+
+    @property
+    def situacao(self):
+        """Uma palavra para a cor do dia (a fita do mês e a linha do tempo)."""
+        if self.futuro:
+            return "futuro"
+        if self.fora_do_contrato:
+            return "fora"
+        if self.falta:
+            return "falta"
+        if self.incompleto:
+            return "incompleto"
+        if self.jornada_longa:
+            return "longa"
+        if self.feriado and not self.trabalhado:
+            return "feriado"
+        if self.abono and not self.trabalhado:
+            return "abono"
+        if not self.dia_util and not self.trabalhado:
+            return "folga"
+        if self.atraso or self.debito:
+            return "atraso"
+        if self.extra or self.extra_100:
+            return "extra"
+        return "ok"
 
 
 @dataclass
@@ -282,13 +354,22 @@ class Espelho:
     mes: int
     dias: list
     integridade: list
+    de: date | None = None
+    ate: date | None = None
 
     def _soma(self, campo):
         return sum(getattr(d, campo) for d in self.dias)
 
     @property
     def inicio(self):
-        return date(self.ano, self.mes, 1)
+        return self.de or date(self.ano, self.mes, 1)
+
+    @property
+    def mes_inteiro(self):
+        if not (self.de and self.ate):
+            return True
+        return self.de.day == 1 and self.ate == date(self.ate.year, self.ate.month, calendar.monthrange(self.ate.year, self.ate.month)[1]) \
+            and (self.de.year, self.de.month) == (self.ate.year, self.ate.month)
 
     @property
     def totais(self):
@@ -299,41 +380,83 @@ class Espelho:
         return {
             "esperado": hm(self._soma("esperado")),
             "trabalhado": hm(trabalhado),
+            "normais": hm(sum(d.normais for d in self.dias)),
+            "noturno": hm(self._soma("noturno")),
             "extra": hm(extra),
             "extra_100": hm(extra_100),
+            "extras_total": hm(extra + extra_100),
             "debito": hm(debito),
             "saldo": hm(extra + extra_100 - debito),
             "saldo_minutos": extra + extra_100 - debito,
+            "trabalhado_minutos": trabalhado,
+            "extras_minutos": extra + extra_100,
+            "debito_minutos": debito,
             "atrasos": sum(1 for d in self.dias if d.atraso),
             "atraso_min": hm(self._soma("atraso")),
             "faltas": sum(1 for d in self.dias if d.falta),
             "dias_trabalhados": sum(1 for d in self.dias if d.trabalhado),
             "incompletos": sum(1 for d in self.dias if d.incompleto),
+            "jornadas_longas": sum(1 for d in self.dias if d.jornada_longa),
             "abonos": sum(1 for d in self.dias if d.abono),
             "intervalos_curtos": sum(1 for d in self.dias if d.intervalo_curto),
             "pendentes": self._soma("pendentes"),
+            "do_relogio": sum(1 for d in self.dias if d.do_relogio),
         }
 
     @property
     def integro(self):
         return not self.integridade
 
+    @property
+    def alertas(self):
+        return alertas(self)
+
+    @property
+    def regua(self):
+        """A janela de horas da linha do tempo: das 6h às 20h, ou mais, se alguém passou."""
+        inicio, fim = 6 * 60, 20 * 60
+        for d in self.dias:
+            for a, b, _ in d.segmentos:
+                inicio = min(inicio, a)
+                fim = max(fim, b)
+            for a, b in d.previsto:
+                inicio = min(inicio, _min(a))
+                fim = max(fim, _min(b))
+        inicio = (inicio // 60) * 60
+        fim = min(24 * 60, -(-fim // 60) * 60)
+        return inicio, fim
+
 
 def espelho(colaborador: Colaborador, ano: int, mes: int, *, agora=None, com_integridade=True) -> Espelho:
-    agora = timezone.localtime(agora or timezone.now())
-    hoje = agora.date()
     primeiro = date(ano, mes, 1)
     ultimo = date(ano, mes, calendar.monthrange(ano, mes)[1])
-    feriados = feriados_nacionais(ano)
+    return espelho_periodo(colaborador, primeiro, ultimo, agora=agora, com_integridade=com_integridade)
 
-    marcacoes = list(
-        MarcacaoPonto.objects.filter(colaborador=colaborador, data__range=(primeiro, ultimo)).order_by("momento", "id")
-    )
-    ajustes = list(
-        AjustePonto.objects.filter(colaborador=colaborador, data__range=(primeiro, ultimo))
-        .exclude(situacao=AjustePonto.Estado.RECUSADO)
-        .select_related("marcacao")
-    )
+
+def espelho_periodo(colaborador: Colaborador, primeiro: date, ultimo: date, *, agora=None, com_integridade=True,
+                    marcacoes=None, ajustes=None) -> Espelho:
+    """O espelho de um período qualquer (o mês, ou o período do cartão do relógio).
+
+    `marcacoes` e `ajustes` já buscados (o lote de `espelhos`) evitam as
+    duas consultas por pessoa.
+    """
+    agora = timezone.localtime(agora or timezone.now())
+    hoje = agora.date()
+    feriados = {}
+    for ano in range(primeiro.year, ultimo.year + 1):
+        feriados.update(feriados_nacionais(ano))
+
+    if marcacoes is None:
+        marcacoes = list(
+            MarcacaoPonto.objects.filter(colaborador=colaborador, data__range=(primeiro, ultimo))
+            .order_by("momento", "id")
+        )
+    if ajustes is None:
+        ajustes = list(
+            AjustePonto.objects.filter(colaborador=colaborador, data__range=(primeiro, ultimo))
+            .exclude(situacao=AjustePonto.Estado.RECUSADO)
+            .select_related("marcacao")
+        )
     desconsideradas = {
         a.marcacao_id: a for a in ajustes
         if a.tipo == AjustePonto.Tipo.DESCONSIDERAR
@@ -361,21 +484,52 @@ def espelho(colaborador: Colaborador, ano: int, mes: int, *, agora=None, com_int
             abonos[a.data] = a
 
     dias = []
-    for numero in range(1, ultimo.day + 1):
-        d = date(ano, mes, numero)
+    d = primeiro
+    while d <= ultimo:
         dia = Dia(data=d, feriado=feriados.get(d, ""), abono=abonos.get(d), futuro=d > hoje,
                   pendentes=pendentes_por_dia.get(d, 0))
         dia.eventos = sorted(por_dia.get(d, []), key=lambda e: (e.hora, 0 if e.origem == "registro" else 1))
         dia.fora_do_contrato = not colaborador.empregado_em(d)
+        dia.previsto = colaborador.pares_do_dia(d) if colaborador.jornada_semana else (
+            [(colaborador.jornada_inicio, colaborador.jornada_fim)] if colaborador.trabalha_no_dia(d) else []
+        )
         previsto = (
             not dia.fora_do_contrato and colaborador.trabalha_no_dia(d) and not dia.feriado and not dia.abono
         )
-        dia.esperado = colaborador.jornada_minutos if previsto else 0
+        dia.esperado = colaborador.minutos_previstos(d) if previsto else 0
         _calcular_dia(dia, colaborador, hoje, agora)
         dias.append(dia)
+        d += timedelta(days=1)
 
     integridade = conferir_cadeia(colaborador) if com_integridade else []
-    return Espelho(colaborador=colaborador, ano=ano, mes=mes, dias=dias, integridade=integridade)
+    return Espelho(colaborador=colaborador, ano=primeiro.year, mes=primeiro.month, dias=dias,
+                   integridade=integridade, de=primeiro, ate=ultimo)
+
+
+def espelhos(colaboradores, primeiro: date, ultimo: date, *, agora=None) -> dict:
+    """O espelho de cada pessoa no período, com DUAS consultas no total (não duas por pessoa).
+
+    O banco fica longe do servidor (~170 ms por ida): a equipe inteira sai
+    de uma leitura das marcações e uma dos ajustes. Sem a conferência da
+    cadeia (essa é do espelho de uma pessoa).
+    """
+    colaboradores = list(colaboradores)
+    if not colaboradores:
+        return {}
+    ids = [c.pk for c in colaboradores]
+    marcacoes = defaultdict(list)
+    for m in (MarcacaoPonto.objects.filter(colaborador_id__in=ids, data__range=(primeiro, ultimo))
+              .order_by("momento", "id")):
+        marcacoes[m.colaborador_id].append(m)
+    ajustes = defaultdict(list)
+    for a in (AjustePonto.objects.filter(colaborador_id__in=ids, data__range=(primeiro, ultimo))
+              .exclude(situacao=AjustePonto.Estado.RECUSADO).select_related("marcacao")):
+        ajustes[a.colaborador_id].append(a)
+    return {
+        c.pk: espelho_periodo(c, primeiro, ultimo, agora=agora, com_integridade=False,
+                              marcacoes=marcacoes[c.pk], ajustes=ajustes[c.pk])
+        for c in colaboradores
+    }
 
 
 def _calcular_dia(dia: Dia, colaborador: Colaborador, hoje: date, agora: datetime):
@@ -391,6 +545,7 @@ def _calcular_dia(dia: Dia, colaborador: Colaborador, hoje: date, agora: datetim
                 dia.incompleto = True
             if evento.tipo == TipoMarcacao.VOLTA_INTERVALO and intervalo_desde is not None:
                 dia.intervalo += max(0, minuto - intervalo_desde)
+                dia.segmentos.append((intervalo_desde, minuto, "intervalo"))
                 intervalo_desde = None
             aberto = minuto
         else:
@@ -398,6 +553,8 @@ def _calcular_dia(dia: Dia, colaborador: Colaborador, hoje: date, agora: datetim
                 dia.incompleto = True
                 continue
             dia.trabalhado += max(0, minuto - aberto)
+            dia.noturno += _noturno(aberto, minuto)
+            dia.segmentos.append((aberto, max(aberto, minuto), "trabalho"))
             aberto = None
             if evento.tipo == TipoMarcacao.SAIDA_INTERVALO:
                 intervalo_desde = minuto
@@ -405,20 +562,25 @@ def _calcular_dia(dia: Dia, colaborador: Colaborador, hoje: date, agora: datetim
         if dia.data == hoje:
             dia.em_andamento = True
             if aberto is not None:
-                dia.trabalhado += max(0, _min(agora.time()) - aberto)
+                agora_min = _min(agora.time())
+                dia.trabalhado += max(0, agora_min - aberto)
+                dia.noturno += _noturno(aberto, max(aberto, agora_min))
+                dia.segmentos.append((aberto, max(aberto, agora_min), "aberto"))
         else:
             dia.incompleto = True
+            if aberto is not None:
+                dia.segmentos.append((aberto, min(24 * 60, aberto + 30), "aberto"))
 
     efetivos = dia.efetivos
     if dia.dia_util and efetivos:
         primeira = next((e for e in efetivos if e.tipo == TipoMarcacao.ENTRADA), None)
         if primeira:
-            atraso = _min(primeira.hora) - _min(colaborador.jornada_inicio)
+            atraso = _min(primeira.hora) - _min(colaborador.inicio_previsto(dia.data))
             if atraso > TOLERANCIA_ATRASO:
                 dia.atraso = atraso
 
     if dia.dia_util and not efetivos:
-        terminou = dia.data < hoje or _min(agora.time()) > _min(colaborador.jornada_fim)
+        terminou = dia.data < hoje or _min(agora.time()) > _min(colaborador.fim_previsto(dia.data))
         if terminou:
             dia.falta = True
             dia.debito = dia.esperado
@@ -441,6 +603,98 @@ def _calcular_dia(dia: Dia, colaborador: Colaborador, hoje: date, agora: datetim
             dia.extra = saldo
     elif saldo < 0:
         dia.debito = -saldo
+
+
+# ======================================================================
+# O QUE PEDE ATENÇÃO (o acompanhamento do período)
+# ======================================================================
+def _datas(dias, limite=6):
+    texto = ", ".join(f"{d.data:%d/%m}" for d in dias[:limite])
+    if len(dias) > limite:
+        texto += f" e mais {len(dias) - limite}"
+    return texto
+
+
+def alertas(e: Espelho) -> list[dict]:
+    """O que o período de uma pessoa tem para alguém olhar, do mais grave ao mais leve."""
+    saida = []
+    sem_marca = [d for d in e.dias if d.incompleto]
+    if sem_marca:
+        sem_saida = [d for d in sem_marca if d.efetivos and d.efetivos[-1].tipo in ABRE]
+        saida.append({
+            "chave": "incompleto", "nivel": "alerta", "icone": "bi-door-open",
+            "titulo": (f"{len(sem_marca)} dia{'s' if len(sem_marca) > 1 else ''} com marcação faltando"),
+            "texto": (f"{len(sem_saida)} sem a última saída · " if sem_saida else "") + _datas(sem_marca),
+            "dias": [d.data for d in sem_marca],
+        })
+    faltas = [d for d in e.dias if d.falta]
+    if faltas:
+        saida.append({
+            "chave": "falta", "nivel": "perigo", "icone": "bi-person-x",
+            "titulo": f"{len(faltas)} falta{'s' if len(faltas) > 1 else ''}",
+            "texto": _datas(faltas), "dias": [d.data for d in faltas],
+        })
+    longas = [d for d in e.dias if d.jornada_longa]
+    if longas:
+        maior = max(longas, key=lambda d: d.trabalhado)
+        saida.append({
+            "chave": "longa", "nivel": "perigo", "icone": "bi-hourglass-top",
+            "titulo": f"{len(longas)} jornada{'s' if len(longas) > 1 else ''} acima de 10 h",
+            "texto": f"A maior: {hm(maior.trabalhado)} em {maior.data:%d/%m}"
+                     + (f" · {_datas(longas)}" if len(longas) > 1 else ""),
+            "dias": [d.data for d in longas],
+        })
+    atrasos = [d for d in e.dias if d.atraso]
+    if atrasos:
+        saida.append({
+            "chave": "atraso", "nivel": "alerta", "icone": "bi-alarm",
+            "titulo": f"{len(atrasos)} atraso{'s' if len(atrasos) > 1 else ''} na entrada",
+            "texto": f"{hm(sum(d.atraso for d in atrasos))} no período · " + _datas(atrasos),
+            "dias": [d.data for d in atrasos],
+        })
+    curtos = [d for d in e.dias if d.intervalo_curto]
+    if curtos:
+        saida.append({
+            "chave": "intervalo", "nivel": "alerta", "icone": "bi-cup-hot",
+            "titulo": f"{len(curtos)} intervalo{'s' if len(curtos) > 1 else ''} menor{'es' if len(curtos) > 1 else ''} que 1 h",
+            "texto": _datas(curtos), "dias": [d.data for d in curtos],
+        })
+    pendentes = sum(d.pendentes for d in e.dias)
+    if pendentes:
+        dias_p = [d for d in e.dias if d.pendentes]
+        saida.append({
+            "chave": "pendente", "nivel": "info", "icone": "bi-hourglass-split",
+            "titulo": f"{pendentes} ajuste{'s' if pendentes > 1 else ''} esperando decisão",
+            "texto": "Só entram na conta depois de aprovados · " + _datas(dias_p),
+            "dias": [d.data for d in dias_p],
+        })
+    return saida
+
+
+def linha_do_tempo(dia: Dia, regua: tuple) -> dict:
+    """As barras de um dia, em porcentagem da régua (a tela só desenha)."""
+    inicio, fim = regua
+    largura = max(1, fim - inicio)
+
+    def pos(minuto):
+        return round(max(0.0, min(100.0, (minuto - inicio) * 100 / largura)), 2)
+
+    # Em texto com ponto: o número localizado do Django ("12,5") não é CSS.
+    def css(valor):
+        return f"{valor:.2f}"
+
+    barras = []
+    for a, b, tipo in dia.segmentos:
+        esquerda = pos(a)
+        barras.append({
+            "tipo": tipo, "esquerda": css(esquerda), "largura": css(max(0.6, pos(b) - esquerda)),
+            "texto": f"{a // 60:02d}:{a % 60:02d}–{b // 60:02d}:{b % 60:02d}",
+        })
+    previsto = []
+    for a, b in dia.previsto:
+        esquerda = pos(_min(a))
+        previsto.append({"esquerda": css(esquerda), "largura": css(pos(_min(b)) - esquerda)})
+    return {"barras": barras, "previsto": previsto}
 
 
 def mes_do_texto(texto: str, padrao: date | None = None) -> tuple[int, int]:
@@ -499,7 +753,7 @@ def situacao_de_hoje(agora=None):
             continue
         if feriado or c.pk in abonados or not c.trabalha_no_dia(hoje) or not c.empregado_em(hoje):
             continue
-        limite = _min(c.jornada_inicio) + FOLGA_PARA_FALTA
+        limite = _min(c.inicio_previsto(hoje)) + FOLGA_PARA_FALTA
         if _min(agora.time()) >= limite:
             faltando.append(c)
         else:

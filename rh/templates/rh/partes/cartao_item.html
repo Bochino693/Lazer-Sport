@@ -1,0 +1,132 @@
+{% load rh_extras %}
+{% comment %}
+  Uma pessoa do cartão de ponto (`i`, de views_cartao.CartoesView._item):
+  pendente com ficha (o que preenche, o que diverge, a prévia e o
+  "Importar"), pendente sem ficha ("Cadastrar colaborador" na folha) ou
+  importado (o que entrou e a comparação com o sistema).
+{% endcomment %}
+{% with c=i.c r=i.resumo %}
+<article class="rh-cartao{% if c.importado %} is-importado{% elif not c.colaborador_id %} is-sem-ficha{% endif %}" id="cartao-{{ c.pk }}">
+  <header class="rh-cartao-topo">
+    <span class="rh-avatar" aria-hidden="true">{% if c.colaborador %}{{ c.colaborador.nome|iniciais }}{% else %}{{ i.nome_cartao|iniciais }}{% endif %}</span>
+    <div class="rh-cartao-nome">
+      <strong>{% if c.colaborador %}{{ c.colaborador.nome }}{% else %}{{ i.nome_cartao }}{% endif %}</strong>
+      <small>CPF {{ i.cpf_cartao }} · {{ c.periodo_texto }}{% if c.dados.paginas|length > 1 or c.importacao.paginas > 1 %} · pág. {{ c.dados.paginas|join:", " }}{% endif %}</small>
+    </div>
+    <div class="rh-cartao-selos">
+      {% if c.importado %}<span class="rh-selo rh-selo--ok"><i class="bi bi-check2-circle" aria-hidden="true"></i> Importado {{ c.importado_em|date:"d/m H:i" }}</span>
+      {% elif c.colaborador_id %}<span class="rh-selo rh-selo--ok"><i class="bi bi-person-check" aria-hidden="true"></i> Ficha achada pelo {% if c.casado_por == "pis" %}PIS{% else %}CPF{% endif %}</span>
+      {% else %}<span class="rh-selo rh-selo--alerta"><i class="bi bi-person-plus" aria-hidden="true"></i> Sem ficha</span>{% endif %}
+      {% if not i.empresa_confere %}<span class="rh-selo rh-selo--perigo"><i class="bi bi-building-exclamation" aria-hidden="true"></i> CNPJ de outra empresa</span>{% endif %}
+    </div>
+  </header>
+
+  <div class="rh-mini-numeros">
+    <span><strong>{{ r.dias }}</strong><small>dias</small></span>
+    <span><strong>{{ r.marcas }}</strong><small>marcações</small></span>
+    <span class="{% if r.faltas %}is-perigo{% endif %}"><strong>{{ r.faltas }}</strong><small>falta{{ r.faltas|pluralize }}</small></span>
+    <span class="{% if r.incompletos %}is-alerta{% endif %}"><strong>{{ r.incompletos }}</strong><small>sem marcação</small></span>
+    <span><strong>{{ r.folgas }}</strong><small>folga{{ r.folgas|pluralize }}</small></span>
+    <span><strong>{{ r.feriados }}</strong><small>feriado{{ r.feriados|pluralize }}</small></span>
+  </div>
+  {% if r.marcadores %}<p class="rh-nota"><i class="bi bi-tags" aria-hidden="true"></i> Marcas do relógio: {% for m, n in r.marcadores.items %}({{ m }}) × {{ n }}{% if not forloop.last %} · {% endif %}{% endfor %} — guardadas em cada marcação.</p>{% endif %}
+  {% if r.avisos %}<ul class="rh-avisos-leitura">{% for a in r.avisos %}<li><i class="bi bi-exclamation-circle" aria-hidden="true"></i> {{ a }}</li>{% endfor %}</ul>{% endif %}
+  {% if r.alteracoes %}<p class="rh-nota"><i class="bi bi-journal-text" aria-hidden="true"></i> Alterações do relógio: {{ r.alteracoes|join:" · " }}</p>{% endif %}
+
+  {% if c.pendente and c.colaborador_id %}
+    <form class="rh-cartao-form" method="post" action="{% url 'rh_cartao_importar' c.pk %}" data-rh-ligar data-rh-carregando="Importando…">
+      {% csrf_token %}
+      <input type="hidden" name="forcar_cnpj" value="0" data-rh-forcar-cnpj>
+      {% if i.preencher %}
+        <div class="rh-bloco">
+          <h3><i class="bi bi-ui-checks" aria-hidden="true"></i> Entra na ficha (estava vazio)</h3>
+          <ul class="rh-preenche">
+            {% for l in i.preencher %}
+              <li><span>{{ l.rotulo }}</span><strong>{{ l.cartao }}</strong>{% if l.nota %}<small>{{ l.nota }}</small>{% endif %}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+      {% if i.divergentes %}
+        <div class="rh-bloco">
+          <h3><i class="bi bi-arrow-left-right" aria-hidden="true"></i> Diverge da ficha: escolha</h3>
+          {% for l in i.divergentes %}
+            <div class="rh-diverge" data-campo="escolha_{{ l.campo }}">
+              <span class="rh-diverge-rotulo">{{ l.rotulo }}</span>
+              <div class="rh-chips rh-chips--escolha" role="radiogroup" aria-label="{{ l.rotulo }}">
+                <label class="rh-chip rh-chip--escolha"><input type="radio" name="escolha_{{ l.campo }}" value="ficha" checked><span><small>Manter a da ficha</small>{{ l.ficha }}</span></label>
+                <label class="rh-chip rh-chip--escolha"><input type="radio" name="escolha_{{ l.campo }}" value="cartao"><span><small>Usar a do cartão</small>{{ l.cartao }}</span></label>
+              </div>
+              {% if l.nota %}<small class="rh-nota">{{ l.nota }}</small>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {% if i.ignorados %}
+        <ul class="rh-avisos-leitura">{% for l in i.ignorados %}<li><i class="bi bi-slash-circle" aria-hidden="true"></i> {{ l.rotulo }} do cartão ({{ l.cartao }}): {{ l.nota }}</li>{% endfor %}</ul>
+      {% endif %}
+      {% if not i.preencher and not i.divergentes %}<p class="rh-nota rh-nota--ok"><i class="bi bi-check2-all" aria-hidden="true"></i> A ficha já tem tudo o que o cartão traz.</p>{% endif %}
+      {% with p=i.previa %}
+        <div class="rh-previa">
+          <h3><i class="bi bi-fingerprint" aria-hidden="true"></i> Vai para o ponto</h3>
+          <div class="rh-previa-itens">
+            <span class="is-ok"><strong>{{ p.criar|length }}</strong> marcaç{{ p.criar|length|pluralize:"ão,ões" }} do relógio</span>
+            {% if p.ja_estavam %}<span><strong>{{ p.ja_estavam }}</strong> já estava{{ p.ja_estavam|pluralize:",m" }} (não repete)</span>{% endif %}
+            {% if p.ajustes_incluir %}<span class="is-alerta"><strong>{{ p.ajustes_incluir|length }}</strong> pedido{{ p.ajustes_incluir|length|pluralize }} de ajuste (dia com marcação do painel)</span>{% endif %}
+            {% if p.abonos %}<span><strong>{{ p.abonos|length }}</strong> abono{{ p.abonos|length|pluralize }} (folga/feriado num dia de jornada)</span>{% endif %}
+            {% if p.pulados %}<span class="is-alerta"><strong>{{ p.pulados|length }}</strong> dia{{ p.pulados|length|pluralize }} fora do contrato da ficha</span>{% endif %}
+          </div>
+          {% if p.conflitos %}
+            <ul class="rh-avisos-leitura">
+              {% for cf in p.conflitos|slice:":5" %}<li><i class="bi bi-intersect" aria-hidden="true"></i> {{ cf.data|date:"d/m" }}: no ponto {{ cf.ponto|join:", " }} · no cartão {{ cf.cartao|join:", " }}</li>{% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% endwith %}
+      <div class="rh-cartao-acoes">
+        <a class="btn btn-outline-secondary" href="{% url 'rh_ficha' c.colaborador_id %}"><i class="bi bi-person-vcard me-1" aria-hidden="true"></i> Ficha</a>
+        <button class="btn btn-success" type="submit"><i class="bi bi-box-arrow-in-down me-1" aria-hidden="true"></i> Importar para o ponto</button>
+      </div>
+    </form>
+
+  {% elif c.pendente %}
+    <div class="rh-aviso rh-aviso--alerta">
+      <i class="bi bi-person-plus" aria-hidden="true"></i>
+      <div><strong>Nenhuma ficha com este CPF{% if c.pis %} nem com o PIS{% endif %}</strong><span>Cadastre com os dados do cartão (nome, CPF, admissão e jornada de cada dia já vêm preenchidos) e complete só o que falta. O ponto entra em seguida.</span></div>
+    </div>
+    <ul class="rh-preenche">
+      <li><span>Nome</span><strong>{{ i.nome_cartao }}</strong></li>
+      <li><span>CPF</span><strong>{{ i.cpf_cartao }}</strong></li>
+      {% if c.dados.funcionario.admissao %}<li><span>Admissão</span><strong>{{ i.form.initial.data_admissao|date:"d/m/Y" }}</strong></li>{% endif %}
+      <li><span>Jornada</span><strong>{{ i.semana }}</strong></li>
+    </ul>
+    <div class="rh-cartao-acoes">
+      <button class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#rhCadastro{{ c.pk }}"><i class="bi bi-person-plus-fill me-1" aria-hidden="true"></i> Cadastrar colaborador</button>
+    </div>
+    {% include "rh/partes/folha_cadastro_cartao.html" with form=i.form %}
+
+  {% else %}
+    {% with res=c.resultado %}
+      <div class="rh-previa">
+        <h3><i class="bi bi-check2-circle" aria-hidden="true"></i> O que entrou{% if c.importado_por %} · por {{ c.importado_por.get_full_name|default:c.importado_por.username }}{% endif %}</h3>
+        <div class="rh-previa-itens">
+          <span class="is-ok"><strong>{{ res.criadas }}</strong> marcaç{{ res.criadas|pluralize:"ão,ões" }} lançada{{ res.criadas|pluralize }}</span>
+          {% if res.ja_estavam %}<span><strong>{{ res.ja_estavam }}</strong> já estava{{ res.ja_estavam|pluralize:",m" }}</span>{% endif %}
+          {% if res.pedidos_de_ajuste %}<span class="is-alerta"><strong>{{ res.pedidos_de_ajuste }}</strong> pedido{{ res.pedidos_de_ajuste|pluralize }} de ajuste</span>{% endif %}
+          {% if res.abonos %}<span><strong>{{ res.abonos }}</strong> abono{{ res.abonos|pluralize }}</span>{% endif %}
+          {% if res.preenchidos %}<span class="is-ok">Ficha: {{ res.preenchidos|join:", " }}</span>{% endif %}
+          {% if res.cnpj_forcado %}<span class="is-alerta">Importado com CNPJ de outra empresa</span>{% endif %}
+        </div>
+      </div>
+    {% endwith %}
+    {% if i.comparacao %}{% include "rh/partes/comparacao.html" with r=i.comparacao %}{% endif %}
+    <div class="rh-cartao-acoes">
+      {% if c.documento_id %}<a class="btn btn-outline-secondary" href="{% url 'rh_documento_arquivo' c.documento_id %}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF na pasta</a>{% endif %}
+      {% if c.colaborador_id %}
+        <a class="btn btn-outline-secondary" href="{% url 'rh_ficha' c.colaborador_id %}"><i class="bi bi-person-vcard me-1" aria-hidden="true"></i> Ficha</a>
+        <a class="btn btn-success" href="{% url 'rh_espelho' c.colaborador_id %}?de={{ c.inicio|date:'Y-m-d' }}&amp;ate={{ c.fim|date:'Y-m-d' }}"><i class="bi bi-graph-up me-1" aria-hidden="true"></i> Acompanhamento do período</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</article>
+{% endwith %}

@@ -231,4 +231,44 @@ def painel(agora=None):
         "total_atrasadas": Tarefa.objects.filter(prazo__lt=hoje).exclude(situacao=Tarefa.Estado.FEITA).count(),
         "termo_pendentes": termo.pendentes().count(),
         "total_ativos": Colaborador.objects.exclude(situacao=Situacao.DESLIGADO).count(),
+        "ponto": alertas_do_ponto(agora),
     }
+
+
+def alertas_do_ponto(agora=None):
+    """O que o ponto da equipe pede de atenção, para o Início do RH (seção 125).
+
+    O período é o do último cartão do relógio importado; sem cartão, o mês
+    até ontem. Os espelhos saem em lote (ponto.espelhos): quatro consultas
+    para a equipe inteira, não quatro por pessoa.
+    """
+    from datetime import timedelta as _dias
+
+    from . import ponto
+    from .models import CartaoPonto
+
+    hoje = timezone.localdate(agora)
+    ultimo = (
+        CartaoPonto.objects.filter(situacao=CartaoPonto.Estado.IMPORTADO)
+        .order_by("-fim", "-inicio").values_list("inicio", "fim").first()
+    )
+    pendentes = CartaoPonto.objects.filter(situacao=CartaoPonto.Estado.PENDENTE).count()
+    if ultimo:
+        de, ate, origem = ultimo[0], ultimo[1], "cartao"
+    else:
+        de, ate, origem = hoje.replace(day=1), hoje - _dias(days=1), "mes"
+    vazio = {"de": de, "ate": ate, "origem": origem, "linhas": [], "total": 0, "pendentes_importacao": pendentes,
+             "query": f"de={de:%Y-%m-%d}&ate={ate:%Y-%m-%d}"}
+    if ate < de:
+        return vazio
+    pessoas = list(Colaborador.objects.exclude(situacao=Situacao.DESLIGADO).order_by("nome"))
+    todos = ponto.espelhos(pessoas, de, ate, agora=agora)
+    linhas = []
+    for pessoa in pessoas:
+        importantes = [a for a in todos[pessoa.pk].alertas if a["nivel"] in ("perigo", "alerta")]
+        if importantes:
+            peso = sum(2 if a["nivel"] == "perigo" else 1 for a in importantes)
+            linhas.append({"c": pessoa, "alertas": importantes, "peso": peso})
+    linhas.sort(key=lambda linha: (-linha["peso"], linha["c"].nome))
+    vazio.update({"linhas": linhas[:8], "total": len(linhas)})
+    return vazio

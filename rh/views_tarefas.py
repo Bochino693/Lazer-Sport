@@ -10,7 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from sistema_interno.permissoes import GESTAO
-from sistema_interno.utils import destino_de_retorno
+from sistema_interno.utils import destino_de_retorno, pede_json
 
 from . import acesso, tarefas as svc
 from .forms import TarefaForm
@@ -89,6 +89,8 @@ class TarefasView(BaseRH):
             raise Http404()
         form = TarefaForm(request.POST)
         if not form.is_valid():
+            if pede_json(request):
+                return self.falhou_form(request, form, titulo="A tarefa não foi criada", voltar=reverse("rh_tarefas"))
             erros = "; ".join(m for lista in form.errors.values() for m in lista)
             messages.error(request, f"A tarefa não foi criada: {erros}")
             return self.get(request, form=form)
@@ -98,8 +100,7 @@ class TarefasView(BaseRH):
             tarefa.setor = tarefa.colaborador.setor
         tarefa.save()
         quem = tarefa.colaborador.primeiro_nome if tarefa.colaborador_id else "ninguém ainda"
-        messages.success(request, f"Tarefa criada para {quem}.")
-        return redirect("rh_tarefas")
+        return self.ok(request, f"Tarefa criada para {quem}.", voltar=reverse("rh_tarefas"))
 
 
 def _tarefa_minha_ou_da_gestao(request, pk):
@@ -121,7 +122,8 @@ class TarefaSituacaoView(BaseRH):
         tarefa = _tarefa_minha_ou_da_gestao(request, pk)
         nova = request.POST.get("situacao")
         if nova not in Tarefa.Estado.values:
-            return JsonResponse({"status": "erro", "msg": "Situação inválida."}, status=400)
+            return self.falhou(request, "Situação inválida.", titulo="Não deu para mudar",
+                               voltar=reverse("rh_tarefas"))
         svc.mudar_situacao(tarefa, nova, por=request.user)
         texto = f"“{tarefa.titulo}”: {tarefa.get_situacao_display().lower()}."
         if request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -140,16 +142,12 @@ class TarefaEditarView(BaseRH):
         if request.POST.get("action") == "excluir":
             titulo = tarefa.titulo
             tarefa.delete()
-            messages.success(request, f"Tarefa “{titulo}” excluída.")
-            return redirect("rh_tarefas")
+            return self.ok(request, f"Tarefa “{titulo}” excluída.", voltar=reverse("rh_tarefas"))
         form = TarefaForm(request.POST, instance=tarefa)
         if not form.is_valid():
-            erros = "; ".join(m for lista in form.errors.values() for m in lista)
-            messages.error(request, f"A tarefa não foi salva: {erros}")
-        else:
-            form.save()
-            messages.success(request, "Tarefa salva.")
-        return redirect("rh_tarefas")
+            return self.falhou_form(request, form, titulo="A tarefa não foi salva", voltar=reverse("rh_tarefas"))
+        form.save()
+        return self.ok(request, "Tarefa salva.", voltar=reverse("rh_tarefas"))
 
 
 class SugerirView(BaseRH):

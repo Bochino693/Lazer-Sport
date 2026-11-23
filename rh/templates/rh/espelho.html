@@ -1,76 +1,154 @@
 {% extends "rh/base_rh.html" %}
 {% load rh_extras %}
-{% block titulo_rh %}Espelho de ponto · {{ c.nome }}{% endblock %}
+{% block titulo_rh %}Ponto · {{ c.nome }}{% endblock %}
 
 {% block rh_conteudo %}
-<section class="ls-page-hero">
-  <div class="ls-page-hero-copy">
-    <span class="ls-page-kicker">Espelho de ponto</span>
+{% comment %}
+  O ACOMPANHAMENTO DE UMA PESSOA (o espelho, LEIA-ME-V10, seções 113 e
+  125): o período (mês ou o do cartão do relógio), os números, o que pede
+  atenção, o cartão do relógio contra o sistema e cada dia -- na LINHA DO
+  TEMPO (as barras do trabalho e do intervalo sobre a jornada prevista) ou
+  na TABELA de sempre. A conta é a da jornada da ficha, dia a dia.
+{% endcomment %}
+<section class="rh-perfil-ponto">
+  <span class="rh-avatar rh-avatar--g" aria-hidden="true">{{ c.nome|iniciais }}</span>
+  <div class="rh-perfil-texto">
+    <span class="ls-page-kicker">{% if proprio %}Meu ponto · acompanhamento{% else %}Ponto · acompanhamento{% endif %}</span>
     <h1>{{ c.nome }}</h1>
-    <p>Jornada {{ c.jornada_texto }}. Cada dia com as marcações (as de ajuste aparecem tracejadas; as desconsideradas, riscadas) e a conta pela jornada da ficha. Tolerância de 5 minutos por marcação e 10 por dia (CLT, art. 58).</p>
+    <p>{{ c.cargo }} · {{ c.get_vinculo_display }}{% if c.matricula %} · matrícula {{ c.matricula }}{% endif %} · {{ c.horas_semanais }} por semana</p>
+    <div class="rh-jornada-chips" aria-label="Jornada">
+      {% for rotulo, texto in c.jornada_por_grupo %}<span class="rh-jornada-chip"><strong>{{ rotulo }}</strong> {{ texto }}</span>{% endfor %}
+    </div>
   </div>
-  <div class="ls-page-hero-actions">
-    <a class="btn btn-success" href="{% url 'rh_espelho_imprimir' c.pk %}?mes={{ mes }}" data-no-soft-nav="true"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF para assinar</a>
+  <div class="rh-perfil-acoes">
+    <a class="btn btn-outline-secondary" href="{% url 'rh_espelho_imprimir' c.pk %}?{{ periodo.query }}" data-no-soft-nav="true"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> PDF para assinar</a>
+    {% if gere %}<button class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#rhFolhaCartao"><i class="bi bi-file-earmark-arrow-up me-1" aria-hidden="true"></i> Enviar cartão de ponto</button>{% endif %}
+    {% if proprio %}<a class="btn btn-success" href="{% url 'rh_ponto' %}#pedir-ajuste"><i class="bi bi-pencil-square me-1" aria-hidden="true"></i> Pedir ajuste</a>{% endif %}
   </div>
 </section>
 
-<section class="rh-painel">
+<section class="rh-painel" aria-label="Período e números">
   <header>
-    <nav class="rh-mes" aria-label="Mês">
-      <a class="btn btn-sm btn-outline-secondary" href="?mes={{ anterior }}" aria-label="Mês anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
-      <strong>{{ mes_texto|capfirst }}</strong>
-      <a class="btn btn-sm btn-outline-secondary" href="?mes={{ seguinte }}" aria-label="Mês seguinte"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
-    </nav>
+    {% include "rh/partes/periodo.html" %}
     {% if e.integro %}<span class="rh-selo rh-selo--ok"><i class="bi bi-link-45deg" aria-hidden="true"></i> Cadeia de marcações íntegra</span>
     {% else %}<span class="rh-selo rh-selo--perigo" title="{{ e.integridade|join:' ' }}"><i class="bi bi-exclamation-octagon" aria-hidden="true"></i> Cadeia com problema ({{ e.integridade|length }})</span>{% endif %}
   </header>
   <div class="rh-totais">
     <div class="rh-total"><strong>{{ t.trabalhado }}</strong><span>trabalhadas</span></div>
     <div class="rh-total"><strong>{{ t.esperado }}</strong><span>previstas</span></div>
+    <div class="rh-total"><strong>{{ t.normais }}</strong><span>normais</span></div>
     <div class="rh-total rh-total--extra"><strong>{{ t.extra }}</strong><span>extras (50%)</span></div>
     <div class="rh-total rh-total--extra"><strong>{{ t.extra_100 }}</strong><span>dom./feriado</span></div>
-    <div class="rh-total rh-total--debito"><strong>{{ t.debito }}</strong><span>a compensar</span></div>
-    <div class="rh-total"><strong>{{ t.atrasos }}</strong><span>atrasos · {{ t.atraso_min }}</span></div>
-    <div class="rh-total"><strong>{{ t.faltas }}</strong><span>faltas</span></div>
-    <div class="rh-total"><strong>{{ t.saldo }}</strong><span>saldo do mês</span></div>
+    <div class="rh-total"><strong>{{ t.noturno }}</strong><span>noturno (22h–5h)</span></div>
+    <div class="rh-total rh-total--debito"><strong>{{ t.debito }}</strong><span>falta e atraso</span></div>
+    <div class="rh-total"><strong>{{ t.faltas }}</strong><span>falta{{ t.faltas|pluralize }}</span></div>
+    <div class="rh-total"><strong>{{ t.atrasos }}</strong><span>atraso{{ t.atrasos|pluralize }} · {{ t.atraso_min }}</span></div>
+    <div class="rh-total{% if t.saldo_minutos < 0 %} rh-total--debito{% else %} rh-total--extra{% endif %}"><strong>{{ t.saldo }}</strong><span>saldo (banco)</span></div>
   </div>
-  {% if t.pendentes %}<p class="rh-nota"><i class="bi bi-hourglass-split" aria-hidden="true"></i> {{ t.pendentes }} ajuste{{ t.pendentes|pluralize }} esperando decisão (pontilhados): só entram na conta depois de aprovados.</p>{% endif %}
+  {% include "rh/partes/fita.html" %}
 </section>
 
-<section class="rh-painel">
-  <table class="rh-tabela-espelho">
-    <thead>
-      <tr><th>Dia</th><th>Marcações</th><th>Trabalhado</th><th>Intervalo</th><th>Atraso</th><th>Extra</th><th>Débito</th><th>Ocorrência</th></tr>
-    </thead>
-    <tbody>
-      {% for d in e.dias %}
-        <tr class="{% if not d.dia_util and not d.trabalhado %}is-folga{% endif %}{% if d.falta %} is-falta{% endif %}{% if d.em_andamento %} is-hoje{% endif %}">
-          <td class="rh-dia" data-rotulo="Dia"><strong>{{ d.data|date:"d/m" }}</strong> {{ d.semana }}</td>
-          <td data-rotulo="Marcações"{% if not d.eventos %} class="rh-sem-valor"{% endif %}>
-            <span class="rh-marcas">
-              {% for ev in d.eventos %}
-                <span class="rh-marca{% if ev.origem == 'ajuste' %} rh-marca--ajuste{% endif %}{% if ev.pendente %} rh-marca--pendente{% endif %}{% if ev.desconsiderada %} rh-marca--fora{% endif %}" title="{{ ev.rotulo }}{% if ev.origem == 'ajuste' %} · incluída por ajuste{% endif %}{% if ev.desconsiderada %} · desconsiderada por ajuste{% endif %}{% if ev.pendente %} · ajuste pendente{% endif %}">{{ ev.hora|time:"H:i" }}</span>
-              {% empty %}<span class="rh-nota">—</span>{% endfor %}
-            </span>
-          </td>
-          <td class="rh-num{% if not d.trabalhado %} rh-sem-valor{% endif %}" data-rotulo="Trabalhado">{% if d.trabalhado %}{{ d.trabalhado|hm }}{% else %}—{% endif %}</td>
-          <td class="rh-num{% if not d.intervalo %} rh-sem-valor{% endif %}" data-rotulo="Intervalo">{% if d.intervalo %}{{ d.intervalo|hm }}{% else %}—{% endif %}</td>
-          <td class="rh-num{% if not d.atraso %} rh-sem-valor{% endif %}" data-rotulo="Atraso">{% if d.atraso %}{{ d.atraso|hm }}{% else %}—{% endif %}</td>
-          <td class="rh-num{% if not d.extra and not d.extra_100 %} rh-sem-valor{% endif %}" data-rotulo="Extra">{% if d.extra_100 %}{{ d.extra_100|hm }} (100%){% elif d.extra %}{{ d.extra|hm }}{% else %}—{% endif %}</td>
-          <td class="rh-num{% if not d.debito %} rh-sem-valor{% endif %}" data-rotulo="Débito">{% if d.debito %}{{ d.debito|hm }}{% else %}—{% endif %}</td>
-          <td data-rotulo="Ocorrência"{% if not d.feriado and not d.abono and not d.falta and not d.incompleto and not d.intervalo_curto and not d.em_andamento and not d.fora_do_contrato %} class="rh-sem-valor"{% endif %}>
-            {% if d.feriado %}<span class="rh-selo rh-selo--info">{{ d.feriado }}</span>{% endif %}
-            {% if d.abono %}<span class="rh-selo rh-selo--info">Abono · {{ d.abono.get_motivo_abono_display }}</span>{% endif %}
-            {% if d.falta %}<span class="rh-selo rh-selo--perigo">Falta</span>{% endif %}
-            {% if d.incompleto %}<span class="rh-selo rh-selo--alerta">Marcação faltando</span>{% endif %}
-            {% if d.intervalo_curto %}<span class="rh-selo rh-selo--alerta">Intervalo &lt; 1h</span>{% endif %}
-            {% if d.em_andamento %}<span class="rh-selo rh-selo--ok">Em andamento</span>{% endif %}
-            {% if d.fora_do_contrato %}<span class="rh-nota">fora do contrato</span>{% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% if proprio %}<p class="rh-nota">Algo errado? <a href="{% url 'rh_ponto' %}">Peça um ajuste</a> com a justificativa: a marcação original continua visível ao lado da correção.</p>{% endif %}
+{% if alertas %}
+<section class="rh-alertas" aria-label="O que pede atenção">
+  {% for a in alertas %}
+    <article class="rh-alerta rh-alerta--{{ a.nivel }}">
+      <span class="rh-alerta-icone" aria-hidden="true"><i class="bi {{ a.icone }}"></i></span>
+      <div><strong>{{ a.titulo }}</strong><span>{{ a.texto }}</span></div>
+    </article>
+  {% endfor %}
 </section>
+{% endif %}
+
+{% for cp in comparacoes %}
+<section class="rh-painel" aria-label="Cartão do relógio">
+  <header>
+    <h2><i class="bi bi-file-earmark-check" aria-hidden="true"></i> Cartão do relógio · {{ cp.cartao.periodo_texto }}</h2>
+    <div class="rh-doc-acoes">
+      {% if cp.cartao.documento_id and gere or cp.cartao.documento_id and proprio %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_documento_arquivo' cp.cartao.documento_id %}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i> PDF</a>{% endif %}
+      {% if not cp.mesmo_periodo %}<a class="btn btn-sm btn-outline-secondary" href="?de={{ cp.cartao.inicio|date:'Y-m-d' }}&amp;ate={{ cp.cartao.fim|date:'Y-m-d' }}">Ver só o período do cartão</a>{% endif %}
+      {% if gere %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_cartoes' %}?ids={{ cp.cartao.importacao_id }}">Importação</a>{% endif %}
+    </div>
+  </header>
+  {% include "rh/partes/comparacao.html" with r=cp.r titulo="Totais do cartão × conta do sistema" %}
+</section>
+{% endfor %}
+
+<section class="rh-painel rh-dias" aria-labelledby="rhDiasTitulo">
+  <header>
+    <h2 id="rhDiasTitulo"><i class="bi bi-calendar3-week" aria-hidden="true"></i> Dia a dia</h2>
+    <div class="rh-chips" role="radiogroup" aria-label="Ver como" data-rh-vista data-rh-vista-chave="rh-espelho-vista">
+      <label class="rh-chip"><input type="radio" name="rh-vista-espelho" value="linha" checked><span><i class="bi bi-bar-chart-steps" aria-hidden="true"></i> Linha do tempo</span></label>
+      <label class="rh-chip"><input type="radio" name="rh-vista-espelho" value="tabela"><span><i class="bi bi-table" aria-hidden="true"></i> Tabela</span></label>
+    </div>
+  </header>
+
+  <div class="rh-vista" data-rh-vista-painel="linha">
+    <div class="rh-regua" aria-hidden="true">
+      <span class="rh-regua-dia"></span>
+      <div class="rh-regua-horas">{% for m in regua %}<span style="left:{{ m.esquerda }}%">{{ m.texto }}</span>{% endfor %}</div>
+      <span class="rh-regua-fim"></span>
+    </div>
+    <ol class="rh-linhas-dia">
+      {% for item in dias %}{% with d=item.d l=item.linha %}
+        <li class="rh-dia-linha rh-dia--{{ d.situacao }}{% if d.em_andamento %} is-hoje{% endif %}">
+          <span class="rh-dia-data"><strong>{{ d.data|date:"d/m" }}</strong><small>{{ d.semana }}</small></span>
+          <div class="rh-trilho" role="img" aria-label="{% if d.eventos %}{% for ev in d.eventos %}{{ ev.rotulo }} {{ ev.hora|time:'H:i' }}{% if not forloop.last %}, {% endif %}{% endfor %}{% else %}sem marcação{% endif %}">
+            {% for p in l.previsto %}<span class="rh-trilho-previsto" style="left:{{ p.esquerda }}%;width:{{ p.largura }}%"></span>{% endfor %}
+            {% for b in l.barras %}<span class="rh-trilho-barra rh-trilho--{{ b.tipo }}" style="left:{{ b.esquerda }}%;width:{{ b.largura }}%" title="{{ b.texto }}"></span>{% endfor %}
+            {% if not d.eventos %}<span class="rh-trilho-vazio">{% if d.feriado %}{{ d.feriado }}{% elif d.abono %}Abono · {{ d.abono.get_motivo_abono_display }}{% elif d.falta %}Falta{% elif d.fora_do_contrato %}fora do contrato{% elif d.futuro %}—{% elif not d.dia_util %}folga{% endif %}</span>{% endif %}
+          </div>
+          <span class="rh-dia-resumo">
+            {% if d.trabalhado %}<strong>{{ d.trabalhado|hm }}</strong>{% endif %}
+            {% if d.extra %}<em class="is-ok">+{{ d.extra|hm }}</em>{% elif d.extra_100 %}<em class="is-ok">+{{ d.extra_100|hm }} 100%</em>{% elif d.debito %}<em class="is-perigo">−{{ d.debito|hm }}</em>{% endif %}
+            {% if d.incompleto %}<em class="is-alerta">{{ d.falta_texto }}</em>{% endif %}
+            {% if d.jornada_longa %}<em class="is-perigo">jornada longa</em>{% endif %}
+            {% if d.intervalo_curto %}<em class="is-alerta">intervalo curto</em>{% endif %}
+            {% if d.do_relogio %}<i class="bi bi-file-earmark-check rh-dia-relogio" title="Marcações do cartão do relógio" aria-label="do relógio"></i>{% endif %}
+          </span>
+        </li>
+      {% endwith %}{% endfor %}
+    </ol>
+    <p class="rh-nota rh-legenda"><i class="rh-trilho--trabalho"></i> trabalho <i class="rh-trilho--intervalo"></i> intervalo <i class="rh-trilho--aberto"></i> sem a marcação seguinte <i class="rh-trilho-previsto-legenda"></i> jornada prevista</p>
+  </div>
+
+  <div class="rh-vista" data-rh-vista-painel="tabela" hidden>
+    <table class="rh-tabela-espelho">
+      <thead>
+        <tr><th>Dia</th><th>Marcações</th><th>Trabalhado</th><th>Intervalo</th><th>Atraso</th><th>Extra</th><th>Débito</th><th>Ocorrência</th></tr>
+      </thead>
+      <tbody>
+        {% for d in e.dias %}
+          <tr class="{% if not d.dia_util and not d.trabalhado %}is-folga{% endif %}{% if d.falta %} is-falta{% endif %}{% if d.em_andamento %} is-hoje{% endif %}">
+            <td class="rh-dia" data-rotulo="Dia"><strong>{{ d.data|date:"d/m" }}</strong> {{ d.semana }}</td>
+            <td data-rotulo="Marcações"{% if not d.eventos %} class="rh-sem-valor"{% endif %}>
+              <span class="rh-marcas">
+                {% for ev in d.eventos %}
+                  <span class="rh-marca{% if ev.origem == 'ajuste' %} rh-marca--ajuste{% endif %}{% if ev.pendente %} rh-marca--pendente{% endif %}{% if ev.desconsiderada %} rh-marca--fora{% endif %}{% if ev.do_relogio %} rh-marca--relogio{% endif %}" title="{{ ev.rotulo }}{% if ev.do_relogio %} · {{ ev.marcacao.origem_rotulo }}{% endif %}{% if ev.origem == 'ajuste' %} · incluída por ajuste{% endif %}{% if ev.desconsiderada %} · desconsiderada por ajuste{% endif %}{% if ev.pendente %} · ajuste pendente{% endif %}">{{ ev.hora|time:"H:i" }}{% if ev.marcacao.marcador %}<sup>{{ ev.marcacao.marcador }}</sup>{% endif %}</span>
+                {% empty %}<span class="rh-nota">—</span>{% endfor %}
+              </span>
+            </td>
+            <td class="rh-num{% if not d.trabalhado %} rh-sem-valor{% endif %}" data-rotulo="Trabalhado">{% if d.trabalhado %}{{ d.trabalhado|hm }}{% else %}—{% endif %}</td>
+            <td class="rh-num{% if not d.intervalo %} rh-sem-valor{% endif %}" data-rotulo="Intervalo">{% if d.intervalo %}{{ d.intervalo|hm }}{% else %}—{% endif %}</td>
+            <td class="rh-num{% if not d.atraso %} rh-sem-valor{% endif %}" data-rotulo="Atraso">{% if d.atraso %}{{ d.atraso|hm }}{% else %}—{% endif %}</td>
+            <td class="rh-num{% if not d.extra and not d.extra_100 %} rh-sem-valor{% endif %}" data-rotulo="Extra">{% if d.extra_100 %}{{ d.extra_100|hm }} (100%){% elif d.extra %}{{ d.extra|hm }}{% else %}—{% endif %}</td>
+            <td class="rh-num{% if not d.debito %} rh-sem-valor{% endif %}" data-rotulo="Débito">{% if d.debito %}{{ d.debito|hm }}{% else %}—{% endif %}</td>
+            <td data-rotulo="Ocorrência"{% if not d.feriado and not d.abono and not d.falta and not d.incompleto and not d.intervalo_curto and not d.em_andamento and not d.fora_do_contrato %} class="rh-sem-valor"{% endif %}>
+              {% if d.feriado %}<span class="rh-selo rh-selo--info">{{ d.feriado }}</span>{% endif %}
+              {% if d.abono %}<span class="rh-selo rh-selo--info">Abono · {{ d.abono.get_motivo_abono_display }}</span>{% endif %}
+              {% if d.falta %}<span class="rh-selo rh-selo--perigo">Falta</span>{% endif %}
+              {% if d.incompleto %}<span class="rh-selo rh-selo--alerta">Marcação faltando</span>{% endif %}
+              {% if d.intervalo_curto %}<span class="rh-selo rh-selo--alerta">Intervalo &lt; 1h</span>{% endif %}
+              {% if d.em_andamento %}<span class="rh-selo rh-selo--ok">Em andamento</span>{% endif %}
+              {% if d.fora_do_contrato %}<span class="rh-nota">fora do contrato</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="rh-nota">As de ajuste aparecem tracejadas; as desconsideradas, riscadas; as do cartão do relógio, com a marca dele ao lado (I, P, M, C). Tolerância de 5 minutos por marcação e 10 por dia (CLT, art. 58, § 1º).</p>
+  </div>
+  {% if proprio %}<p class="rh-nota">Algo errado? <a href="{% url 'rh_ponto' %}#pedir-ajuste">Peça um ajuste</a> com a justificativa: a marcação original continua visível ao lado da correção.</p>{% endif %}
+</section>
+
+{% if gere %}{% include "rh/partes/folha_cartao.html" with colaborador=c %}{% endif %}
 {% endblock %}

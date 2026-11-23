@@ -27,7 +27,8 @@
     <div class="rh-doc-acoes">
       {% if gere %}<a class="btn btn-success" href="{% url 'rh_colaborador_editar' c.pk %}"><i class="bi bi-pencil-square me-1" aria-hidden="true"></i> Editar</a>{% endif %}
       <a class="btn btn-outline-secondary" href="{% url 'rh_ficha_imprimir' c.pk %}" data-no-soft-nav="true"><i class="bi bi-file-earmark-pdf me-1" aria-hidden="true"></i> Ficha em PDF</a>
-      <a class="btn btn-outline-secondary" href="{% url 'rh_espelho' c.pk %}"><i class="bi bi-calendar3 me-1" aria-hidden="true"></i> Espelho de ponto</a>
+      <a class="btn btn-outline-secondary" href="{% url 'rh_espelho' c.pk %}"><i class="bi bi-graph-up me-1" aria-hidden="true"></i> Ponto</a>
+      {% if gere %}<button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#rhFolhaCartao"><i class="bi bi-file-earmark-arrow-up me-1" aria-hidden="true"></i> Enviar cartão de ponto (PDF)</button>{% endif %}
     </div>
   </div>
 </section>
@@ -95,7 +96,7 @@
       {% if c.especialidades %}<div><dt>Especialidades</dt><dd>{{ c.especialidades_rotulos|join:", " }}</dd></div>{% endif %}
       <div><dt>Vínculo</dt><dd>{{ c.get_vinculo_display }}</dd></div>
       <div><dt>Admissão</dt><dd>{{ c.data_admissao|date:"d/m/Y" }}</dd></div>
-      {% if "jornada" in partes %}<div><dt>Jornada</dt><dd>{{ c.jornada_texto }}</dd></div>{% endif %}
+      <div><dt>Matrícula (relógio)</dt><dd>{{ c.matricula|default:"—" }}</dd></div>
       {% if "conta" in partes %}
         <div><dt>Conta do painel</dt><dd>{% if c.usuario %}{{ c.usuario.username }}{% else %}Sem conta (assina e bate o ponto pelo link){% endif %}</dd></div>
         <div><dt>Nome na produção</dt><dd>{% if c.colaborador_producao %}{{ c.colaborador_producao.nome }}{% else %}—{% endif %}</dd></div>
@@ -128,11 +129,49 @@
   {% endif %}
 </div>
 
+{% if "jornada" in partes %}
+<section class="rh-painel" id="ponto" aria-labelledby="rhJornada">
+  <header>
+    <h2 id="rhJornada"><i class="bi bi-clock" aria-hidden="true"></i> Jornada e ponto</h2>
+    <span class="rh-selo">{{ c.horas_semanais }} por semana</span>
+  </header>
+  <div class="rh-semana" aria-label="Jornada de cada dia">
+    {% for rotulo, texto in c.jornada_por_grupo %}
+      <div class="rh-semana-dia"><strong>{{ rotulo }}</strong><span>{{ texto }}</span></div>
+    {% empty %}
+      <p class="rh-nota">Sem dias de jornada na ficha.</p>
+    {% endfor %}
+  </div>
+  {% if not c.jornada_semana %}<p class="rh-nota"><i class="bi bi-info-circle" aria-hidden="true"></i> Jornada igual todos os dias. Para a sexta que sai mais cedo ou o sábado de meio período, use “horário diferente em cada dia” na edição — ou envie o cartão do relógio, que traz o horário de cada dia.</p>{% endif %}
+  {% if gere %}
+    <h3>Cartões de ponto do relógio</h3>
+    <ul class="rh-linhas">
+      {% for k in cartoes %}
+        <li>
+          <span class="rh-icone-item{% if k.importado %} rh-icone-item--feita{% endif %}" aria-hidden="true"><i class="bi {% if k.importado %}bi-file-earmark-check{% else %}bi-hourglass-split{% endif %}"></i></span>
+          <span class="rh-linha-principal">
+            <strong>{{ k.periodo_texto }}</strong>
+            <small>{% if k.importado %}Importado em {{ k.importado_em|date:"d/m/Y H:i" }} · {{ k.resultado.criadas }} marcações{% else %}{{ k.get_situacao_display }}{% endif %}</small>
+          </span>
+          {% if k.importado %}<a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_espelho' c.pk %}?de={{ k.inicio|date:'Y-m-d' }}&amp;ate={{ k.fim|date:'Y-m-d' }}"><i class="bi bi-graph-up" aria-hidden="true"></i> Acompanhar</a>
+          {% else %}<a class="btn btn-sm btn-success" href="{% url 'rh_cartoes' %}?ids={{ k.importacao_id }}"><i class="bi bi-ui-checks" aria-hidden="true"></i> Conferir</a>{% endif %}
+        </li>
+      {% empty %}
+        <li class="rh-vazio"><i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i> Nenhum cartão de ponto enviado ainda. <button class="btn btn-sm btn-link p-0" type="button" data-bs-toggle="modal" data-bs-target="#rhFolhaCartao">Enviar o PDF</button></li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</section>
+{% endif %}
+
 {% if "documentos" in partes %}
 <section class="rh-painel" id="documentos" aria-labelledby="rhDocs">
   <header>
     <h2 id="rhDocs"><i class="bi bi-folder2-open" aria-hidden="true"></i> Documentos</h2>
-    <span class="rh-selo rh-selo--info"><i class="bi bi-shield-lock" aria-hidden="true"></i> Arquivos sem endereço público · cada abertura fica registrada</span>
+    <div class="rh-doc-acoes">
+      <span class="rh-selo rh-selo--info"><i class="bi bi-shield-lock" aria-hidden="true"></i> Sem endereço público · cada abertura fica registrada</span>
+      {% if form_documento %}<button class="btn btn-sm btn-success" type="button" data-bs-toggle="modal" data-bs-target="#rhFolhaDocumento"><i class="bi bi-cloud-arrow-up me-1" aria-hidden="true"></i> Enviar documento</button>{% endif %}
+    </div>
   </header>
   <h3>O que a pasta precisa ter ({{ c.get_vinculo_display }})</h3>
   <ul class="rh-check">
@@ -159,15 +198,15 @@
   <ul class="rh-docs">
     {% for d in documentos %}
       <li class="rh-doc">
-        <span class="rh-doc-icone" aria-hidden="true"><i class="bi {% if d.eh_pdf %}bi-file-earmark-pdf{% else %}bi-file-earmark-image{% endif %}"></i></span>
+        <span class="rh-doc-icone" aria-hidden="true"><i class="bi {% if d.tipo == 'cartao_ponto' %}bi-file-earmark-check{% elif d.eh_pdf %}bi-file-earmark-pdf{% else %}bi-file-earmark-image{% endif %}"></i></span>
         <span class="rh-doc-texto">
           <strong>{{ d.rotulo }}</strong>
           <small>{{ d.tamanho_texto }} · enviado em {{ d.enviado_em|date:"d/m/Y" }}{% if d.enviado_por %} por {{ d.enviado_por.get_full_name|default:d.enviado_por.username }}{% endif %}{% if d.validade %} · {% if d.vencido %}venceu{% else %}vale até{% endif %} {{ d.validade|date:"d/m/Y" }}{% endif %}</small>
         </span>
         <span class="rh-doc-acoes">
           <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_documento_arquivo' d.pk %}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-eye" aria-hidden="true"></i> Abrir</a>
-          {% if gere and d.tipo != "termo" %}
-          <form method="post" action="{% url 'rh_documento_remover' d.pk %}" class="rh-inline"
+          {% if gere and d.tipo != "termo" and d.tipo != "cartao_ponto" %}
+          <form method="post" action="{% url 'rh_documento_remover' d.pk %}" class="rh-inline" data-rh-ligar data-rh-carregando="Removendo…"
                 data-ls-confirmar="O arquivo sai do armazenamento. Fica na trilha quem removeu e quando."
                 data-ls-confirmar-titulo="Remover {{ d.rotulo }}" data-ls-confirmar-botao="Remover" data-ls-perigo>
             {% csrf_token %}
@@ -181,25 +220,50 @@
     {% endfor %}
   </ul>
 
-  {% if form_documento %}
-  <form class="rh-envio rh-form" method="post" action="{% url 'rh_documento_enviar' c.pk %}" enctype="multipart/form-data" data-rh-envio>
-    {% csrf_token %}
-    <div class="rh-campos">
-      {% include "rh/partes/chips.html" with campo=form_documento.tipo %}
-      {% include "rh/partes/campo.html" with campo=form_documento.arquivo largura=6 ajuda="PDF, JPG, PNG ou WEBP, até 10 MB. O conteúdo é conferido, não só o nome." %}
-      {% include "rh/partes/campo.html" with campo=form_documento.descricao largura=6 ajuda="Obrigatória em “Outro documento”." %}
-      {% include "rh/partes/campo.html" with campo=form_documento.emissao largura=3 %}
-      {% include "rh/partes/campo.html" with campo=form_documento.validade largura=3 ajuda="Obrigatória no ASO e na declaração de matrícula." %}
-      <div class="rh-campo rh-campo--6">
-        <span class="rh-rotulo">&nbsp;</span>
-        <button class="btn btn-success" type="submit"><i class="bi bi-cloud-arrow-up me-1" aria-hidden="true"></i> Guardar na pasta</button>
-      </div>
-    </div>
-    <p class="rh-arquivo-nota"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i> O arquivo vai para o armazenamento privado: não tem link público, só abre por aqui, para quem pode, e cada abertura é anotada.</p>
-  </form>
-  {% endif %}
 </section>
 {% endif %}
+
+{% if form_documento %}
+<div class="modal fade rh-folha" id="rhFolhaDocumento" tabindex="-1" aria-labelledby="rhFolhaDocumentoTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <form class="modal-content rh-form" id="rhFormDocumento" method="post" action="{% url 'rh_documento_enviar' c.pk %}" enctype="multipart/form-data" data-rh-ligar data-rh-carregando="Guardando…">
+      {% csrf_token %}
+      <div class="modal-header rh-folha-cabeca">
+        <span class="rh-folha-icone" aria-hidden="true"><i class="bi bi-cloud-arrow-up"></i></span>
+        <div>
+          <h2 class="modal-title" id="rhFolhaDocumentoTitulo">Enviar documento</h2>
+          <p>Para a pasta de {{ c.primeiro_nome }} · armazenamento privado</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="visually-hidden" id="rhFormDocumentoErro" data-rh-erro role="alert"></div>
+        <div class="rh-campos">
+          {% include "rh/partes/chips.html" with campo=form_documento.tipo %}
+          <div class="rh-campo rh-campo--12">
+            <label class="rh-soltar" data-rh-soltar data-campo="arquivo">
+              <input type="file" name="arquivo" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" required data-rotulo="Arquivo">
+              <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+              <strong data-rh-soltar-titulo>Arraste o arquivo aqui ou toque para escolher</strong>
+              <small>PDF, JPG, PNG ou WEBP, até 10 MB. O conteúdo é conferido, não só o nome.</small>
+              <ul class="rh-soltar-lista" data-rh-soltar-lista></ul>
+            </label>
+          </div>
+          {% include "rh/partes/campo.html" with campo=form_documento.descricao largura=12 ajuda="Obrigatória em “Outro documento”." %}
+          {% include "rh/partes/campo.html" with campo=form_documento.emissao largura=6 %}
+          {% include "rh/partes/campo.html" with campo=form_documento.validade largura=6 ajuda="Obrigatória no ASO e na declaração de matrícula." %}
+        </div>
+        <p class="rh-arquivo-nota"><i class="bi bi-shield-lock-fill" aria-hidden="true"></i> Sem link público: só abre por aqui, para quem pode, e cada abertura é anotada. O cartão de ponto do relógio entra pelo “Enviar cartão de ponto (PDF)”, que lança o ponto junto.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" type="submit"><i class="bi bi-cloud-arrow-up me-1" aria-hidden="true"></i> Guardar na pasta</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% if gere %}{% include "rh/partes/folha_cartao.html" with colaborador=c %}{% endif %}
 
 {% if "observacoes" in partes and c.observacoes %}
 <section class="rh-painel">

@@ -29,6 +29,15 @@ from .views_ponto import (
     PedirAjusteView,
     PontoEquipeView,
 )
+from .views_cartao import (
+    CartaoCadastrarView,
+    CartaoEnviarView,
+    CartaoImportarTodosView,
+    CartaoImportarView,
+    CartoesView,
+    ImportacaoArquivoView,
+    ImportacaoDescartarView,
+)
 from .views_tarefas import SugerirView, TarefaEditarView, TarefaSituacaoView, TarefasView
 from .views_termo import (
     MeuTermoView,
@@ -62,6 +71,16 @@ urlpatterns = [
     path("rh/ponto/ajustes/<int:pk>/decidir/", DecidirAjusteView.as_view(), name="rh_ajuste_decidir"),
     path("rh/ponto/espelho/<int:pk>/", EspelhoView.as_view(), name="rh_espelho"),
     path("rh/ponto/espelho/<int:pk>/imprimir/", EspelhoImprimirView.as_view(), name="rh_espelho_imprimir"),
+
+    # ---------------- o cartão de ponto do relógio (PDF), seção 125 ----------------
+    path("rh/ponto/cartoes/", CartoesView.as_view(), name="rh_cartoes"),
+    path("rh/ponto/cartoes/enviar/", CartaoEnviarView.as_view(), name="rh_cartao_enviar"),
+    path("rh/ponto/cartoes/<int:pk>/importar-todos/", CartaoImportarTodosView.as_view(), name="rh_cartao_importar_todos"),
+    path("rh/ponto/cartoes/<int:pk>/descartar/", ImportacaoDescartarView.as_view(), name="rh_cartao_descartar"),
+    # O ÚNICO caminho até o PDF original (sem endereço público; fica na trilha).
+    path("rh/ponto/cartoes/<int:pk>/arquivo/", ImportacaoArquivoView.as_view(), name="rh_cartao_arquivo"),
+    path("rh/ponto/cartoes/cartao/<int:pk>/importar/", CartaoImportarView.as_view(), name="rh_cartao_importar"),
+    path("rh/ponto/cartoes/cartao/<int:pk>/cadastrar/", CartaoCadastrarView.as_view(), name="rh_cartao_cadastrar"),
 
     # ---------------- tarefas ----------------
     path("rh/tarefas/", TarefasView.as_view(), name="rh_tarefas"),

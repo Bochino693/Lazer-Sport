@@ -1,0 +1,71 @@
+{% comment %}
+  "Cadastrar colaborador" a partir do cartão de ponto: o que o cartão diz
+  já vem preenchido (nome, admissão, PIS quando é PIS); o CPF é o do
+  cartão (não se digita); a equipe completa o resto. Salvo, a ficha nasce
+  e o cartão é importado na mesma ida (views_cartao.CartaoCadastrarView).
+{% endcomment %}
+<div class="modal fade rh-folha" id="rhCadastro{{ c.pk }}" tabindex="-1" aria-labelledby="rhCadastroTitulo{{ c.pk }}" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <form class="modal-content" id="rhFormCadastro{{ c.pk }}" method="post" action="{% url 'rh_cartao_cadastrar' c.pk %}"
+          data-rh-ligar data-rh-carregando="Cadastrando e importando…">
+      {% csrf_token %}
+      <input type="hidden" name="forcar_cnpj" value="0" data-rh-forcar-cnpj>
+      <div class="modal-header rh-folha-cabeca">
+        <span class="rh-folha-icone" aria-hidden="true"><i class="bi bi-person-plus-fill"></i></span>
+        <div>
+          <h2 class="modal-title" id="rhCadastroTitulo{{ c.pk }}">Cadastrar {{ i.nome_cartao }}</h2>
+          <p>CPF {{ i.cpf_cartao }} · do cartão de ponto · complete o que falta</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="visually-hidden" id="rhFormCadastro{{ c.pk }}Erro" data-rh-erro role="alert"></div>
+        <div class="rh-do-cartao">
+          <span class="rh-do-cartao-titulo"><i class="bi bi-file-earmark-check" aria-hidden="true"></i> Já vem do cartão</span>
+          <span>Jornada: <strong>{{ i.semana }}</strong></span>
+          {% if c.dados.funcionario.matricula and c.dados.funcionario.matricula != "0" %}<span>Matrícula: <strong>{{ c.dados.funcionario.matricula }}</strong></span>{% endif %}
+        </div>
+        <fieldset class="rh-secao">
+          <legend><i class="bi bi-person-vcard" aria-hidden="true"></i> Identificação</legend>
+          <div class="rh-campos">
+            {% include "rh/partes/campo.html" with campo=form.nome largura=8 %}
+            {% include "rh/partes/campo.html" with campo=form.data_nascimento %}
+            {% include "rh/partes/campo.html" with campo=form.rg %}
+            {% include "rh/partes/campo.html" with campo=form.rg_orgao %}
+            {% include "rh/partes/campo.html" with campo=form.pis ajuda="Obrigatório na CLT e no temporário" %}
+          </div>
+        </fieldset>
+        <fieldset class="rh-secao">
+          <legend><i class="bi bi-briefcase" aria-hidden="true"></i> Trabalho</legend>
+          <div class="rh-campos">
+            {% include "rh/partes/campo.html" with campo=form.cargo largura=8 %}
+            {% include "rh/partes/campo.html" with campo=form.data_admissao %}
+            {% include "rh/partes/chips.html" with campo=form.setor %}
+            {% include "rh/partes/chips.html" with campo=form.vinculo %}
+          </div>
+        </fieldset>
+        <fieldset class="rh-secao">
+          <legend><i class="bi bi-house-door" aria-hidden="true"></i> Endereço e contato</legend>
+          <div class="rh-campos">
+            {% include "rh/partes/campo.html" with campo=form.cep largura=3 %}
+            {% include "rh/partes/campo.html" with campo=form.logradouro largura=6 %}
+            {% include "rh/partes/campo.html" with campo=form.numero largura=3 %}
+            {% include "rh/partes/campo.html" with campo=form.complemento %}
+            {% include "rh/partes/campo.html" with campo=form.bairro %}
+            {% include "rh/partes/campo.html" with campo=form.cidade largura=3 %}
+            {% include "rh/partes/campo.html" with campo=form.uf largura=2 %}
+            {% include "rh/partes/campo.html" with campo=form.telefone %}
+            {% include "rh/partes/campo.html" with campo=form.emergencia_nome %}
+            {% include "rh/partes/campo.html" with campo=form.emergencia_telefone %}
+            {% include "rh/partes/campo.html" with campo=form.emergencia_parentesco %}
+          </div>
+        </fieldset>
+        <p class="rh-nota"><i class="bi bi-info-circle" aria-hidden="true"></i> Salário, banco, documentos e o termo de exclusividade ficam para a ficha, depois.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Cadastrar e importar</button>
+      </div>
+    </form>
+  </div>
+</div>

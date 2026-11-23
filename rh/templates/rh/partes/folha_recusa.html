@@ -1,0 +1,29 @@
+{# A folha do motivo da recusa de um ajuste: o botão "Recusar" (data-rh-recusar) põe o endereço e o resumo aqui e abre. #}
+<div class="modal fade rh-folha" id="rhFolhaRecusa" tabindex="-1" aria-labelledby="rhFolhaRecusaTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form class="modal-content" id="rhFormRecusa" method="post" action="" data-rh-ligar data-rh-carregando="Recusando…">
+      {% csrf_token %}
+      <input type="hidden" name="decisao" value="recusar">
+      <input type="hidden" name="voltar" value="{{ request.get_full_path }}">
+      <div class="modal-header rh-folha-cabeca">
+        <span class="rh-folha-icone rh-folha-icone--perigo" aria-hidden="true"><i class="bi bi-x-octagon"></i></span>
+        <div>
+          <h2 class="modal-title" id="rhFolhaRecusaTitulo">Recusar o ajuste</h2>
+          <p data-rh-recusa-resumo>—</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="visually-hidden" id="rhFormRecusaErro" data-rh-erro role="alert"></div>
+        <div class="rh-campo rh-campo--12">
+          <label for="rhRecusaMotivo">Motivo (o colaborador vai ler)</label>
+          <textarea class="form-control" id="rhRecusaMotivo" name="resposta" rows="3" minlength="5" maxlength="500" required data-rotulo="Motivo" placeholder="Ex.: o atestado não foi entregue no RH"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger"><i class="bi bi-x-lg me-1" aria-hidden="true"></i> Recusar</button>
+      </div>
+    </form>
+  </div>
+</div>

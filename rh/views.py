@@ -16,18 +16,20 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Q
-from django.http import Http404, HttpResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import View
 
 from sistema_interno.permissoes import FINANCEIRO, GESTAO, NOMES_DOS_GRUPOS
+from sistema_interno.utils import pede_json
 from sistema_interno.views import InternoRequiredMixin
 
 from . import acesso, servicos, termo as svc_termo
 from .forms import ColaboradorForm, DocumentoForm
 from .models import (
+    CartaoPonto,
     Colaborador,
     DocumentoColaborador,
     Especialidade,
@@ -94,6 +96,49 @@ class BaseRH(InternoRequiredMixin, View):
 
     def responder(self, request, modelo, **extra):
         return sem_cache(render(request, modelo, self.contexto(request, **extra)))
+
+    # ---- as respostas de app (LEIA-ME-V10, seções 123 e 125) ----
+    # O formulário do RH vai por fetch (rh.js liga com `Painel.ligar`): o
+    # erro volta como JANELA, com o título, o campo que acende e o botão
+    # que resolve; o deu-certo é toast (ou a janela do resultado, quando
+    # há o que ler). Sem JavaScript, o mesmo POST volta para a tela com o
+    # recado (o `messages` vira toast).
+    def ok(self, request, mensagem, *, voltar="", ir="", janela=None, **extras):
+        if pede_json(request):
+            corpo = {"status": "sucesso", "msg": mensagem}
+            if ir:
+                corpo["ir"] = ir
+            if janela:
+                corpo["janela"] = janela
+            corpo.update({k: v for k, v in extras.items() if k not in ("status", "msg")})
+            return JsonResponse(corpo)
+        messages.success(request, mensagem)
+        return redirect(ir or voltar or "rh_inicio")
+
+    def falhou(self, request, mensagem, *, titulo="", campo="", acao=None, voltar="", status=400, lista=None):
+        if pede_json(request):
+            corpo = {"status": "erro", "msg": mensagem}
+            if titulo:
+                corpo["titulo"] = titulo
+            if campo:
+                corpo["campo"] = campo
+            if acao:
+                corpo["acao"] = acao
+            if lista:
+                corpo["lista"] = lista
+            return JsonResponse(corpo, status=status)
+        messages.error(request, mensagem, extra_tags=f"titulo:{titulo}" if titulo else "")
+        return redirect(voltar or "rh_inicio")
+
+    def falhou_form(self, request, form, *, titulo="Confira antes de salvar", voltar="", prefixo=""):
+        """O primeiro erro do formulário, com o campo dele aceso."""
+        campo, mensagens = next(iter(form.errors.items()))
+        rotulo = form.fields[campo].label if campo in form.fields else ""
+        texto = f"{rotulo}: {mensagens[0]}" if rotulo and campo != "__all__" else mensagens[0]
+        outros = [f"{(form.fields[c].label if c in form.fields else '')}: {m[0]}".strip(": ")
+                  for c, m in list(form.errors.items())[1:6]]
+        return self.falhou(request, texto, titulo=titulo, campo="" if campo == "__all__" else prefixo + campo,
+                           voltar=voltar, lista=outros or None)
 
 
 # ======================================================================
@@ -276,6 +321,10 @@ class FichaView(BaseRH):
             "tarefas_abertas": colaborador.tarefas.exclude(situacao="feita").count(),
             "conta_sem_funcao": self._conta_sem_funcao(colaborador),
             "tipos_documento": [c for c in TipoDocumento.choices if c[0] != TipoDocumento.TERMO],
+            "cartoes": (
+                list(colaborador.cartoes_ponto.order_by("-inicio")[:6])
+                if acesso.gere(request.user) and "jornada" in partes else []
+            ),
         }
         return self.responder(request, "rh/ficha.html", **contexto)
 
@@ -324,11 +373,10 @@ class DocumentoEnviarView(BaseRH):
 
     def post(self, request, pk):
         colaborador = get_object_or_404(Colaborador, pk=pk)
+        voltar = reverse("rh_ficha", args=[pk]) + "#documentos"
         form = DocumentoForm(request.POST, request.FILES, colaborador=colaborador)
         if not form.is_valid():
-            erros = "; ".join(m for lista in form.errors.values() for m in lista)
-            messages.error(request, f"O documento não foi guardado: {erros}", extra_tags="titulo:Documento recusado")
-            return redirect(reverse("rh_ficha", args=[pk]) + "#documentos")
+            return self.falhou_form(request, form, titulo="Documento recusado", voltar=voltar)
         dados = form.cleaned_data
         documento = servicos.guardar_documento(
             colaborador, form.conferido, tipo=dados["tipo"], descricao=dados.get("descricao", ""),
@@ -338,8 +386,7 @@ class DocumentoEnviarView(BaseRH):
             request, RegistroRH.Acao.DOC_ENVIADO, colaborador=colaborador, documento=documento,
             descricao=f"{documento.rotulo} · {documento.tamanho_texto} · SHA-256 {documento.sha256[:12]}…",
         )
-        messages.success(request, f"{documento.rotulo} guardado na pasta de {colaborador.primeiro_nome}.")
-        return redirect(reverse("rh_ficha", args=[pk]) + "#documentos")
+        return self.ok(request, f"{documento.rotulo} guardado na pasta de {colaborador.primeiro_nome}.", voltar=voltar)
 
 
 class DocumentoArquivoView(BaseRH):
@@ -384,17 +431,20 @@ class DocumentoRemoverView(BaseRH):
 
     def post(self, request, pk):
         documento = get_object_or_404(DocumentoColaborador.objects.select_related("colaborador"), pk=pk)
+        voltar = reverse("rh_ficha", args=[documento.colaborador_id]) + "#documentos"
         if hasattr(documento, "termo") and documento.termo is not None and documento.termo.assinado:
-            messages.error(request, "O PDF do termo assinado não se remove: ele é a prova da assinatura.")
-            return redirect(reverse("rh_ficha", args=[documento.colaborador_id]) + "#documentos")
+            return self.falhou(request, "O PDF do termo assinado não se remove: ele é a prova da assinatura.",
+                               titulo="Não dá para remover", voltar=voltar, status=409)
+        if documento.tipo == TipoDocumento.CARTAO_PONTO and CartaoPonto.objects.filter(documento=documento).exists():
+            return self.falhou(request, "Este é o cartão de ponto do relógio de onde vieram marcações do ponto: "
+                               "ele fica como prova do que entrou.", titulo="Não dá para remover", voltar=voltar, status=409)
         colaborador = documento.colaborador
         servicos.registrar(
             request, RegistroRH.Acao.DOC_REMOVIDO, colaborador=colaborador,
             descricao=f"{documento.rotulo} (#{documento.pk}, enviado em {timezone.localtime(documento.enviado_em):%d/%m/%Y})",
         )
         documento.delete()
-        messages.success(request, "Documento removido. O registro de quem removeu fica na trilha da ficha.")
-        return redirect(reverse("rh_ficha", args=[colaborador.pk]) + "#documentos")
+        return self.ok(request, "Documento removido. O registro de quem removeu fica na trilha da ficha.", voltar=voltar)
 
 
 class DocumentosView(BaseRH):
