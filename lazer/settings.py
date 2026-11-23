@@ -206,6 +206,9 @@ MIDDLEWARE = [
     # teria onde ser guardada.
     "core.middleware.LojaSomenteDeClienteMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # Foto do Cloudinary que não chega não fica quebrada: entra a cópia local
+    # ou o quadro "Foto em atualização" (core/fotos_reserva.py, seção 128).
+    "core.middleware.FotoReservaMiddleware",
 ]
 
 ROOT_URLCONF = "lazer.urls"
