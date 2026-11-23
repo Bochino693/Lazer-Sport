@@ -1,0 +1,46 @@
+{% comment %}
+  A FOLHA "ENVIAR CARTÃO DE PONTO (PDF)" (LEIA-ME-V10, seção 125): cartão
+  no meio no PC, folha que sobe de baixo no celular. Um ou vários PDFs; o
+  servidor lê cada um aqui mesmo (sem serviço de fora), acha a ficha pelo
+  CPF ou pelo PIS e abre a conferência. `colaborador` (opcional): enviado
+  pela ficha -- se o CPF do cartão for de outra pessoa, a conferência avisa.
+  O botão que abre: data-bs-toggle="modal" data-bs-target="#rhFolhaCartao".
+{% endcomment %}
+<div class="modal fade rh-folha" id="rhFolhaCartao" tabindex="-1" aria-labelledby="rhFolhaCartaoTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+    <form class="modal-content" id="rhFormCartao" method="post" action="{% url 'rh_cartao_enviar' %}" enctype="multipart/form-data"
+          data-rh-ligar data-rh-carregando="Lendo o cartão…">
+      {% csrf_token %}
+      <input type="hidden" name="voltar" value="{{ request.get_full_path }}">
+      {% if colaborador %}<input type="hidden" name="colaborador" value="{{ colaborador.pk }}">{% endif %}
+      <div class="modal-header rh-folha-cabeca">
+        <span class="rh-folha-icone" aria-hidden="true"><i class="bi bi-file-earmark-arrow-up"></i></span>
+        <div>
+          <h2 class="modal-title" id="rhFolhaCartaoTitulo">Enviar cartão de ponto</h2>
+          <p>O PDF que o sistema do relógio (REP-P) exporta{% if colaborador %} · {{ colaborador.primeiro_nome }}{% endif %}.</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="visually-hidden" id="rhFormCartaoErro" data-rh-erro role="alert"></div>
+        <label class="rh-soltar" data-rh-soltar data-campo="arquivos">
+          <input type="file" name="arquivos" accept=".pdf,application/pdf" multiple required data-rotulo="Arquivo do cartão de ponto">
+          <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+          <strong data-rh-soltar-titulo>Arraste o PDF aqui ou toque para escolher</strong>
+          <small>Um ou vários arquivos (um com a equipe inteira também serve), até 10 MB cada.</small>
+          <ul class="rh-soltar-lista" data-rh-soltar-lista></ul>
+        </label>
+        <ul class="rh-passos" aria-label="O que acontece">
+          <li><i class="bi bi-search" aria-hidden="true"></i><span><strong>Acha a ficha</strong> pelo CPF (ou pelo PIS), nunca pelo nome.</span></li>
+          <li><i class="bi bi-ui-checks" aria-hidden="true"></i><span><strong>Preenche o vazio</strong> da ficha (PIS, matrícula, jornada de cada dia). O que já está preenchido e diverge, você escolhe.</span></li>
+          <li><i class="bi bi-fingerprint" aria-hidden="true"></i><span><strong>Lança o ponto</strong> com a origem “relógio”, sem repetir o que já está lá e sem mexer em nenhuma marcação.</span></li>
+          <li><i class="bi bi-shield-lock" aria-hidden="true"></i><span><strong>Guarda o PDF</strong> na pasta da pessoa, sem endereço público.</span></li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success"><i class="bi bi-upload me-1" aria-hidden="true"></i> Ler o cartão</button>
+      </div>
+    </form>
+  </div>
+</div>

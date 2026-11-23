@@ -1,12 +1,13 @@
 {% comment %}
-  Aprovar ou recusar um ajuste de ponto (Gestão). Recusar pede o motivo,
-  que o colaborador lê; os dois passam pela folha de confirmação do
-  LSAviso (nunca confirm()). Ninguém decide o próprio ajuste (o servidor
-  confere de novo).
+  Aprovar ou recusar um ajuste de ponto (Gestão). Aprovar passa pela folha
+  de confirmação do LSAviso; recusar abre a folha do motivo (que o
+  colaborador lê) -- rh/partes/folha_recusa.html, uma por tela. Os dois vão
+  por fetch: o erro volta como janela; o deu-certo, toast. Ninguém decide
+  o próprio ajuste (o servidor confere de novo).
 {% endcomment %}
 {% if acesso_rh.rh %}{% if a.colaborador.usuario_id != request.user.pk or request.user.is_superuser %}
 <div class="rh-doc-acoes">
-  <form method="post" action="{% url 'rh_ajuste_decidir' a.pk %}" class="rh-inline"
+  <form method="post" action="{% url 'rh_ajuste_decidir' a.pk %}" class="rh-inline" data-rh-ligar data-rh-carregando="Aprovando…"
         data-ls-confirmar="{{ a.colaborador.primeiro_nome }}: {{ a.resumo }} em {{ a.data|date:'d/m/Y' }}. Fica registrado quem aprovou."
         data-ls-confirmar-titulo="Aprovar o ajuste" data-ls-confirmar-botao="Aprovar">
     {% csrf_token %}
@@ -14,17 +15,10 @@
     <input type="hidden" name="voltar" value="{{ voltar }}">
     <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-check-lg" aria-hidden="true"></i> Aprovar</button>
   </form>
-  <details class="rh-recusa">
-    <summary class="btn btn-sm btn-outline-danger"><i class="bi bi-x-lg" aria-hidden="true"></i> Recusar</summary>
-    <form method="post" action="{% url 'rh_ajuste_decidir' a.pk %}" class="rh-recusa-form">
-      {% csrf_token %}
-      <input type="hidden" name="decisao" value="recusar">
-      <input type="hidden" name="voltar" value="{{ voltar }}">
-      <label class="visually-hidden" for="rhRecusa{{ a.pk }}">Motivo da recusa</label>
-      <input class="form-control form-control-sm" id="rhRecusa{{ a.pk }}" name="resposta" minlength="5" maxlength="500" required placeholder="Motivo (o colaborador vai ler)">
-      <button type="submit" class="btn btn-sm btn-danger">Recusar</button>
-    </form>
-  </details>
+  <button type="button" class="btn btn-sm btn-outline-danger" data-rh-recusar="{% url 'rh_ajuste_decidir' a.pk %}"
+          data-rh-recusar-texto="{{ a.colaborador.primeiro_nome }} · {{ a.data|date:'d/m/Y' }} · {{ a.resumo }}">
+    <i class="bi bi-x-lg" aria-hidden="true"></i> Recusar
+  </button>
 </div>
 {% else %}
 <span class="rh-selo">outra pessoa da Gestão decide</span>

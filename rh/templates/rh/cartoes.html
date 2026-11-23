@@ -1,0 +1,79 @@
+{% extends "rh/base_rh.html" %}
+{% load rh_extras %}
+{% block titulo_rh %}Cartão de ponto · conferência{% endblock %}
+
+{% block rh_conteudo %}
+{% comment %}
+  A CONFERÊNCIA DO CARTÃO DE PONTO DO RELÓGIO (LEIA-ME-V10, seção 125). Um
+  bloco por arquivo; dentro, um cartão por pessoa: a ficha achada (pelo CPF
+  ou pelo PIS), o que entra na ficha sozinho, o que diverge (chips para
+  escolher), a prévia do que vai para o ponto e o "Importar". Quem não tem
+  ficha ganha "Cadastrar colaborador" com os dados do cartão. Importado, o
+  cartão mostra o que entrou e a comparação com o sistema.
+{% endcomment %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Ponto · cartão do relógio (REP-P)</span>
+    <h1>{% if so_estes %}Conferir e importar{% else %}Cartões de ponto recebidos{% endif %}</h1>
+    <p>Cada pessoa do PDF, casada com a ficha pelo CPF (ou pelo PIS). O vazio da ficha entra sozinho; o que diverge, você escolhe. As marcações entram com a origem “relógio” e nada do que já está no ponto é alterado.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a class="btn btn-outline-secondary" href="{% url 'rh_ponto_equipe' %}"><i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Ponto da equipe</a>
+    <button class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#rhFolhaCartao"><i class="bi bi-file-earmark-arrow-up me-1" aria-hidden="true"></i> Enviar cartão de ponto (PDF)</button>
+  </div>
+</section>
+
+{% for b in blocos %}
+<section class="rh-painel rh-arquivo" aria-labelledby="rhArquivo{{ b.imp.pk }}">
+  <header class="rh-arquivo-topo">
+    <span class="rh-doc-icone" aria-hidden="true"><i class="bi bi-file-earmark-pdf"></i></span>
+    <div class="rh-arquivo-nome">
+      <h2 id="rhArquivo{{ b.imp.pk }}">{{ b.imp.nome_original|default:"cartão de ponto.pdf" }}</h2>
+      <small>{{ b.imp.paginas }} página{{ b.imp.paginas|pluralize }} · {{ b.imp.tamanho_texto }} · enviado em {{ b.imp.enviado_em|date:"d/m/Y H:i" }}{% if b.imp.enviado_por %} por {{ b.imp.enviado_por.get_full_name|default:b.imp.enviado_por.username }}{% endif %} · {{ b.itens|length }} pessoa{{ b.itens|length|pluralize }}</small>
+    </div>
+    <div class="rh-arquivo-acoes">
+      <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_cartao_arquivo' b.imp.pk %}" target="_blank" rel="noopener" data-no-soft-nav="true"><i class="bi bi-eye me-1" aria-hidden="true"></i> Abrir o PDF</a>
+      {% if b.prontos > 1 %}
+        <form method="post" action="{% url 'rh_cartao_importar_todos' b.imp.pk %}" class="rh-inline" data-rh-ligar data-rh-carregando="Importando…"
+              data-ls-confirmar="As marcações dos {{ b.prontos }} cartões prontos entram no ponto (com as escolhas padrão: o que diverge fica como está na ficha)."
+              data-ls-confirmar-titulo="Importar os {{ b.prontos }} cartões" data-ls-confirmar-botao="Importar">
+          {% csrf_token %}
+          <button class="btn btn-sm btn-success" type="submit"><i class="bi bi-box-arrow-in-down me-1" aria-hidden="true"></i> Importar os {{ b.prontos }} prontos</button>
+        </form>
+      {% endif %}
+      {% if b.pode_descartar %}
+        <form method="post" action="{% url 'rh_cartao_descartar' b.imp.pk %}" class="rh-inline" data-rh-ligar data-rh-carregando="Descartando…"
+              data-ls-confirmar="O PDF sai do armazenamento e nada dele entra no ponto. Dá para enviar de novo depois."
+              data-ls-confirmar-titulo="Descartar o arquivo" data-ls-confirmar-botao="Descartar" data-ls-perigo>
+          {% csrf_token %}
+          <button class="btn btn-sm btn-outline-danger" type="submit"><i class="bi bi-trash me-1" aria-hidden="true"></i> Descartar</button>
+        </form>
+      {% endif %}
+    </div>
+  </header>
+
+  {% if not b.imp.cnpj_confere %}
+    <div class="rh-aviso rh-aviso--perigo">
+      <i class="bi bi-building-exclamation" aria-hidden="true"></i>
+      <div><strong>CNPJ de outra empresa</strong><span>O cartão é de {{ b.imp.empresa_nome|default:"outra empresa" }} (CNPJ {{ b.itens.0.empresa_cnpj }}). Confira se o arquivo é mesmo daqui: o ponto só entra com o “Importar mesmo assim”.</span></div>
+    </div>
+  {% elif b.imp.empresa_cnpj %}
+    <p class="rh-nota rh-nota--ok"><i class="bi bi-building-check" aria-hidden="true"></i> CNPJ da fábrica conferido ({{ b.itens.0.empresa_cnpj }}).</p>
+  {% endif %}
+
+  <div class="rh-cartoes">
+    {% for i in b.itens %}{% include "rh/partes/cartao_item.html" %}{% endfor %}
+  </div>
+</section>
+{% empty %}
+<section class="rh-painel rh-vazio-grande">
+  <i class="bi bi-file-earmark-arrow-up" aria-hidden="true"></i>
+  <h2>Nenhum cartão de ponto recebido</h2>
+  <p>Exporte o “Cartão de Ponto” no sistema do relógio (PDF) e envie aqui: a ficha é achada sozinha e o ponto entra conferido.</p>
+  <button class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#rhFolhaCartao"><i class="bi bi-upload me-1" aria-hidden="true"></i> Enviar cartão de ponto (PDF)</button>
+</section>
+{% endfor %}
+
+{% include "rh/partes/folha_cartao.html" %}
+<datalist id="rhUfs">{% for uf in ufs %}<option value="{{ uf }}"></option>{% endfor %}</datalist>
+{% endblock %}

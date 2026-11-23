@@ -11,8 +11,10 @@ from django.contrib import admin
 
 from .models import (
     AjustePonto,
+    CartaoPonto,
     Colaborador,
     DocumentoColaborador,
+    ImportacaoPonto,
     MarcacaoPonto,
     RegistroRH,
     Tarefa,
@@ -53,8 +55,8 @@ class DocumentoAdmin(SoLeitura):
 
 @admin.register(MarcacaoPonto)
 class MarcacaoAdmin(SoLeitura):
-    list_display = ("colaborador", "nsr", "tipo", "momento", "ip")
-    list_filter = ("tipo", "data")
+    list_display = ("colaborador", "nsr", "tipo", "momento", "origem", "marcador", "ip")
+    list_filter = ("tipo", "origem", "data")
     search_fields = ("colaborador__nome", "hash")
 
 
@@ -84,3 +86,19 @@ class TermoAdmin(SoLeitura):
     list_display = ("colaborador", "versao", "situacao", "gerado_em", "assinado_em", "canal")
     list_filter = ("situacao", "versao")
     exclude = ("assinatura_png",)
+
+
+@admin.register(ImportacaoPonto)
+class ImportacaoPontoAdmin(SoLeitura):
+    """O PDF do relógio enviado: sem o arquivo (abre só pela tela da Gestão)."""
+
+    list_display = ("nome_original", "paginas", "empresa_cnpj", "cnpj_confere", "enviado_por", "enviado_em")
+    exclude = ("arquivo",)
+
+
+@admin.register(CartaoPonto)
+class CartaoPontoAdmin(SoLeitura):
+    list_display = ("nome", "colaborador", "inicio", "fim", "situacao", "casado_por", "importado_em")
+    list_filter = ("situacao",)
+    search_fields = ("nome", "colaborador__nome")
+    exclude = ("dados",)

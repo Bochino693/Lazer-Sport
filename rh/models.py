@@ -195,6 +195,20 @@ class Colaborador(models.Model):
         "dias de trabalho", max_length=7, default="12345",
         help_text="Dias da semana, 1 = segunda ... 7 = domingo.",
     )
+    # O horário DIA A DIA, como o relógio de ponto (REP) o tem: a sexta que
+    # sai uma hora antes, o sábado de meio período. {"1": [["08:00",
+    # "12:00"], ["13:00", "18:00"]], ..., "5": [...]} -- dia sem chave é
+    # folga. Vazio: vale a jornada simples acima (entrada, saída e
+    # intervalo, iguais em todos os dias). Preenchido, ela manda, e os
+    # campos simples passam a ser o resumo do dia mais comum.
+    jornada_semana = models.JSONField(
+        "jornada por dia da semana", default=dict, blank=True,
+        help_text="Entradas e saídas de cada dia da semana (o horário do relógio de ponto).",
+    )
+    matricula = models.CharField(
+        "matrícula", max_length=20, blank=True,
+        help_text="O número de matrícula no relógio de ponto (REP), se houver.",
+    )
 
     # ---------------- pagamento (Gestão e Financeiro) ----------------
     salario = models.DecimalField("salário", max_digits=10, decimal_places=2, null=True, blank=True)
@@ -250,8 +264,36 @@ class Colaborador(models.Model):
                       "agencia", "conta", "pix_chave", "ctps_numero", "ctps_serie"):
             setattr(self, campo, re.sub(r"\s+", " ", getattr(self, campo) or "").strip())
         self.email = (self.email or "").strip().lower()
+        self.matricula = re.sub(r"\s+", " ", self.matricula or "").strip()
+        self.jornada_semana = normalizar_jornada_semana(self.jornada_semana)
+        if self.jornada_semana:
+            self._resumir_jornada_semana()
         self.jornada_dias = "".join(sorted(set(re.sub(r"[^1-7]", "", self.jornada_dias or ""))))
         self.especialidades = [e for e in dict.fromkeys(self.especialidades or []) if e in Especialidade.values]
+
+    def _resumir_jornada_semana(self):
+        """Os campos simples viram o resumo do horário dia a dia.
+
+        Os dias de trabalho são os que têm horário; entrada, saída e
+        intervalo saem do horário mais comum da semana (o de segunda a
+        quinta, quando a sexta sai mais cedo).
+        """
+        try:
+            semana = {dia: pares_de_texto(pares) for dia, pares in self.jornada_semana.items()}
+        except ValueError:
+            return  # a conferência de `clean` diz o que está errado
+        contagem = {}
+        for dia in sorted(semana):
+            contagem.setdefault(tuple(semana[dia]), []).append(dia)
+        if not contagem:
+            return
+        comum = max(contagem, key=lambda pares: (len(contagem[pares]), -int(contagem[pares][0])))
+        self.jornada_dias = "".join(sorted(semana))
+        self.jornada_inicio = comum[0][0]
+        self.jornada_fim = comum[-1][1]
+        self.jornada_intervalo_min = sum(
+            _minutos(comum[i + 1][0]) - _minutos(comum[i][1]) for i in range(len(comum) - 1)
+        )
 
     def clean(self):
         self.normalizar()
@@ -294,6 +336,10 @@ class Colaborador(models.Model):
             erros["salario"] = "O salário não pode ser negativo."
 
         # ---- jornada ----
+        if self.jornada_semana:
+            mensagem = erro_da_jornada_semana(self.jornada_semana)
+            if mensagem:
+                erros["jornada_semana"] = mensagem
         if not self.jornada_dias:
             erros["jornada_dias"] = "Marque ao menos um dia de trabalho."
         if self.jornada_inicio and self.jornada_fim:
@@ -400,12 +446,77 @@ class Colaborador(models.Model):
 
     @property
     def jornada_texto(self):
+        if self.jornada_semana:
+            return " · ".join(f"{rotulo} {texto}" for rotulo, texto in self.jornada_por_grupo)
         return (
             f"{self.jornada_inicio:%H:%M}–{self.jornada_fim:%H:%M}, "
             f"intervalo {self.jornada_intervalo_min} min · {self.dias_rotulos}"
         )
 
+    # ---------------- o horário de cada dia ----------------
+    def pares_do_dia(self, dia: date) -> list:
+        """[(entrada, saída), ...] previstos no dia (vazio: não trabalha)."""
+        chave = str(dia.isoweekday())
+        if self.jornada_semana:
+            try:
+                return pares_de_texto(self.jornada_semana.get(chave) or [])
+            except ValueError:
+                return []
+        if chave not in (self.jornada_dias or "") or not (self.jornada_inicio and self.jornada_fim):
+            return []
+        return [(self.jornada_inicio, self.jornada_fim)]
+
+    def minutos_previstos(self, dia: date) -> int:
+        if not self.jornada_semana:
+            return self.jornada_minutos if self.trabalha_no_dia(dia) else 0
+        return sum(_minutos(fim) - _minutos(inicio) for inicio, fim in self.pares_do_dia(dia))
+
+    def inicio_previsto(self, dia: date):
+        pares = self.pares_do_dia(dia)
+        return pares[0][0] if pares else self.jornada_inicio
+
+    def fim_previsto(self, dia: date):
+        pares = self.pares_do_dia(dia)
+        return pares[-1][1] if pares else self.jornada_fim
+
+    @property
+    def jornada_por_grupo(self) -> list:
+        """[("Seg a Qui", "08:00–12:00 · 13:00–18:00"), ("Sex", "...")]: os dias iguais juntos."""
+        grupos = []
+        for valor, rotulo in DIAS_DA_SEMANA:
+            if self.jornada_semana:
+                try:
+                    pares = pares_de_texto(self.jornada_semana.get(valor) or [])
+                except ValueError:
+                    pares = []
+            else:
+                pares = [(self.jornada_inicio, self.jornada_fim)] if valor in (self.jornada_dias or "") else []
+            if not pares:
+                continue
+            texto = " · ".join(f"{a:%H:%M}–{b:%H:%M}" for a, b in pares)
+            if grupos and grupos[-1][2] == texto and int(grupos[-1][1]) == int(valor) - 1:
+                grupos[-1] = (grupos[-1][0], valor, texto, grupos[-1][3] + [rotulo])
+            else:
+                grupos.append((valor, valor, texto, [rotulo]))
+        saida = []
+        for _, _, texto, rotulos in grupos:
+            nome = rotulos[0] if len(rotulos) == 1 else (
+                f"{rotulos[0]} e {rotulos[1]}" if len(rotulos) == 2 else f"{rotulos[0]} a {rotulos[-1]}"
+            )
+            if not self.jornada_semana:
+                texto += f" (intervalo {self.jornada_intervalo_min} min)"
+            saida.append((nome, texto))
+        return saida
+
+    @property
+    def horas_semanais(self) -> str:
+        total = sum(self.minutos_previstos(date(2024, 1, d)) for d in range(1, 8))  # 1/1/2024 é segunda
+        horas, minutos = divmod(total, 60)
+        return f"{horas}h{minutos:02d}" if minutos else f"{horas}h"
+
     def trabalha_no_dia(self, dia: date) -> bool:
+        if self.jornada_semana:
+            return bool(self.pares_do_dia(dia))
         return str(dia.isoweekday()) in (self.jornada_dias or "")
 
     def empregado_em(self, dia: date) -> bool:
@@ -434,6 +545,70 @@ class Colaborador(models.Model):
 
 def _minutos(hora: time) -> int:
     return hora.hour * 60 + hora.minute
+
+
+# ---------------- a jornada dia a dia (Colaborador.jornada_semana) ----------------
+def _hora_de_texto(texto) -> time:
+    if isinstance(texto, time):
+        return texto
+    achado = re.fullmatch(r"\s*(\d{1,2}):(\d{2})\s*", str(texto or ""))
+    if not achado:
+        raise ValueError(f"hora inválida: {texto!r}")
+    hora, minuto = int(achado.group(1)), int(achado.group(2))
+    if hora > 23 or minuto > 59:
+        raise ValueError(f"hora inválida: {texto!r}")
+    return time(hora, minuto)
+
+
+def pares_de_texto(pares) -> list:
+    """[["08:00", "12:00"], ...] -> [(time, time), ...]. Levanta ValueError."""
+    saida = []
+    for par in pares or []:
+        if not isinstance(par, (list, tuple)) or len(par) != 2:
+            raise ValueError("cada período tem entrada e saída")
+        saida.append((_hora_de_texto(par[0]), _hora_de_texto(par[1])))
+    return saida
+
+
+def normalizar_jornada_semana(semana) -> dict:
+    """Só os dias com horário, chaves "1".."7", horas em "HH:MM"."""
+    if not isinstance(semana, dict):
+        return {}
+    limpo = {}
+    for chave, pares in semana.items():
+        chave = str(chave).strip()
+        if chave not in {"1", "2", "3", "4", "5", "6", "7"} or not pares:
+            continue
+        try:
+            limpo[chave] = [[f"{a:%H:%M}", f"{b:%H:%M}"] for a, b in pares_de_texto(pares)]
+        except ValueError:
+            limpo[chave] = pares  # fica como veio: `erro_da_jornada_semana` explica
+    return dict(sorted(limpo.items()))
+
+
+def erro_da_jornada_semana(semana) -> str:
+    """A mesma regra da jornada simples, dia por dia (CLT, arts. 58 e 71)."""
+    nomes = dict(DIAS_DA_SEMANA)
+    for chave, pares in sorted((semana or {}).items()):
+        nome = nomes.get(chave, chave)
+        try:
+            periodos = pares_de_texto(pares)
+        except ValueError:
+            return f"{nome}: confira as horas (formato 08:00)."
+        anterior_fim = None
+        for inicio, fim in periodos:
+            if fim <= inicio:
+                return f"{nome}: a saída das {fim:%H:%M} precisa ser depois da entrada das {inicio:%H:%M}."
+            if anterior_fim is not None and inicio < anterior_fim:
+                return f"{nome}: os períodos se sobrepõem ({anterior_fim:%H:%M} e {inicio:%H:%M})."
+            anterior_fim = fim
+        liquido = sum(_minutos(b) - _minutos(a) for a, b in periodos)
+        intervalo = sum(_minutos(periodos[i + 1][0]) - _minutos(periodos[i][1]) for i in range(len(periodos) - 1))
+        if liquido > 10 * 60:
+            return f"{nome}: passa de 10 horas de trabalho (8 h + 2 h extras, o teto da CLT)."
+        if liquido > 6 * 60 and intervalo < 30:
+            return f"{nome}: jornada acima de 6 horas pede intervalo (ao menos 1 hora; 30 minutos só com acordo coletivo)."
+    return ""
 
 
 def _erro_da_chave_pix(tipo, chave) -> str:
@@ -470,6 +645,7 @@ class TipoDocumento(models.TextChoices):
     MATRICULA = "matricula", "Declaração de matrícula (estágio)"
     CURRICULO = "curriculo", "Histórico / currículo"
     TERMO = "termo", "Termo de exclusividade (assinado)"
+    CARTAO_PONTO = "cartao_ponto", "Cartão de ponto (relógio REP)"
     OUTRO = "outro", "Outro documento"
 
 
@@ -603,6 +779,9 @@ class RegistroRH(models.Model):
         ESPELHO_IMPRESSO = "espelho_impresso", "Gerou o espelho de ponto"
         AJUSTE_DECIDIDO = "ajuste_decidido", "Decidiu ajuste de ponto"
         ACESSO_NEGADO = "acesso_negado", "Tentou abrir sem permissão"
+        CARTAO_ENVIADO = "cartao_enviado", "Enviou cartão de ponto (PDF)"
+        CARTAO_IMPORTADO = "cartao_importado", "Importou cartão de ponto"
+        CARTAO_DESCARTADO = "cartao_descartado", "Descartou cartão de ponto"
 
     momento = models.DateTimeField(auto_now_add=True, db_index=True)
     usuario = models.ForeignKey(
@@ -647,6 +826,129 @@ class TipoMarcacao(models.TextChoices):
     SAIDA = "saida", "Saída"
 
 
+class OrigemMarcacao(models.TextChoices):
+    REP = "rep", "Relógio REP-P (importado do cartão de ponto)"
+
+
+#: A legenda do cartão de ponto do relógio (Control iD, REP-P).
+MARCADORES_REP = {
+    "I": "Incluído",
+    "P": "Pré-assinalado",
+    "M": "Coletor REP-P Mobile/Web",
+    "C": "Coletor REP-P (iDFace/iDFlex)",
+}
+
+
+def caminho_do_cartao(instancia, nome_arquivo):
+    """Nome aleatório, como o dos documentos: nada de nome ou CPF no caminho."""
+    import uuid
+
+    aleatorio = uuid.uuid4().hex
+    return f"rh/cartoes/{aleatorio[:2]}/{aleatorio}.pdf"
+
+
+class ImportacaoPonto(models.Model):
+    """Um PDF de cartão de ponto enviado ao RH -- pode trazer várias pessoas.
+
+    O arquivo original fica no armazenamento privado (sem endereço; só a
+    Gestão abre, pela view, e fica na trilha). Cada pessoa achada nele é um
+    `CartaoPonto`. O mesmo arquivo (SHA-256) não entra duas vezes.
+    """
+
+    arquivo = models.FileField(upload_to=caminho_do_cartao, storage=armazenamento_privado, max_length=200)
+    nome_original = models.CharField(max_length=150, blank=True)
+    tamanho = models.PositiveIntegerField(default=0)
+    sha256 = models.CharField(max_length=64, unique=True)
+    paginas = models.PositiveSmallIntegerField(default=0)
+    empresa_nome = models.CharField(max_length=160, blank=True)
+    empresa_cnpj = models.CharField(max_length=14, blank=True)
+    cnpj_confere = models.BooleanField(default=True)
+    avisos = models.JSONField(default=list, blank=True)
+    enviado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    enviado_em = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = "Cartão de ponto enviado (PDF)"
+        verbose_name_plural = "Cartões de ponto enviados (PDF)"
+        ordering = ("-enviado_em", "-id")
+
+    def __str__(self):
+        return f"{self.nome_original or 'cartão de ponto'} · {timezone.localtime(self.enviado_em):%d/%m/%Y %H:%M}"
+
+    @property
+    def tamanho_texto(self):
+        if self.tamanho >= 1024 * 1024:
+            return f"{self.tamanho / (1024 * 1024):.1f} MB".replace(".", ",")
+        return f"{max(1, round(self.tamanho / 1024))} KB"
+
+
+class CartaoPonto(models.Model):
+    """O cartão de UMA pessoa, lido de um PDF (rh/cartao_ponto.py).
+
+    Pendente: lido, conferido, esperando o "Importar" (ou o cadastro de
+    quem não tem ficha). Importado: as marcações entraram no ponto (com
+    a origem "rep"), os campos vazios da ficha foram preenchidos e o PDF
+    da pessoa foi para a pasta dela. `dados` guarda a leitura inteira
+    (dias, marcas, totais do cartão); `resultado`, o que a importação fez.
+    """
+
+    class Estado(models.TextChoices):
+        PENDENTE = "pendente", "Esperando importar"
+        IMPORTADO = "importado", "Importado"
+        DESCARTADO = "descartado", "Descartado"
+
+    importacao = models.ForeignKey(ImportacaoPonto, on_delete=models.CASCADE, related_name="cartoes")
+    ordem = models.PositiveSmallIntegerField(default=1)
+    colaborador = models.ForeignKey(
+        Colaborador, on_delete=models.SET_NULL, null=True, blank=True, related_name="cartoes_ponto",
+    )
+    casado_por = models.CharField(max_length=4, blank=True, help_text="cpf ou pis: nunca pelo nome.")
+    nome = models.CharField(max_length=150)
+    cpf = models.CharField(max_length=11, blank=True)
+    pis = models.CharField(max_length=11, blank=True)
+    inicio = models.DateField(db_index=True)
+    fim = models.DateField()
+    dados = models.JSONField()
+    situacao = models.CharField(max_length=10, choices=Estado.choices, default=Estado.PENDENTE, db_index=True)
+    resultado = models.JSONField(default=dict, blank=True)
+    documento = models.OneToOneField(
+        DocumentoColaborador, on_delete=models.SET_NULL, null=True, blank=True, related_name="cartao_ponto",
+    )
+    importado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    importado_em = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Cartão de ponto (uma pessoa)"
+        verbose_name_plural = "Cartões de ponto (uma pessoa)"
+        ordering = ("-inicio", "importacao_id", "ordem")
+        indexes = [models.Index(fields=("colaborador", "inicio"), name="rh_cartao_periodo")]
+
+    def __str__(self):
+        return f"Cartão {self.inicio:%d/%m}–{self.fim:%d/%m/%Y} · {self.nome}"
+
+    @property
+    def importado(self):
+        return self.situacao == self.Estado.IMPORTADO
+
+    @property
+    def pendente(self):
+        return self.situacao == self.Estado.PENDENTE
+
+    @property
+    def periodo_texto(self):
+        if self.inicio.year == self.fim.year:
+            return f"{self.inicio:%d/%m} a {self.fim:%d/%m/%Y}"
+        return f"{self.inicio:%d/%m/%Y} a {self.fim:%d/%m/%Y}"
+
+    @property
+    def cpf_mascarado(self):
+        return mascarar_cpf(self.cpf) if self.cpf else "—"
+
+
 class MarcacaoQuerySet(models.QuerySet):
     def update(self, **kwargs):
         raise RegistroImutavel("Marcação de ponto não se edita: peça um ajuste.")
@@ -676,6 +978,22 @@ class MarcacaoPonto(models.Model):
     precisao_m = models.PositiveIntegerField("precisão (m)", null=True, blank=True, editable=False)
     hash_anterior = models.CharField(max_length=64, blank=True, editable=False)
     hash = models.CharField(max_length=64, unique=True, editable=False)
+    # DE ONDE VEIO. Vazio (NULL) é o painel (celular ou PC, a hora do
+    # servidor). "rep" é o relógio de ponto, importado do cartão de ponto em
+    # PDF (rh/importacao_ponto.py), com a marca que o relógio pôs ao lado
+    # da hora: (I) incluído, (P) pré-assinalado, (M) coletor mobile/web,
+    # (C) coletor iDFace/iDFlex. Colunas que aceitam NULL de propósito: no
+    # SQLite, coluna nova sem padrão entra por ALTER TABLE ADD COLUMN, sem
+    # recriar a tabela -- recriar perderia o gatilho que proíbe UPDATE e
+    # DELETE (migração 0002). Entram no hash quando preenchidas.
+    origem = models.CharField(
+        max_length=8, choices=OrigemMarcacao.choices, null=True, blank=True, editable=False,
+    )
+    marcador = models.CharField(max_length=1, null=True, blank=True, editable=False)
+    cartao = models.ForeignKey(
+        "CartaoPonto", on_delete=models.PROTECT, null=True, blank=True, editable=False,
+        related_name="marcacoes",
+    )
 
     objects = MarcacaoQuerySet.as_manager()
 
@@ -710,7 +1028,24 @@ class MarcacaoPonto(models.Model):
             _texto_decimal(self.longitude),
             str(self.precisao_m or ""),
         ]
+        if self.origem:
+            # A origem também é selada (as marcações do painel, sem origem,
+            # mantêm o hash de antes).
+            partes += [f"origem={self.origem}", self.marcador or "", str(self.cartao_id or "")]
         return hashlib.sha256("|".join(partes).encode("utf-8")).hexdigest()
+
+    @property
+    def do_relogio(self) -> bool:
+        return self.origem == OrigemMarcacao.REP
+
+    @property
+    def origem_rotulo(self) -> str:
+        if not self.origem:
+            return "Painel (celular ou PC)"
+        rotulo = OrigemMarcacao(self.origem).label
+        if self.marcador:
+            rotulo += f" · ({self.marcador}) {MARCADORES_REP.get(self.marcador, 'marca do relógio')}"
+        return rotulo
 
     @property
     def codigo(self) -> str:

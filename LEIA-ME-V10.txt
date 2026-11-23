@@ -8985,3 +8985,270 @@ Dependência nova: rjsmin (requirements.txt).
    recusada com Refazer, pagamento sem valor; clientes, estoque e O.S.) no
    PC 1366 e no celular 390, sol, lua e eclipse, sem rolagem lateral e
    sem erro de JS.
+
+125) O CARTÃO DE PONTO DO RELÓGIO EM PDF: A FICHA SE PREENCHE, O PONTO ENTRA E O RH VIRA APP
+   O PEDIDO: "esta é a folha de ponto, adapte para enviar o arquivo pdf e
+   auto preencher os campos e informações do colaborador em questao no
+   pdf. para automatizar e agilizar o processo e monitoriamento. ja
+   aproveite para refinar e deixar moderno estilo app toda visualização e
+   tambem interações e alterações" (com o PDF de um cartão de ponto real,
+   que NÃO foi para o repositório: os testes e os prints usam um cartão
+   sintético com o mesmo desenho e nomes, CPFs e PIS inventados).
+
+   O FORMATO ENTENDIDO (o "Cartão de Ponto" que o sistema do relógio
+   Control iD, REP-P, exporta pelo wkhtmltopdf):
+     * cabeçalho: "Página 01 de NN", "Emitido em dd/mm/aaaa às hh:mm", o
+       período "DE dd/mm/aaaa ATÉ dd/mm/aaaa" e os rótulos NOME DA EMPRESA,
+       CNPJ DA EMPRESA (só dígitos), INSCRIÇÃO ESTADUAL, NOME DO
+       FUNCIONÁRIO, CPF DO FUNCIONÁRIO, PIS DO FUNCIONÁRIO (o relógio pode
+       repetir o CPF aqui: o eSocial identifica pelo CPF), DATA DE
+       ADMISSÃO e NÚMERO DE MATRÍCULA ("0" = sem matrícula);
+     * o quadro "HORÁRIO DE TRABALHO": SEG a DOM com ENT. 1, SAÍ. 1, ENT. 2,
+       SAÍ. 2 (vazio = folga) -- ex.: seg a qui 08-12/13-18, sex 08-12/13-17;
+     * a tabela dos dias: "dd/mm/aaaa - QUI", o PREVISTO, as marcações
+       (HH:MM, às vezes com a marca do relógio: (I) incluído, (P)
+       pré-assinalado, (M) coletor mobile/web, (C) iDFace/iDFlex) ou as
+       palavras Folga, Falta (por marcação = marcação faltando; nas quatro
+       = falta no dia) e Feriado; e os totais TOTAL NORMAIS, TOTAL
+       NOTURNO, DIA FALTA, FALTA E ATRASO, ABONO, EXTRA 50%D/50%N, EXTRA
+       DIURNA/NOTURNA, BANCO TOTAL/SALDO -- ESPARSOS (a célula vazia não
+       existe no texto);
+     * a linha TOTAIS (que é a soma dos dias), a legenda e as
+       "Alterações" ("Feriado em 12/10/2026");
+     * as contas do relógio, conferidas no PDF: normais = trabalhado até a
+       jornada do dia; no dia COMPLETO o relógio DESCONTA 10 minutos de
+       tolerância da falta/atraso e da extra (um dia completo com 36
+       minutos a menos aparece como 00:26); no dia com marcação faltando,
+       não desconta; o noturno é a hora de relógio entre 22h e 5h.
+
+   COMO SE LÊ (rh/cartao_ponto.py, sem serviço de fora): pela POSIÇÃO de
+   cada pedaço de texto (o pypdf entrega x e y). O cabeçalho da tabela diz
+   onde cada coluna começa (as células são alinhadas à esquerda, e o nome
+   em duas linhas -- "TOTAL"/"NORMAIS" -- é juntado pelo x); cada valor vai
+   para a coluna que começa logo à esquerda dele. Se o PDF não der as
+   posições, a mesma conta roda no texto "em layout" do pypdf (a coluna de
+   caracteres no lugar do x; a marca "(I)" que empurra a hora seguinte é
+   separada). Várias páginas e várias pessoas no mesmo arquivo: a página
+   com o mesmo CPF e período continua o cartão. PDF escaneado (sem texto)
+   e PDF que não é cartão viram a janela "PDF sem texto" / "Cartão de ponto
+   não reconhecido". A linha TOTAIS que não bate com a soma dos dias vira
+   aviso na conferência.
+
+   O CAMINHO NA TELA (Gestão; o superusuário tem todas as funções):
+     1. "Enviar cartão de ponto (PDF)" -- no Ponto da equipe, no Início, na
+        ficha e no acompanhamento: a folha (janela no PC, sobe de baixo no
+        celular) com arrastar e soltar, um ou vários PDFs (até 12, 10 MB
+        cada, conferidos como os documentos: PDF de verdade, sem script,
+        sem senha). O arquivo vai para o armazenamento privado
+        (ImportacaoPonto, sem endereço público; o original só abre pela
+        view, para a Gestão, com a trilha). O mesmo arquivo (SHA-256) não
+        entra duas vezes: "Já recebido".
+     2. A CONFERÊNCIA (/rh/ponto/cartoes/?ids=...): um cartão por pessoa
+        (CartaoPonto), com os números do cartão (dias, marcações, faltas,
+        sem marcação, folgas, feriados, as marcas do relógio), a ficha
+        achada pelo CPF -- senão pelo PIS, quando o PIS do cartão é um PIS
+        (diferente do CPF e com o dígito certo) --, NUNCA pelo nome:
+          * "Entra na ficha (estava vazio)": PIS, matrícula e a jornada dia
+            a dia (quando a ficha tem a mesma jornada escrita do jeito
+            simples);
+          * "Diverge da ficha: escolha": o que já está preenchido e é
+            diferente (nome, admissão, jornada, matrícula, PIS; o CPF quando
+            achado pelo PIS) em dois chips -- "Manter a da ficha" (marcado)
+            e "Usar a do cartão" --: nada muda calado;
+          * o que não serve, com o porquê (o PIS que é o CPF, o PIS de
+            outra ficha);
+          * "Vai para o ponto": quantas marcações entram, quantas já
+            estavam, quantas viram pedido de ajuste, os abonos e os dias
+            fora do contrato;
+          * o CNPJ: o do cartão tem de ser o da fábrica (EMPRESA_CNPJ, o
+            dos documentos, ou o da tela "Dados do contrato"); diferente, a
+            faixa vermelha, e o "Importar" devolve a janela "CNPJ de outra
+            empresa" com o botão "Importar mesmo assim".
+        "Importar para o ponto" (um) ou "Importar os N prontos" (com ficha,
+        CNPJ conferido, escolhas padrão). O resultado é a janela "Cartão
+        importado" com o que andou junto e "Ver o acompanhamento".
+     3. SEM FICHA: "Cadastrar colaborador" abre a folha com o que o cartão
+        já diz (nome sem o maiúsculo do relógio, CPF -- que não se digita
+        --, admissão, PIS quando é PIS, matrícula e a jornada de cada dia);
+        a equipe completa só o que a ficha precisa (nascimento, RG, cargo,
+        setor, vínculo, endereço, telefones). O campo que falta é a janela
+        "Confira o campo" com ele aceso; salvo, a ficha nasce e o cartão é
+        importado na mesma ida ("Ficha criada e cartão importado").
+
+   AS MARCAÇÕES E A IMUTABILIDADE (rh/importacao_ponto.py). Cada hora do
+   cartão vira uma MarcacaoPonto com origem "rep", a marca do relógio
+   (marcador I/P/M/C) e o cartão de onde veio, NA MESMA CADEIA de NSR e
+   hash do painel (a origem entra no hash; as marcações do painel, sem
+   origem, mantêm o hash de antes). O tipo sai da coluna: ENT. 1 é a
+   entrada, ENT. 2 a volta, SAÍ. a saída para o intervalo -- e a última
+   hora do dia, se nada falta depois, é a saída. "Falta" numa marcação
+   deixa o dia incompleto, como o relógio diz. NADA DO QUE EXISTE É
+   EDITADO OU APAGADO:
+     * a mesma hora que já está no ponto (até 1 minuto de diferença) não
+       entra de novo -- reimportar o mesmo período, até de outro arquivo,
+       não duplica;
+     * o dia que só tem marcações do relógio e ganhou uma a mais (o "(I)"
+       incluído no relógio) recebe só a que faltava;
+     * o dia que tem marcação do PAINEL diferente do cartão NÃO é tocado:
+       cada hora do cartão que falta vira um PEDIDO DE AJUSTE "incluir
+       marcação" (pendente, a justificativa diz de onde veio), na fila de
+       sempre da Gestão; a marcação do painel que o cartão não tem fica
+       como divergência (desconsiderar é decisão de gente);
+     * Folga, Feriado que não é nacional, Férias e Atestado num dia que a
+       jornada da ficha espera trabalho viram ABONO aprovado (o mesmo poder
+       do "Lançar abono"); se quem importa é o próprio colaborador, o abono
+       fica pendente (ninguém decide o próprio). Falta não precisa de nada:
+       o espelho já conta falta no dia de jornada sem marcação; o feriado
+       nacional ele já conhece;
+     * dia antes da admissão, depois do desligamento ou no futuro não
+       recebe marcação (aparece em "pulados").
+   O modelo e o gatilho do banco (rh/0002) continuam valendo: as colunas
+   novas da marcação aceitam NULL de propósito, para o SQLite acrescentar
+   a coluna sem recriar a tabela (recriar perderia o gatilho) -- há teste
+   que tenta o UPDATE e o DELETE pelo SQL depois da 0004.
+   O PDF DA PESSOA vai para a pasta dela (documento "Cartão de ponto
+   (relógio REP)", privado): num arquivo com várias pessoas, só as
+   páginas dela (pypdf), para ninguém ver o ponto do colega pelo próprio
+   documento. Esse documento não se remove (é a prova do que entrou) e o
+   tipo não aparece no "Enviar documento" (entra só pela importação). O
+   arquivo ainda não importado pode ser "Descartado"; o importado, não.
+
+   A CONTA DO SISTEMA CONTRA O CARTÃO (importacao_ponto.comparar): o
+   espelho no período do cartão contra a linha TOTAIS -- horas normais,
+   noturno, dias de falta, falta e atraso, extras e banco (quando o cartão
+   traz) --, cada um "confere" ou a diferença, e o PORQUÊ dia a dia:
+     * "Tolerância de 10 min": o relógio desconta os 10 minutos do dia; o
+       espelho segue a CLT (art. 58, § 1º) e a Súmula 366 do TST -- passou
+       de 10, conta o dia inteiro. Diferença de REGRA, não de marcação
+       (selo "Só diferença de regra"). O espelho NÃO foi mudado para imitar
+       o relógio.
+     * "Jornada diferente": a da ficha não é a do relógio naquele dia
+       (escolha "Usar a do cartão" na importação, ou edite a jornada);
+     * "Marcações do painel", "Ajuste esperando decisão", "Feriado", "Fora
+       do contrato" e, sem explicação, "Confira".
+   Com a jornada da ficha igual à do relógio, as horas normais, o noturno
+   e os dias de falta batem com o cartão; falta e atraso e extras diferem
+   só pela tolerância.
+
+   A JORNADA DIA A DIA (Colaborador.jornada_semana, e a matrícula). A ficha
+   tinha uma jornada só (entrada, saída, intervalo, dias): a sexta que sai
+   uma hora antes virava "1 h de falta" toda semana. Agora há o horário de
+   cada dia, como o do relógio ({"1": [["08:00","12:00"],["13:00",
+   "18:00"]], ...}); vazio, vale a jornada simples de antes. Preenchido,
+   os campos simples viram o resumo do dia mais comum e o espelho usa o
+   do dia (esperado, atraso pela entrada do dia, falta depois da saída do
+   dia; o "Quem falta hoje" também). Na edição da ficha: "Horário
+   diferente em cada dia" abre a grade (entrada, saída, volta, saída de
+   seg a dom), conferida como a simples (saída depois da entrada, até 10 h
+   por dia, intervalo acima de 6 h). A matrícula do relógio também é campo
+   da ficha.
+
+   O ACOMPANHAMENTO (monitoramento):
+     * PONTO DA EQUIPE (/rh/ponto/equipe/): o período é o mês (setas) ou o
+       de um cartão importado (chips); os números da equipe (trabalhadas,
+       extras, faltas, atrasos, dias com marcação faltando, jornadas acima
+       de 10 h, saldo); os chips que filtram na hora (Pedem atenção,
+       Marcação faltando, Faltas, Jornada longa, Atrasos, Do relógio); cada
+       pessoa em Lista ou Cards com a FITA dos dias (um quadradinho por dia,
+       na cor do que aconteceu), as horas e os alertas. Os espelhos saem em
+       LOTE (ponto.espelhos: duas consultas para a equipe inteira -- antes
+       eram duas por pessoa); há teste que confere que a tela não cresce
+       com a equipe. A faixa "N cartões esperando importação", os ajustes
+       para decidir (Aprovar com a folha de confirmação; Recusar abre a
+       folha do motivo) e "Lançar abono" em folha.
+     * O ACOMPANHAMENTO DE UMA PESSOA (o espelho, /rh/ponto/espelho/<id>/
+       ?de=&ate=): a jornada de cada dia em chips, os números (normais e
+       noturno entraram), a fita, os ALERTAS (dias com marcação faltando e
+       quantos sem a última saída, faltas, jornadas acima de 10 h com a
+       maior, atrasos e o total, intervalos menores que 1 h, ajustes
+       pendentes), o cartão do relógio contra o sistema e o DIA A DIA na
+       LINHA DO TEMPO (as barras do trabalho e do intervalo sobre a jornada
+       prevista, tracejada; o que ficou sem a marcação seguinte em
+       vermelho) ou na TABELA de sempre (as marcações do relógio com a
+       marca ao lado). A escolha da vista fica no aparelho.
+     * INÍCIO DO RH: "Ponto: o que pede atenção" no período do último
+       cartão importado (ou o mês até ontem): quem tem falta, marcação
+       faltando, jornada longa ou atraso, e os cartões esperando importação.
+     * MEU PONTO: a fita do mês, os alertas do próprio ponto com "Pedir
+       ajuste" ali mesmo, e o pedido de ajuste numa folha.
+
+   O RH INTEIRO COMO APP (o resto do pedido): todo formulário do RH que
+   grava vai por fetch (rh.js liga com o Painel.ligar do painel; seção
+   123): o campo que falta vira a janela "Confira o campo" com o nome do
+   rótulo e o campo aceso; o erro do servidor, a janela com título, campo
+   e o botão que resolve (BaseRH.ok/falhou/falhou_form, o mesmo JSON de
+   ErroDeFormulario); o deu-certo, toast ou a janela do resultado; a folha
+   fecha e a tela se atualiza sozinha. Viraram folhas: enviar cartão,
+   cadastrar pelo cartão, pedir ajuste, lançar abono, recusar ajuste,
+   enviar documento (com arrastar e soltar no lugar do "Escolher arquivo"
+   do navegador) e nova tarefa. A situação da tarefa muda por toque
+   (toast). Ficha: a seção "Jornada e ponto" (a semana, os cartões do
+   relógio), a matrícula, "Enviar cartão de ponto". Edição da ficha: os
+   chips das seções no alto (presos ao rolar) e a barra de salvar presa no
+   pé. CSS novo numa seção nova no fim de rh/static/rh/rh.css (só
+   variáveis do tema; nos cards, no máximo 4 por fileira); o ícone que
+   sumia nas linhas flexíveis (min-width:0 do .rh-tela) voltou.
+
+   PERMISSÕES: enviar, conferir, importar, cadastrar, descartar e abrir o
+   PDF original são da Gestão (funcoes_necessarias, também em POST e em
+   URL digitada: o resto da equipe e o Financeiro são devolvidos sem
+   nada gravar -- há teste). O Financeiro vê o acompanhamento da equipe
+   (como já via o espelho); o colaborador vê só o próprio acompanhamento e
+   o PDF do próprio cartão na pasta.
+
+   BANCO: rh/0004_cartao_de_ponto_do_relogio (SÓ ESQUEMA): Colaborador.
+   matricula e jornada_semana; MarcacaoPonto.origem, marcador e cartao
+   (NULL, ADD COLUMN); ImportacaoPonto e CartaoPonto; os tipos novos de
+   documento e da trilha. Nenhuma migração de dados.
+       python manage.py migrate rh
+   ARQUIVOS: rh/cartao_ponto.py (novo, a leitura), rh/importacao_ponto.py
+   (novo, casar/preencher/importar/comparar), rh/views_cartao.py (novo),
+   rh/models.py, rh/ponto.py (espelho_periodo, espelhos em lote, noturno,
+   alertas, linha do tempo, a jornada do dia), rh/views.py (ok/falhou,
+   documentos por fetch, os cartões na ficha), rh/views_ponto.py (período,
+   equipe, acompanhamento, ajustes por fetch), rh/views_tarefas.py,
+   rh/forms.py (jornada dia a dia, CadastroPeloCartaoForm), rh/servicos.py
+   (alertas_do_ponto), rh/urls.py, rh/apoio_testes.py (cartao_ponto_pdf,
+   o cartão sintético), templates rh/cartoes.html, espelho.html,
+   ponto_equipe.html, meu_ponto.html, inicio.html, ficha.html,
+   colaborador_form.html, tarefas.html e as partes novas (folha_cartao,
+   folha_cadastro_cartao, folha_abono, folha_recusa, cartao_item,
+   comparacao, periodo, fita), rh/static/rh/rh.js e rh.css. Fora do rh/:
+   sistema_interno/tests_urls.py (as rotas novas na varredura).
+   TESTES: rh/tests_importacao_ponto.py (38): a leitura (cabeçalho,
+   período, 31 dias, horário, colunas esparsas pela posição, Falta/Folga/
+   Feriado, marcação faltando, marcas I e M, várias pessoas e páginas, o
+   texto em layout igual, TOTAIS que não batem, escaneado e não-cartão); o
+   CPF, o PIS, nunca o nome, o PIS que é o CPF; o arquivo repetido; a
+   janela do arquivo errado; o CNPJ com "Importar mesmo assim"; a origem,
+   a marca, o tipo e a cadeia; o espelho coerente (falta, feriado, sem a
+   saída, jornada longa, noturno, a sexta de 8 h); a comparação com a
+   tolerância; preencher o vazio e não mexer no preenchido; usar o do
+   cartão; reimportar (de outro arquivo) sem duplicar; o dia do painel
+   que vira pedido de ajuste; folga e feriado local que viram abono; antes
+   da admissão; a imutabilidade (modelo e gatilho do banco) e o PDF que
+   não se remove; o PDF só com as páginas da pessoa; importar todos;
+   descartar; cadastrar pelo cartão, o campo aceso e a jornada do relógio
+   fora da regra (não entra; a ficha sai); a permissão por URL;
+   o colaborador só no próprio; o teto de consultas (a equipe não cresce
+   com as pessoas; acompanhamento, conferência e Início com teto;
+   importar um mês sem uma consulta por dia); a jornada dia a dia na ficha.
+       DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test core sistema_interno contas rh --parallel 1
+   CONFERIDO NO CHROMIUM (dados sintéticos, PC 1366 e celular 390, sol e
+   lua): enviar sem arquivo (janela), enviar o PDF da equipe (3 pessoas,
+   uma sem ficha), a conferência, escolher "usar a do cartão", importar
+   (janela), cadastrar com campo faltando (janela, campo aceso) e completo,
+   o CNPJ de outra empresa (janela com "Importar mesmo assim"), o ponto da
+   equipe com os filtros e os cards, o acompanhamento (linha do tempo e
+   tabela), o Início, a ficha e a folha de documento, a jornada dia a dia,
+   a recusa sem motivo (janela), a nova tarefa, e cada tela do RH da
+   Gestão e da colaboradora, sem rolagem lateral e sem erro de JS. A
+   leitura do PDF real do dono foi conferida só aqui, sem guardar nada: o
+   período, as 31 linhas, os 3 dias de falta, o feriado, os dias sem a
+   última saída e a linha TOTAIS igual à soma dos dias.
+   FICOU DE FORA: PDF escaneado (sem texto; precisaria de OCR -- a tela
+   pede o PDF exportado do relógio); outros formatos de cartão que não
+   tenham o cabeçalho "DIA/PREVISTO/ENT. 1"; jornada que atravessa a
+   meia-noite; a regra de tolerância do relógio como opção do espelho (a
+   diferença aparece explicada, a conta segue a CLT); o banco de horas
+   acumulado entre períodos.

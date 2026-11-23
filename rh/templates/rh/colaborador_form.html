@@ -18,6 +18,16 @@
   </div>
 </section>
 
+<nav class="rh-chips rh-secoes-nav" aria-label="Partes da ficha">
+  <a class="rh-chip" href="#rhSecIdentificacao"><i class="bi bi-person-vcard" aria-hidden="true"></i> Identificação</a>
+  <a class="rh-chip" href="#rhSecEndereco"><i class="bi bi-house-door" aria-hidden="true"></i> Endereço</a>
+  <a class="rh-chip" href="#rhSecContato"><i class="bi bi-telephone" aria-hidden="true"></i> Contato</a>
+  <a class="rh-chip" href="#rhSecTrabalho"><i class="bi bi-briefcase" aria-hidden="true"></i> Trabalho</a>
+  <a class="rh-chip" href="#rhSecJornada"><i class="bi bi-clock" aria-hidden="true"></i> Jornada</a>
+  <a class="rh-chip" href="#rhSecPagamento"><i class="bi bi-cash-coin" aria-hidden="true"></i> Pagamento</a>
+  <a class="rh-chip" href="#rhSecConta"><i class="bi bi-link-45deg" aria-hidden="true"></i> Conta</a>
+</nav>
+
 <form class="rh-form" method="post" novalidate id="rhFormColaborador" data-rh-form-colaborador>
   {% csrf_token %}
   {% if form.errors %}
@@ -32,7 +42,7 @@
     </div>
   {% endif %}
 
-  <fieldset class="rh-secao">
+  <fieldset class="rh-secao" id="rhSecIdentificacao">
     <legend><i class="bi bi-person-vcard" aria-hidden="true"></i> Identificação</legend>
     <div class="rh-campos">
       {% include "rh/partes/campo.html" with campo=form.nome largura=8 %}
@@ -47,7 +57,7 @@
     </div>
   </fieldset>
 
-  <fieldset class="rh-secao">
+  <fieldset class="rh-secao" id="rhSecEndereco">
     <legend><i class="bi bi-house-door" aria-hidden="true"></i> Endereço</legend>
     <div class="rh-campos">
       {% include "rh/partes/campo.html" with campo=form.cep largura=3 ajuda="8 números" %}
@@ -60,7 +70,7 @@
     </div>
   </fieldset>
 
-  <fieldset class="rh-secao">
+  <fieldset class="rh-secao" id="rhSecContato">
     <legend><i class="bi bi-telephone" aria-hidden="true"></i> Contato</legend>
     <div class="rh-campos">
       {% include "rh/partes/campo.html" with campo=form.telefone %}
@@ -71,11 +81,12 @@
     </div>
   </fieldset>
 
-  <fieldset class="rh-secao">
+  <fieldset class="rh-secao" id="rhSecTrabalho">
     <legend><i class="bi bi-briefcase" aria-hidden="true"></i> Trabalho</legend>
     <div class="rh-campos">
       {% include "rh/partes/campo.html" with campo=form.cargo largura=6 %}
       {% include "rh/partes/campo.html" with campo=form.data_admissao largura=3 %}
+      {% include "rh/partes/campo.html" with campo=form.matricula largura=3 ajuda="A do relógio de ponto (REP), se houver" %}
       {% include "rh/partes/campo.html" with campo=form.data_desligamento largura=3 ajuda="Só com a situação Desligado" %}
       {% include "rh/partes/chips.html" with campo=form.setor ajuda="O setor é a função do painel: é por ele que a produção sugere quem faz cada etapa." %}
       <div class="rh-painel--largo" data-rh-especialidades>
@@ -86,17 +97,34 @@
     </div>
   </fieldset>
 
-  <fieldset class="rh-secao">
+  <fieldset class="rh-secao" id="rhSecJornada">
     <legend><i class="bi bi-clock" aria-hidden="true"></i> Jornada (é por ela que o espelho conta atraso, falta e extra)</legend>
-    <div class="rh-campos">
+    <label class="rh-interruptor">
+      {{ form.jornada_por_dia }}
+      <span><strong>Horário diferente em cada dia</strong><small>A sexta que sai mais cedo, o sábado de meio período — como o quadro “Horário de trabalho” do relógio de ponto.</small></span>
+    </label>
+    {% for erro in form.jornada_por_dia.errors %}<small class="rh-erro" role="alert">{{ erro }}</small>{% endfor %}
+    {% for erro in form.jornada_semana.errors %}<small class="rh-erro" role="alert">{{ erro }}</small>{% endfor %}
+    {{ form.jornada_semana }}
+    <div class="rh-campos" data-rh-jornada-simples>
       {% include "rh/partes/campo.html" with campo=form.jornada_inicio largura=3 %}
       {% include "rh/partes/campo.html" with campo=form.jornada_fim largura=3 %}
       {% include "rh/partes/campo.html" with campo=form.jornada_intervalo_min largura=3 %}
       {% include "rh/partes/chips.html" with campo=form.jornada_dias multiplo=True %}
     </div>
+    <div class="rh-grade-semana" data-rh-jornada-semana hidden>
+      <div class="rh-grade-semana-cabeca" aria-hidden="true"><span></span><span>Entrada</span><span>Saída</span><span>Volta</span><span>Saída</span></div>
+      {% for dia in form.campos_da_semana %}
+        <div class="rh-grade-semana-dia">
+          <strong>{{ dia.rotulo }}</strong>
+          {% for item in dia.campos %}{% with campo=item.campo %}<span class="rh-campo{% if campo.errors %} tem-erro{% endif %}" data-curto="{{ item.curto }}"><label class="visually-hidden" for="{{ campo.id_for_label }}">{{ campo.label }}</label>{{ campo }}{% for erro in campo.errors %}<small class="rh-erro" role="alert">{{ erro }}</small>{% endfor %}</span>{% endwith %}{% endfor %}
+        </div>
+      {% endfor %}
+      <small class="rh-ajuda">Deixe em branco o dia de folga. Sem intervalo? Preencha só a entrada e a primeira saída.</small>
+    </div>
   </fieldset>
 
-  <fieldset class="rh-secao">
+  <fieldset class="rh-secao" id="rhSecPagamento">
     <legend><i class="bi bi-cash-coin" aria-hidden="true"></i> Pagamento (visível só para Gestão e Financeiro)</legend>
     <div class="rh-campos">
       {% include "rh/partes/campo.html" with campo=form.salario largura=3 %}
@@ -109,7 +137,7 @@
     </div>
   </fieldset>
 
-  <fieldset class="rh-secao">
+  <fieldset class="rh-secao" id="rhSecConta">
     <legend><i class="bi bi-link-45deg" aria-hidden="true"></i> Conta do painel e observações</legend>
     <div class="rh-campos">
       {% include "rh/partes/campo.html" with campo=form.conta_painel largura=6 ajuda="Quem tem conta bate o ponto, vê as próprias tarefas e assina o termo pelo painel. A conta é criada em Equipe e acessos." %}
@@ -121,7 +149,7 @@
   <datalist id="rhBancos">{% for banco in bancos %}<option value="{{ banco }}"></option>{% endfor %}</datalist>
   <datalist id="rhContas">{% for conta in contas %}<option value="{{ conta.username }}">{{ conta.get_full_name|default:conta.username }}</option>{% endfor %}</datalist>
 
-  <div class="rh-acoes-form">
+  <div class="rh-acoes-form rh-acoes-form--presa">
     <a class="btn btn-outline-secondary" href="{% if colaborador %}{% url 'rh_ficha' colaborador.pk %}{% else %}{% url 'rh_colaboradores' %}{% endif %}">Cancelar</a>
     <button class="btn btn-success" type="submit"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Salvar ficha</button>
   </div>

@@ -55,6 +55,12 @@ SO_POST = {
     "rh_tarefa_situacao": "muda a situação de uma tarefa",
     "rh_tarefa_editar": "salva ou exclui uma tarefa",
     "rh_termo_todos": "envia o termo para todos assinarem",
+    # o cartão de ponto do relógio (rh/tests_importacao_ponto.py)
+    "rh_cartao_enviar": "recebe o PDF do cartão de ponto",
+    "rh_cartao_importar": "lança no ponto as marcações de um cartão",
+    "rh_cartao_importar_todos": "lança no ponto os cartões prontos de um arquivo",
+    "rh_cartao_cadastrar": "cria a ficha com os dados do cartão e importa",
+    "rh_cartao_descartar": "descarta um arquivo ainda não importado",
 }
 EXIGEM_PARAMETRO = {
     "campanha_ofertas": "precisa do cliente escolhido",
@@ -95,6 +101,7 @@ SO_DE_UM_REGISTRO = {
     "rh_termo": "o termo de um colaborador cadastrado",
     "rh_termo_via": "um termo gerado",
     "rh_termo_publico": "token de 10 minutos inventado",
+    "rh_cartao_arquivo": "o PDF original de um cartão de ponto recebido",
 }
 
 

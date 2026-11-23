@@ -1,0 +1,51 @@
+{% comment %}
+  O CARTÃO DO RELÓGIO CONTRA O SISTEMA (importacao_ponto.comparar): os
+  totais lado a lado e o porquê de cada diferença, dia a dia. `r` é o
+  resultado; `titulo` (opcional) troca o título.
+{% endcomment %}
+<div class="rh-compara">
+  <header class="rh-compara-topo">
+    <h3><i class="bi bi-arrow-left-right" aria-hidden="true"></i> {{ titulo|default:"Cartão do relógio × sistema" }}</h3>
+    {% if r.confere %}<span class="rh-selo rh-selo--ok"><i class="bi bi-check2-all" aria-hidden="true"></i> Os totais conferem</span>
+    {% elif r.so_regra %}<span class="rh-selo rh-selo--info"><i class="bi bi-info-circle" aria-hidden="true"></i> Só diferença de regra</span>
+    {% else %}<span class="rh-selo rh-selo--alerta"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {{ r.dias|length }} dia{{ r.dias|length|pluralize }} com diferença</span>{% endif %}
+  </header>
+  <div class="rh-compara-grade">
+    {% for l in r.linhas %}
+      <div class="rh-compara-item{% if not l.confere %} is-diverge{% endif %}">
+        <span class="rh-compara-rotulo">{{ l.rotulo }}</span>
+        <div class="rh-compara-valores">
+          <span><small>Cartão</small><strong>{{ l.cartao }}</strong></span>
+          <span><small>Sistema</small><strong>{{ l.sistema }}</strong></span>
+        </div>
+        {% if l.confere %}<em class="rh-compara-ok"><i class="bi bi-check2" aria-hidden="true"></i> confere</em>
+        {% else %}<em class="rh-compara-dif">{{ l.diferenca }} no sistema</em>{% endif %}
+      </div>
+    {% endfor %}
+  </div>
+  {% if r.motivos %}
+    <ul class="rh-motivos">
+      {% for m in r.motivos %}
+        <li class="rh-motivo rh-motivo--{{ m.chave }}">
+          <strong>{{ m.titulo }} · {{ m.dias|length }} dia{{ m.dias|length|pluralize }}</strong>
+          <span>{% for d in m.dias|slice:":10" %}{{ d|date:"d/m" }}{% if not forloop.last %}, {% endif %}{% endfor %}{% if m.dias|length > 10 %} e mais {{ m.dias|length|add:"-10" }}{% endif %}</span>
+          <small>{{ m.texto }}</small>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  {% if r.dias %}
+    <details class="rh-compara-dias">
+      <summary><i class="bi bi-list-ul" aria-hidden="true"></i> Ver dia a dia ({{ r.dias|length }})</summary>
+      <ul class="rh-compara-lista">
+        {% for d in r.dias %}
+          <li>
+            <strong>{{ d.data|date:"d/m" }} <small>{{ d.data|date:"D"|lower }}</small></strong>
+            <span>{% for it in d.itens %}{{ it.rotulo }}: cartão {{ it.cartao }} · sistema {{ it.sistema }}{% if not forloop.last %}<br>{% endif %}{% endfor %}</span>
+            <span class="rh-selo rh-selo--{% if d.motivo == 'tolerancia' %}info{% elif d.motivo == 'confira' %}perigo{% else %}alerta{% endif %}">{{ d.motivo_titulo }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    </details>
+  {% endif %}
+</div>

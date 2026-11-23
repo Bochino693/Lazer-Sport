@@ -3,11 +3,101 @@
 {% block titulo_rh %}Ponto da equipe{% endblock %}
 
 {% block rh_conteudo %}
+{% comment %}
+  O PONTO DA EQUIPE COMO ACOMPANHAMENTO (LEIA-ME-V10, seção 125): o
+  período (o mês, ou o período de um cartão do relógio importado), os
+  números da equipe, os chips que filtram quem pede atenção, e cada pessoa
+  com a fita dos dias e os alertas. Os espelhos saem em lote
+  (ponto.espelhos: duas consultas para a equipe inteira). Para a Gestão:
+  os cartões de ponto esperando importação, os ajustes para decidir e o
+  "Lançar abono" -- tudo em folhas.
+{% endcomment %}
 <section class="ls-page-hero">
   <div class="ls-page-hero-copy">
-    <span class="ls-page-kicker">Controle de frequência · controle interno</span>
+    <span class="ls-page-kicker">Controle de frequência · acompanhamento</span>
     <h1>Ponto da equipe</h1>
-    <p>O mês de cada um pela jornada da ficha: horas, extras, atrasos e faltas. {% if gere %}Os ajustes pedidos esperam a sua decisão aqui.{% else %}Só leitura: os ajustes são decididos pela Gestão.{% endif %}</p>
+    <p>Horas, extras, faltas, atrasos e o que falta marcar, de cada um, no período. {% if gere %}Envie o cartão de ponto do relógio em PDF: a ficha é achada sozinha e o ponto entra conferido.{% else %}Só leitura: os ajustes são decididos pela Gestão.{% endif %}</p>
+  </div>
+  {% if gere %}
+  <div class="ls-page-hero-actions">
+    <button class="btn btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#rhFolhaAbono"><i class="bi bi-calendar-plus me-1" aria-hidden="true"></i> Lançar abono</button>
+    <button class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#rhFolhaCartao"><i class="bi bi-file-earmark-arrow-up me-1" aria-hidden="true"></i> Enviar cartão de ponto (PDF)</button>
+  </div>
+  {% endif %}
+</section>
+
+{% if cartoes_pendentes %}
+<section class="rh-destaque rh-destaque--alerta" aria-labelledby="rhCartoesPend">
+  <span class="rh-destaque-icone" aria-hidden="true"><i class="bi bi-file-earmark-medical"></i></span>
+  <div>
+    <h2 id="rhCartoesPend">{{ cartoes_pendentes|length }} cartão{{ cartoes_pendentes|length|pluralize:"ões" }} de ponto esperando importação</h2>
+    <p>{% for c in cartoes_pendentes|slice:":4" %}{% if c.colaborador %}{{ c.colaborador.primeiro_nome }}{% else %}sem ficha{% endif %} ({{ c.periodo_texto }}){% if not forloop.last %}, {% endif %}{% endfor %}{% if cartoes_pendentes|length > 4 %}…{% endif %}</p>
+  </div>
+  <div class="rh-destaque-acoes"><a class="btn btn-primary" href="{% url 'rh_cartoes' %}"><i class="bi bi-ui-checks me-1" aria-hidden="true"></i> Conferir e importar</a></div>
+</section>
+{% endif %}
+
+<section class="rh-painel" aria-label="Período e números da equipe">
+  {% include "rh/partes/periodo.html" %}
+  <div class="rh-numeros rh-numeros--equipe">
+    <div class="rh-numero rh-numero--info"><i class="bi bi-clock-history" aria-hidden="true"></i><strong>{{ soma.trabalhado }}</strong><span>trabalhadas</span></div>
+    <div class="rh-numero rh-numero--ok"><i class="bi bi-plus-circle" aria-hidden="true"></i><strong>{{ soma.extras }}</strong><span>extras</span></div>
+    <div class="rh-numero {% if soma.faltas %}rh-numero--perigo{% endif %}"><i class="bi bi-person-x" aria-hidden="true"></i><strong>{{ soma.faltas }}</strong><span>falta{{ soma.faltas|pluralize }}</span></div>
+    <div class="rh-numero {% if soma.atrasos %}rh-numero--alerta{% endif %}"><i class="bi bi-alarm" aria-hidden="true"></i><strong>{{ soma.atrasos }}</strong><span>atraso{{ soma.atrasos|pluralize }}</span></div>
+    <div class="rh-numero {% if soma.incompletos %}rh-numero--alerta{% endif %}"><i class="bi bi-door-open" aria-hidden="true"></i><strong>{{ soma.incompletos }}</strong><span>dia{{ soma.incompletos|pluralize }} com marcação faltando</span></div>
+    <div class="rh-numero {% if soma.longas %}rh-numero--perigo{% endif %}"><i class="bi bi-hourglass-top" aria-hidden="true"></i><strong>{{ soma.longas }}</strong><span>jornada{{ soma.longas|pluralize }} acima de 10 h</span></div>
+    <div class="rh-numero {% if saldo_negativo %}rh-numero--perigo{% else %}rh-numero--ok{% endif %}"><i class="bi bi-piggy-bank" aria-hidden="true"></i><strong>{{ soma.saldo }}</strong><span>saldo (banco)</span></div>
+  </div>
+</section>
+
+<section class="ls-data-panel rh-painel" aria-labelledby="rhEquipeTitulo">
+  <div class="ls-data-header">
+    <div>
+      <h2 id="rhEquipeTitulo">{{ linhas|length }} pessoa{{ linhas|length|pluralize }} no período</h2>
+      <p class="rh-nota">Toque na pessoa para o acompanhamento dia a dia. A fita mostra cada dia: <span class="rh-legenda"><i class="rh-fita--ok"></i>ok <i class="rh-fita--atraso"></i>atraso <i class="rh-fita--incompleto"></i>faltou marcar <i class="rh-fita--falta"></i>falta <i class="rh-fita--longa"></i>jornada longa <i class="rh-fita--folga"></i>folga</span></p>
+    </div>
+    {% include "includes/lista_ou_cards.html" with alvo="rhPontoEquipe" chave="rh-ponto-equipe" %}
+  </div>
+  <div class="rh-chips rh-filtro-rapido" role="group" aria-label="Mostrar" data-rh-filtro="#rhPontoEquipe">
+    <button type="button" class="rh-chip is-ativo" data-rh-filtro-chave="" aria-pressed="true">Todos <small>{{ linhas|length }}</small></button>
+    <button type="button" class="rh-chip" data-rh-filtro-chave="alerta" aria-pressed="false"><i class="bi bi-bell" aria-hidden="true"></i> Pedem atenção <small>{{ contagem.alerta }}</small></button>
+    <button type="button" class="rh-chip" data-rh-filtro-chave="incompleto" aria-pressed="false"><i class="bi bi-door-open" aria-hidden="true"></i> Marcação faltando <small>{{ contagem.incompleto }}</small></button>
+    <button type="button" class="rh-chip" data-rh-filtro-chave="falta" aria-pressed="false"><i class="bi bi-person-x" aria-hidden="true"></i> Faltas <small>{{ contagem.falta }}</small></button>
+    <button type="button" class="rh-chip" data-rh-filtro-chave="longa" aria-pressed="false"><i class="bi bi-hourglass-top" aria-hidden="true"></i> Jornada longa <small>{{ contagem.longa }}</small></button>
+    <button type="button" class="rh-chip" data-rh-filtro-chave="atraso" aria-pressed="false"><i class="bi bi-alarm" aria-hidden="true"></i> Atrasos <small>{{ contagem.atraso }}</small></button>
+    <button type="button" class="rh-chip" data-rh-filtro-chave="relogio" aria-pressed="false"><i class="bi bi-file-earmark-check" aria-hidden="true"></i> Do relógio <small>{{ contagem.relogio }}</small></button>
+  </div>
+
+  <div class="rh-itens ls-visao-alvo" id="rhPontoEquipe" data-visao="lista">
+    <div class="ls-visao-cabeca" aria-hidden="true">
+      <span data-col="foto"></span>
+      <span data-col="titulo">Colaborador</span>
+      <span data-col="info">Dias do período</span>
+      <span data-col="valor">Trabalhadas</span>
+      <span data-col="selos">O que pede atenção</span>
+      <span data-col="acoes">Ações</span>
+    </div>
+    {% for l in linhas %}{% with c=l.c t=l.t %}
+      <article class="rh-item rh-item--ponto" data-visao-item data-registro="{{ c.pk }}" data-rh-marcas="{{ l.marcas }}">
+        <span data-v="foto"><span class="rh-avatar" aria-hidden="true">{{ c.nome|iniciais }}</span></span>
+        <div data-v="titulo">
+          <a href="{% url 'rh_espelho' c.pk %}?{{ periodo.query }}"><strong>{{ c.nome }}</strong><small>{{ c.cargo }} · {{ c.horas_semanais }}/semana</small></a>
+        </div>
+        <div data-v="info">{% include "rh/partes/fita.html" with e=l.e %}</div>
+        <div data-v="valor">{{ t.trabalhado }}<small>{% if t.extras_minutos %}+{{ t.extras_total }} extra{% elif t.debito_minutos %}−{{ t.debito }} a compensar{% else %}no período{% endif %}</small></div>
+        <div data-v="selos">
+          {% for a in l.alertas|slice:":4" %}<span class="rh-selo rh-selo--{% if a.nivel == 'perigo' %}perigo{% elif a.nivel == 'alerta' %}alerta{% else %}info{% endif %}" title="{{ a.texto }}"><i class="bi {{ a.icone }}" aria-hidden="true"></i> {{ a.titulo }}</span>
+          {% empty %}<span class="rh-selo rh-selo--ok"><i class="bi bi-check2" aria-hidden="true"></i> Em dia</span>{% endfor %}
+          {% if t.do_relogio %}<span class="rh-selo rh-selo--violeta" title="Dias com marcação vinda do cartão do relógio"><i class="bi bi-file-earmark-check" aria-hidden="true"></i> relógio</span>{% endif %}
+        </div>
+        <div data-v="acoes">
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_espelho' c.pk %}?{{ periodo.query }}"><i class="bi bi-graph-up" aria-hidden="true"></i> Acompanhar</a>
+        </div>
+      </article>
+    {% endwith %}{% empty %}
+      <div class="ls-empty"><i class="bi bi-people" aria-hidden="true"></i> <span>Nenhum colaborador sob contrato.</span></div>
+    {% endfor %}
+    <div class="ls-empty" data-rh-filtro-vazio hidden><i class="bi bi-emoji-smile" aria-hidden="true"></i> <span>Ninguém com esse filtro no período.</span></div>
   </div>
 </section>
 
@@ -17,77 +107,23 @@
   <ul class="rh-linhas">
     {% for a in pendentes %}
       <li>
+        <a class="rh-pessoa" href="{% url 'rh_espelho' a.colaborador_id %}?mes={{ a.data|date:'Y-m' }}"><span class="rh-avatar" aria-hidden="true">{{ a.colaborador.nome|iniciais }}</span></a>
         <span class="rh-linha-principal">
           <strong>{{ a.colaborador.nome }} · {{ a.data|date:"d/m/Y" }} · {{ a.resumo }}</strong>
           <small>“{{ a.justificativa }}” · pedido em {{ a.solicitado_em|date:"d/m H:i" }}{% if a.solicitado_por %} por {{ a.solicitado_por.get_full_name|default:a.solicitado_por.username }}{% endif %}</small>
         </span>
-        {% if gere %}{% include "rh/partes/decidir_ajuste.html" with a=a voltar=request.get_full_path %}{% else %}<span class="rh-selo rh-selo--alerta">com a Gestão</span>{% endif %}
+        {% include "rh/partes/decidir_ajuste.html" with a=a voltar=request.get_full_path %}
       </li>
     {% endfor %}
   </ul>
 </section>
 {% endif %}
 
-<section class="rh-painel" aria-labelledby="rhMesEquipe">
-  <header>
-    <h2 id="rhMesEquipe"><i class="bi bi-calendar3" aria-hidden="true"></i> Mês</h2>
-    <nav class="rh-mes" aria-label="Mês">
-      <a class="btn btn-sm btn-outline-secondary" href="?mes={{ anterior }}" aria-label="Mês anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i></a>
-      <strong>{{ mes_texto|capfirst }}</strong>
-      <a class="btn btn-sm btn-outline-secondary" href="?mes={{ seguinte }}" aria-label="Mês seguinte"><i class="bi bi-chevron-right" aria-hidden="true"></i></a>
-    </nav>
-  </header>
-  <ul class="rh-linhas">
-    {% for l in linhas %}
-      <li>
-        <a class="rh-pessoa rh-linha-principal" href="{% url 'rh_espelho' l.c.pk %}?mes={{ mes }}">
-          <span class="rh-avatar" aria-hidden="true">{{ l.c.nome|iniciais }}</span>
-          <span><strong>{{ l.c.nome }}</strong><small>{{ l.c.cargo }} · {{ l.c.jornada_inicio|time:"H:i" }}–{{ l.c.jornada_fim|time:"H:i" }}</small></span>
-        </a>
-        <span class="rh-selo">{{ l.t.trabalhado }} trabalhadas</span>
-        {% if l.t.extra != "0h00" %}<span class="rh-selo rh-selo--ok">+{{ l.t.extra }} extras</span>{% endif %}
-        {% if l.t.extra_100 != "0h00" %}<span class="rh-selo rh-selo--ok">+{{ l.t.extra_100 }} dom./feriado</span>{% endif %}
-        {% if l.t.debito != "0h00" %}<span class="rh-selo rh-selo--perigo">−{{ l.t.debito }}</span>{% endif %}
-        {% if l.t.atrasos %}<span class="rh-selo rh-selo--alerta">{{ l.t.atrasos }} atraso{{ l.t.atrasos|pluralize }}</span>{% endif %}
-        {% if l.t.faltas %}<span class="rh-selo rh-selo--perigo">{{ l.t.faltas }} falta{{ l.t.faltas|pluralize }}</span>{% endif %}
-        {% if l.t.incompletos %}<span class="rh-selo rh-selo--alerta">{{ l.t.incompletos }} incompleto{{ l.t.incompletos|pluralize }}</span>{% endif %}
-        <a class="btn btn-sm btn-outline-secondary" href="{% url 'rh_espelho' l.c.pk %}?mes={{ mes }}">Espelho</a>
-      </li>
-    {% empty %}
-      <li class="rh-vazio"><i class="bi bi-people" aria-hidden="true"></i> Nenhum colaborador sob contrato.</li>
-    {% endfor %}
-  </ul>
-</section>
+<p class="rh-modelo"><i class="bi bi-info-circle" aria-hidden="true"></i> Controle interno de frequência. As marcações do cartão do relógio (REP-P) entram com a origem “relógio”; o painel não substitui um REP certificado (Portaria MTP 671/2021) quando a lei o exigir para o porte da empresa.</p>
 
-{% if gere and pessoas %}
-<section class="rh-painel" aria-labelledby="rhLancar">
-  <header><h2 id="rhLancar"><i class="bi bi-calendar-plus" aria-hidden="true"></i> Lançar abono (férias, atestado, feriado local)</h2></header>
-  <p class="rh-nota">Lançado aqui pela Gestão, já entra aprovado e fica no espelho como ajuste, com a justificativa. Os feriados nacionais já são contados sozinhos.</p>
-  <form class="rh-form" method="post" action="{% url 'rh_ajuste_pedir' %}">
-    {% csrf_token %}
-    <input type="hidden" name="tipo" value="abono">
-    <input type="hidden" name="aprovar" value="1">
-    <input type="hidden" name="voltar" value="{{ request.get_full_path }}">
-    <div class="rh-campos">
-      <div class="rh-campo rh-campo--12">
-        <span class="rh-rotulo">Quem</span>
-        <div class="rh-chips" role="radiogroup" aria-label="Colaborador">
-          {% for p in pessoas %}<label class="rh-chip"><input type="radio" name="colaborador" value="{{ p.pk }}" required><span>{{ p.nome }}</span></label>{% endfor %}
-        </div>
-      </div>
-      <div class="rh-campo rh-campo--3"><label for="rhAbData">Dia</label><input class="form-control" type="date" id="rhAbData" name="data" required></div>
-      <div class="rh-campo rh-campo--8">
-        <span class="rh-rotulo">Motivo</span>
-        <div class="rh-chips" role="radiogroup" aria-label="Motivo">
-          {% for valor, rotulo in motivos %}<label class="rh-chip"><input type="radio" name="motivo_abono" value="{{ valor }}"{% if forloop.first %} checked{% endif %}><span>{{ rotulo }}</span></label>{% endfor %}
-        </div>
-      </div>
-      <div class="rh-campo rh-campo--12"><label for="rhAbJust">Justificativa</label><input class="form-control" id="rhAbJust" name="justificativa" minlength="10" maxlength="1000" required placeholder="Ex.: atestado de 1 dia entregue no RH"></div>
-    </div>
-    <div><button class="btn btn-success" type="submit"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Lançar abono</button></div>
-  </form>
-</section>
+{% if gere %}
+  {% include "rh/partes/folha_cartao.html" %}
+  {% include "rh/partes/folha_abono.html" %}
+  {% include "rh/partes/folha_recusa.html" %}
 {% endif %}
-
-<p class="rh-modelo"><i class="bi bi-info-circle" aria-hidden="true"></i> Controle interno de frequência. Não substitui um REP certificado (Portaria MTP 671/2021) quando a lei o exigir para o porte da empresa.</p>
 {% endblock %}

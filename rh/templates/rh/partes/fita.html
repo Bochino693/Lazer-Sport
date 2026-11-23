@@ -1,0 +1,5 @@
+{% load rh_extras %}
+{# A fita do período: um quadradinho por dia, na cor do que aconteceu (ok, atraso, falta, marcação faltando, jornada longa, folga...). #}
+<div class="rh-fita" role="img" aria-label="Dias do período: {{ e.totais.faltas }} falta(s), {{ e.totais.incompletos }} com marcação faltando, {{ e.totais.jornadas_longas }} jornada(s) longa(s)">
+  {% for d in e.dias %}<span class="rh-fita-dia rh-fita--{{ d.situacao }}" title="{{ d.data|date:'d/m' }} {{ d.semana }}{% if d.trabalhado %} · {{ d.trabalhado|hm }}{% endif %}{% if d.falta %} · falta{% endif %}{% if d.incompleto %} · {{ d.falta_texto }}{% endif %}{% if d.feriado %} · {{ d.feriado }}{% endif %}"></span>{% endfor %}
+</div>

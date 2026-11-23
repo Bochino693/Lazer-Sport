@@ -9,38 +9,14 @@
     <h1>{% if gere %}Tarefas{% else %}Minhas tarefas{% endif %}</h1>
     <p>{% if gere %}Distribua o trabalho: a etapa sugere quem é do setor (e quem tem a especialidade) e está menos ocupado. As tarefas que a produção cria chegam aqui sozinhas.{% else %}Tudo que é seu: o que a Gestão passou e o que veio da produção. Mude a situação conforme anda.{% endif %}</p>
   </div>
+  {% if gere and form %}
+  <div class="ls-page-hero-actions">
+    <button class="btn btn-success" type="button" data-bs-toggle="modal" data-bs-target="#rhFolhaTarefa"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Nova tarefa</button>
+  </div>
+  {% endif %}
 </section>
 
-{% if gere and form %}
-<details class="rh-painel" {% if form.errors %}open{% endif %}>
-  <summary class="btn btn-success"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i> Nova tarefa</summary>
-  <form class="rh-form" method="post" action="{% url 'rh_tarefas' %}" data-rh-nova-tarefa data-sugerir="{% url 'rh_tarefa_sugerir' %}">
-    {% csrf_token %}
-    <div class="rh-campos">
-      {% include "rh/partes/campo.html" with campo=form.titulo largura=8 %}
-      {% include "rh/partes/campo.html" with campo=form.prazo %}
-      {% include "rh/partes/campo.html" with campo=form.descricao largura=12 %}
-      {% include "rh/partes/chips.html" with campo=form.prioridade largura=6 %}
-      {% include "rh/partes/campo.html" with campo=form.etapa largura=6 ajuda="Uma das 7 etapas da produção, ou outra. A etapa sugere o responsável." %}
-      {% include "rh/partes/chips.html" with campo=form.setor %}
-      <div class="rh-campo rh-campo--12">
-        <span class="rh-rotulo" id="rhRotuloResp">Responsável</span>
-        <div class="rh-filtros">
-          <div class="rh-busca"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" type="search" placeholder="Filtrar pelo nome" aria-label="Filtrar responsáveis" data-rh-filtrar-chips="#rhResponsaveis" autocomplete="off"></div>
-          <button class="btn btn-outline-secondary" type="button" data-rh-sugerir><i class="bi bi-magic me-1" aria-hidden="true"></i> Sugerir pela etapa</button>
-        </div>
-        <div class="rh-chips rh-pessoas-chips" id="rhResponsaveis" role="radiogroup" aria-labelledby="rhRotuloResp">
-          <label class="rh-chip"><input type="radio" name="colaborador" value="" checked><span>Ninguém ainda</span></label>
-          {% for p in pessoas %}<label class="rh-chip" data-nome="{{ p.nome|lower }}" data-id="{{ p.pk }}"><input type="radio" name="colaborador" value="{{ p.pk }}"><span>{{ p.nome }}</span><small>{{ p.get_setor_display }}</small></label>{% endfor %}
-        </div>
-        <small class="rh-ajuda" data-rh-sugestao-nota></small>
-      </div>
-    </div>
-    <datalist id="rhEtapas">{% for etapa in etapas %}<option value="{{ etapa }}"></option>{% endfor %}</datalist>
-    <div><button class="btn btn-success" type="submit"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Criar tarefa</button></div>
-  </form>
-</details>
-{% endif %}
+
 
 <section class="ls-data-panel rh-painel">
   <div class="ls-data-header">
@@ -84,13 +60,13 @@
           {% if t.da_producao %}<span class="rh-selo rh-selo--violeta">Produção</span>{% endif %}
         </div>
         <div data-v="acoes">
-          <form method="post" action="{% url 'rh_tarefa_situacao' t.pk %}" class="rh-situacao" aria-label="Situação">
+          <form method="post" action="{% url 'rh_tarefa_situacao' t.pk %}" class="rh-situacao" aria-label="Situação" data-rh-rapido>
             {% csrf_token %}
             <input type="hidden" name="voltar" value="{{ request.get_full_path }}">
             {% for valor, rotulo in estados %}<button type="submit" name="situacao" value="{{ valor }}" aria-pressed="{% if t.situacao == valor %}true{% else %}false{% endif %}">{{ rotulo }}</button>{% endfor %}
           </form>
           {% if gere %}
-          <form method="post" action="{% url 'rh_tarefa_editar' t.pk %}" class="rh-inline"
+          <form method="post" action="{% url 'rh_tarefa_editar' t.pk %}" class="rh-inline" data-rh-ligar data-rh-carregando="Excluindo…"
                 data-ls-confirmar="“{{ t.titulo }}” sai da lista de {% if t.colaborador %}{{ t.colaborador.primeiro_nome }}{% else %}tarefas{% endif %}."
                 data-ls-confirmar-titulo="Excluir tarefa" data-ls-confirmar-botao="Excluir" data-ls-perigo>
             {% csrf_token %}<input type="hidden" name="action" value="excluir">
@@ -117,5 +93,50 @@
     {% endfor %}
   </ul>
 </section>
+{% endif %}
+{% if gere and form %}
+<div class="modal fade rh-folha" id="rhFolhaTarefa" tabindex="-1" aria-labelledby="rhFolhaTarefaTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+    <form class="modal-content rh-form" id="rhFormTarefa" method="post" action="{% url 'rh_tarefas' %}" data-rh-nova-tarefa data-rh-ligar data-rh-carregando="Criando…" data-sugerir="{% url 'rh_tarefa_sugerir' %}">
+      {% csrf_token %}
+      <div class="modal-header rh-folha-cabeca">
+        <span class="rh-folha-icone" aria-hidden="true"><i class="bi bi-check2-square"></i></span>
+        <div>
+          <h2 class="modal-title" id="rhFolhaTarefaTitulo">Nova tarefa</h2>
+          <p>A etapa sugere quem é do setor e está menos ocupado</p>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <div class="visually-hidden" id="rhFormTarefaErro" data-rh-erro role="alert"></div>
+        <div class="rh-campos">
+          {% include "rh/partes/campo.html" with campo=form.titulo largura=8 %}
+          {% include "rh/partes/campo.html" with campo=form.prazo %}
+          {% include "rh/partes/campo.html" with campo=form.descricao largura=12 %}
+          {% include "rh/partes/chips.html" with campo=form.prioridade largura=12 %}
+          {% include "rh/partes/campo.html" with campo=form.etapa largura=6 ajuda="Uma das 7 etapas da produção, ou outra. A etapa sugere o responsável." %}
+          {% include "rh/partes/chips.html" with campo=form.setor %}
+          <div class="rh-campo rh-campo--12" data-campo="colaborador">
+            <span class="rh-rotulo" id="rhRotuloResp">Responsável</span>
+            <div class="rh-filtros">
+              <div class="rh-busca"><i class="bi bi-search" aria-hidden="true"></i><input class="form-control" type="search" placeholder="Filtrar pelo nome" aria-label="Filtrar responsáveis" data-rh-filtrar-chips="#rhResponsaveis" autocomplete="off"></div>
+              <button class="btn btn-outline-secondary" type="button" data-rh-sugerir><i class="bi bi-magic me-1" aria-hidden="true"></i> Sugerir pela etapa</button>
+            </div>
+            <div class="rh-chips rh-pessoas-chips" id="rhResponsaveis" role="radiogroup" aria-labelledby="rhRotuloResp">
+              <label class="rh-chip"><input type="radio" name="colaborador" value="" checked><span>Ninguém ainda</span></label>
+              {% for p in pessoas %}<label class="rh-chip" data-nome="{{ p.nome|lower }}" data-id="{{ p.pk }}"><input type="radio" name="colaborador" value="{{ p.pk }}"><span>{{ p.nome }}</span><small>{{ p.get_setor_display }}</small></label>{% endfor %}
+            </div>
+            <small class="rh-ajuda" data-rh-sugestao-nota></small>
+          </div>
+        </div>
+        <datalist id="rhEtapas">{% for etapa in etapas %}<option value="{{ etapa }}"></option>{% endfor %}</datalist>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-success" type="submit"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Criar tarefa</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endif %}
 {% endblock %}
