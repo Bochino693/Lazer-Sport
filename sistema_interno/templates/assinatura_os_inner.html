@@ -1,0 +1,68 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+
+{% block title %}Ordem de serviço para assinatura · {{ ordem.numero_documento }} | Lazer & Sport{% endblock %}
+{% block top_title %}Ordem de serviço para assinatura{% endblock %}
+{% block body_class %}ls-commercial-body ls-doc-body ls-doc-os-body{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="documento-assinatura" href="{% estatico 'interno/documento-assinatura.css' %}">
+{% endblock %}
+
+{% comment %}
+  A ORDEM DE SERVIÇO PARA ASSINATURA (LEIA-ME-V10, seção 124).
+
+  O dono: "também deve emitir contrato ou ordem de serviço, destinado a
+  manutenções e serviços, para padronizar" -- com ou sem pagamento. É a
+  tela do contrato de compra e venda (o mesmo cartão, o mesmo script
+  `documento-assinatura.js`, a mesma folha que sobe de baixo), com a O.S.
+  como origem: o cartão pede o link ao abrir, renova a cada 10 minutos e
+  pergunta a cada 10 segundos se o cliente já assinou.
+{% endcomment %}
+{% block content %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">{{ ordem.numero_com_versao }} · {{ ordem.get_tipo_display|lower }} · {{ ordem.get_status_display|lower }} · {% if ordem.quitado %}pago{% else %}{{ ordem.get_status_pagamento_display|lower }}{% endif %}</span>
+    <h1>Ordem de serviço para assinatura</h1>
+    <p>{{ ordem.destinatario }} · {{ ordem.equipamento }} · o documento padronizado de manutenção e serviços, assinado no telefone do cliente. Sai com ou sem pagamento: a situação do pagamento vai escrita no papel.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{{ urls.lista }}?q={{ ordem.numero_documento|urlencode }}&amp;editar={{ ordem.pk }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Voltar à O.S.
+    </a>
+  </div>
+</section>
+
+<div class="ls-doc-tela" id="docAssinatura" data-doc-assinatura data-doc-papel="servico"
+     data-url-pagina="{{ urls.pagina }}"
+     data-url-link="{{ urls.link }}"
+     data-url-estado="{{ urls.estado }}"
+     data-texto-gerar="A ordem de serviço é montada com o equipamento, o serviço, as peças, os valores e a situação do pagamento de agora, e fica congelada: editar a O.S. depois não muda o que o cliente assina. O pagamento pode vir antes ou depois da assinatura."
+     data-texto-refazer="Use quando a O.S. mudou antes de o cliente assinar. O documento atual é substituído e todos os links dele deixam de valer na hora — inclusive o que o cliente tiver aberto.">
+  {% csrf_token %}
+  {% include "assinatura_os/cartao.html" %}
+
+  {% include "assinatura_os/resumo.html" %}
+</div>
+
+{% comment %}
+  A FOLHA QUE SOBE DE BAIXO, para o que não tem volta: gerar (e gerar de
+  novo, que mata os links que já saíram). Fora do cartão: o cartão é
+  trocado inteiro quando o estado muda, a folha fica.
+{% endcomment %}
+<div class="ls-doc-folha" id="docAssinaturaFolha" role="dialog" aria-modal="true" aria-labelledby="docFolhaTitulo" hidden>
+  <div class="ls-doc-folha-fundo" data-doc-fechar></div>
+  <div class="ls-doc-folha-caixa">
+    <span class="ls-doc-folha-alca" aria-hidden="true"></span>
+    <span class="ls-doc-icone acento" data-doc-folha-icone><i class="bi bi-file-earmark-lock2" aria-hidden="true"></i></span>
+    <h2 id="docFolhaTitulo" data-doc-folha-titulo>Gerar a ordem de serviço?</h2>
+    <p data-doc-folha-texto></p>
+    <button type="button" class="btn btn-success btn-lg w-100" data-doc-confirmar>Gerar a ordem de serviço</button>
+    <button type="button" class="btn btn-outline-secondary btn-lg w-100 mt-2" data-doc-fechar>Cancelar</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% estatico 'interno/documento-assinatura.js' %}"></script>
+{% endblock %}

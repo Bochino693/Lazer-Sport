@@ -19,7 +19,11 @@ from django.utils.safestring import mark_safe
 
 register = template.Library()
 
-_DESTAQUES = re.compile(r"\b(INSTRUMENTO PARTICULAR DE COMPRA E VENDA|VENDEDOR|COMPRADOR)\b")
+# A ordem de serviço (seção 124) tem as partes dela: CONTRATADA e CONTRATANTE.
+_DESTAQUES = re.compile(
+    r"\b(INSTRUMENTO PARTICULAR DE COMPRA E VENDA|INSTRUMENTO PARTICULAR DE PRESTAÇÃO DE SERVIÇOS"
+    r"|ORDEM DE SERVIÇO|VENDEDOR|COMPRADOR|CONTRATADA|CONTRATANTE)\b"
+)
 
 
 @register.filter

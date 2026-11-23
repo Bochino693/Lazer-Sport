@@ -41,6 +41,20 @@ def contexto_ordem(ordem, *, previsualizacao=False, request=None):
 
     itens = list(ordem.itens.all())
     fotos = list(ordem.manutencao.imagens.all()) if ordem.manutencao_id else []
+    # A ORDEM DE SERVIÇO PARA ASSINATURA (LEIA-ME-V10, seção 124) é a
+    # evolução da "ciência": esperando assinatura, a página manda assinar
+    # pelo link do atendente (não há dois jeitos de aceitar a mesma O.S.);
+    # assinada, mostra o comprovante. Sem o retrato e sem o traço.
+    from sistema_interno.models import DocumentoAssinatura
+
+    documento_assinatura = (
+        DocumentoAssinatura.objects
+        .filter(ordem_servico=ordem)
+        .exclude(situacao=DocumentoAssinatura.Situacao.SUBSTITUIDO)
+        .only("id", "situacao", "codigo_publico", "assinado_em", "assinante_nome")
+        .order_by("-id")
+        .first()
+    )
     contexto = {
         "ordem": ordem,
         "itens": itens,
@@ -73,10 +87,12 @@ def contexto_ordem(ordem, *, previsualizacao=False, request=None):
         "responsavel_nome": responsavel,
         "tecnico_nome": tecnico,
         "previsualizacao": previsualizacao,
+        "documento_assinatura": documento_assinatura,
         "pode_confirmar": (
             not previsualizacao
             and bool(ordem.enviada_em)
             and not ordem.cliente_ciente
+            and documento_assinatura is None
         ),
         "telefone_empresa": (
             getattr(settings, "EMPRESA_TELEFONE", "")

@@ -21,7 +21,7 @@
   avisos do link ("expirado", "substituido", "suspenso", "invalido"), o
   freio ("limite") e "assinado" (o comprovante, com a cópia em PDF).
 {% endcomment %}
-<title>{% if estado == "assinado" %}Documento assinado{% elif estado == "assinar" %}{% if e_contrato %}Assinar o contrato{% else %}Assinar o termo de compra{% endif %}{% else %}Link de assinatura{% endif %} | Lazer &amp; Sport</title>
+<title>{% if estado == "assinado" %}Documento assinado{% elif estado == "assinar" %}{% if e_servico %}Assinar a ordem de serviço{% elif e_contrato %}Assinar o contrato{% else %}Assinar o termo de compra{% endif %}{% else %}Link de assinatura{% endif %} | Lazer &amp; Sport</title>
 {% include "partials/icones_da_aba.html" %}
 <link rel="stylesheet" href="{% estatico 'vendor/fontes.css' %}">
 <link rel="stylesheet" href="{% static 'interno/vendor/bootstrap-icons.min.css' %}">
@@ -33,7 +33,7 @@
 <header class="app-barra nao-imprime">
   <span class="app-barra-marca">
     <img src="{% static 'images/logoofi.png' %}" alt="Lazer &amp; Sport" width="34" height="34">
-    <span><strong>Lazer &amp; Sport</strong><small>{% if estado == "assinado" %}Comprovante{% elif estado == "assinar" %}{% if e_contrato %}Contrato de compra e venda{% else %}Termo de compra{% endif %}{% else %}Assinatura{% endif %}</small></span>
+    <span><strong>Lazer &amp; Sport</strong><small>{% if estado == "assinado" %}Comprovante{% elif estado == "assinar" %}{% if e_servico %}Ordem de serviço{% elif e_contrato %}Contrato de compra e venda{% else %}Termo de compra{% endif %}{% else %}Assinatura{% endif %}</small></span>
   </span>
   {% if estado == "assinar" %}
     <span class="relogio" id="relogio" role="timer" aria-live="off"
@@ -54,19 +54,26 @@
   {# ============================================================ ASSINAR #}
   <section class="cartao boas-vindas entra">
     {# "pago" só quando o termo diz que estava pago (o modelo antigo era sempre). #}
+    {% if e_servico and doc.origem == "ordem" %}
+      {# A ordem de serviço da O.S. (seção 124): o número dela e o pagamento como está no papel. #}
+      <span class="kicker"><i class="bi bi-tools" aria-hidden="true"></i> {{ numero_documento }} · {{ doc.pagamento.rotulo|lower }}</span>
+    {% else %}
     <span class="kicker"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Pedido nº {{ doc.orcamento.numero }} · {% if doc.pagamento.situacao == "Pago" %}pago{% else %}aprovado{% endif %}</span>
+    {% endif %}
     <h1>Olá{% if doc.cliente.nome %}, {{ doc.cliente.nome }}{% endif %}! Falta só assinar.</h1>
-    {% if e_contrato %}
+    {% if e_servico %}
+      <p>Leia a ordem de serviço abaixo — o equipamento, o serviço, as peças, os valores e a garantia — e assine com o dedo no fim da página. Neste aparelho você tem {{ validade_minutos }} minutos para assinar, sem precisar de link novo.</p>
+    {% elif e_contrato %}
       <p>Leia o contrato de compra e venda abaixo — com as fotos do que você está comprando — e assine com o dedo no fim da página. Neste aparelho você tem {{ validade_minutos }} minutos para assinar, sem precisar de link novo.</p>
     {% else %}
       <p>Confira o termo de compra abaixo e assine com o dedo. Neste aparelho você tem {{ validade_minutos }} minutos para assinar, sem precisar de link novo.</p>
     {% endif %}
     <ol class="passos" aria-label="Como assinar">
-      <li><span>1</span>{% if e_contrato %}Leia{% else %}Confira{% endif %}</li>
+      <li><span>1</span>{% if e_contrato or e_servico %}Leia{% else %}Confira{% endif %}</li>
       <li><span>2</span>Seus dados</li>
       <li><span>3</span>Assine</li>
     </ol>
-    {% if e_contrato %}
+    {% if e_contrato or e_servico %}
       <a class="ir-assinar" href="#formAssinatura"><i class="bi bi-arrow-down-circle" aria-hidden="true"></i> Ir direto para a assinatura</a>
     {% endif %}
   </section>
@@ -101,7 +108,7 @@
     <label class="concordo{% if erro_campo == 'concordo' %} com-erro{% endif %}" data-campo="concordo">
       <input type="checkbox" name="concordo" id="campoConcordo" value="1">
       <span class="concordo-caixa" aria-hidden="true"><i class="bi bi-check-lg"></i></span>
-      <span>{% if e_contrato %}Li e concordo com todas as cláusulas deste contrato de compra e venda.{% else %}Li e concordo com o {{ doc.titulo|default:"termo de compra"|lower }} acima.{% endif %}</span>
+      <span>{% if e_servico %}Li e concordo com o serviço, os valores e todas as cláusulas desta ordem de serviço.{% elif e_contrato %}Li e concordo com todas as cláusulas deste contrato de compra e venda.{% else %}Li e concordo com o {{ doc.titulo|default:"termo de compra"|lower }} acima.{% endif %}</span>
     </label>
 
     <div class="quadro{% if erro_campo == 'assinatura' %} com-erro{% endif %}" data-campo="assinatura">
@@ -149,7 +156,7 @@
         <span class="icone-grande ambar"><i class="bi bi-hourglass-bottom" aria-hidden="true"></i></span>
         <h2>O tempo do link acabou</h2>
         <p>Por segurança, cada link vale {{ minutos_do_link }} minutos. Nada foi salvo. Peça um link novo ao atendente — seu nome e documento continuam preenchidos neste aparelho.</p>
-        {% if whatsapp_empresa %}<a class="botao-principal verde" href="https://wa.me/{{ whatsapp_empresa }}?text={% if e_contrato %}{{ 'Olá! O link para assinar o contrato do pedido nº '|urlencode }}{% else %}{{ 'Olá! O link para assinar o termo do pedido nº '|urlencode }}{% endif %}{{ doc.orcamento.numero|urlencode }}{{ ' expirou. Pode me mandar um novo?'|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp" aria-hidden="true"></i> Pedir um novo link</a>{% endif %}
+        {% if whatsapp_empresa %}<a class="botao-principal verde" href="https://wa.me/{{ whatsapp_empresa }}?text={% if e_servico %}{{ 'Olá! O link para assinar a ordem de serviço '|urlencode }}{% elif e_contrato %}{{ 'Olá! O link para assinar o contrato do pedido nº '|urlencode }}{% else %}{{ 'Olá! O link para assinar o termo do pedido nº '|urlencode }}{% endif %}{{ numero_documento|urlencode }}{{ ' expirou. Pode me mandar um novo?'|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp" aria-hidden="true"></i> Pedir um novo link</a>{% endif %}
         <button type="button" class="botao-secundario" data-fechar>Fechar</button>
       </div>
     </div>
@@ -189,7 +196,9 @@
     {% elif estado == "suspenso" %}
       <span class="icone-grande ambar"><i class="bi bi-pause-circle" aria-hidden="true"></i></span>
       <h1>Documento suspenso</h1>
-      {% if motivo == "pagamento" %}
+      {% if motivo == "ordem" %}
+        <p>A ordem de serviço foi cancelada ou trocada por uma versão nova depois que este documento saiu. Fale com o atendente antes de assinar.</p>
+      {% elif motivo == "pagamento" %}
         <p>O pagamento deste pedido mudou depois que o documento saiu. Fale com o atendente antes de assinar.</p>
       {% else %}
         <p>Este pedido mudou depois que o documento saiu e não está mais aprovado. Fale com o atendente antes de assinar.</p>
@@ -205,11 +214,11 @@
     {% endif %}
     {% if mensagem_extra %}<p class="nota">{{ mensagem_extra }}</p>{% endif %}
     {% if whatsapp_empresa %}
-      <a class="botao-principal verde" href="https://wa.me/{{ whatsapp_empresa }}?text={% if numero %}{{ 'Olá! Preciso de um novo link para assinar o termo do pedido nº '|urlencode }}{{ numero|urlencode }}.{% else %}{{ 'Olá! Preciso de um novo link para assinar o termo de compra.'|urlencode }}{% endif %}" target="_blank" rel="noopener noreferrer">
+      <a class="botao-principal verde" href="https://wa.me/{{ whatsapp_empresa }}?text={% if numero and e_servico %}{{ 'Olá! Preciso de um novo link para assinar a ordem de serviço '|urlencode }}{{ numero|urlencode }}.{% elif numero %}{{ 'Olá! Preciso de um novo link para assinar o termo do pedido nº '|urlencode }}{{ numero|urlencode }}.{% else %}{{ 'Olá! Preciso de um novo link para assinar o termo de compra.'|urlencode }}{% endif %}" target="_blank" rel="noopener noreferrer">
         <i class="bi bi-whatsapp" aria-hidden="true"></i> Pedir um novo link
       </a>
     {% endif %}
-    {% if numero %}<p class="nota">Pedido nº {{ numero }}</p>{% endif %}
+    {% if numero %}<p class="nota">{% if e_servico %}Ordem de serviço {{ numero }}{% else %}Pedido nº {{ numero }}{% endif %}</p>{% endif %}
   </section>
 {% endif %}
 

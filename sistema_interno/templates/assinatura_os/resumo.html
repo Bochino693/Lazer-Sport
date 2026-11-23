@@ -1,0 +1,53 @@
+{% load interno_extras %}
+{% comment %}
+  O RESUMO AO LADO DO CARTÃO DA O.S. (LEIA-ME-V10, seção 124): o que entra
+  (ou entrou) na ordem de serviço. Com o documento gerado, é o RETRATO
+  congelado; antes, a O.S. de agora. Só diz "pago" do que foi pago.
+{% endcomment %}
+<aside class="ls-doc-resumo" id="docAssinaturaResumo" aria-label="O que entra na ordem de serviço">
+  <h2><i class="bi bi-receipt" aria-hidden="true"></i> O que entra no documento</h2>
+  {% if documento %}
+    <p class="ls-doc-resumo-nota"><i class="bi bi-snow" aria-hidden="true"></i> Congelado em {{ conteudo.emitido_em_texto }}: editar a O.S. ou registrar o pagamento não muda o documento.</p>
+    <ul class="ls-doc-itens">
+      {% for item in conteudo.itens %}
+        <li><span><b>{{ item.quantidade }}×</b> {{ item.descricao }}</span><strong>{{ item.subtotal|reais }}</strong></li>
+      {% empty %}
+        <li><span>Sem linhas de serviço ou peça.</span></li>
+      {% endfor %}
+    </ul>
+    <dl class="ls-doc-totais">
+      {% if conteudo.valores.frete != "0.00" %}<div><dt>Frete / deslocamento</dt><dd>{{ conteudo.valores.frete|reais }}</dd></div>{% endif %}
+      {% if conteudo.valores.desconto != "0.00" %}<div><dt>Desconto</dt><dd>− {{ conteudo.valores.desconto|reais }}</dd></div>{% endif %}
+      <div><dt>Total</dt><dd>{{ conteudo.valores.total|reais }}</dd></div>
+      <div class="longo{% if conteudo.pagamento.codigo == "pago" %} pago{% endif %}"><dt>Pagamento na emissão</dt><dd>{{ conteudo.pagamento.rotulo }}</dd></div>
+      {% if conteudo.pagamento.codigo == "parcial" %}<div><dt>Recebido até a emissão</dt><dd>{{ conteudo.valores.pago|reais }}</dd></div>{% endif %}
+      <div class="longo"><dt>Condição (Cláusula 7ª)</dt><dd>{{ conteudo.condicao_pagamento }}</dd></div>
+      <div class="longo"><dt>Garantia (Cláusula 6ª)</dt><dd>{{ conteudo.garantia.rotulo }}</dd></div>
+      <div class="longo"><dt>Equipamento</dt><dd>{{ conteudo.servico.equipamento|default:"—" }}</dd></div>
+    </dl>
+  {% else %}
+    <p class="ls-doc-resumo-nota"><i class="bi bi-info-circle" aria-hidden="true"></i> Ao gerar, isto fica congelado no documento.</p>
+    <ul class="ls-doc-itens">
+      {% for item in itens %}
+        <li><span><b>{{ item.quantidade }}×</b> {{ item.descricao }}</span><strong>{{ item.subtotal|reais }}</strong></li>
+      {% empty %}
+        <li><span>Sem linhas de serviço ou peça (o documento sai com total de R$ 0,00).</span></li>
+      {% endfor %}
+    </ul>
+    <dl class="ls-doc-totais">
+      {% if ordem.frete %}<div><dt>Frete / deslocamento</dt><dd>{{ ordem.frete|reais }}</dd></div>{% endif %}
+      {% if ordem.desconto %}<div><dt>Desconto</dt><dd>− {{ ordem.desconto|reais }}</dd></div>{% endif %}
+      <div><dt>Total</dt><dd>{{ ordem.total|reais }}</dd></div>
+      {% if ordem.quitado %}
+        <div class="pago"><dt>Pago{% if ordem.pago_em %} em {{ ordem.pago_em|date:"d/m/Y" }}{% endif %}</dt><dd>{{ ordem.valor_pago|reais }}</dd></div>
+      {% elif ordem.valor_pago %}
+        <div><dt>Já recebido</dt><dd>{{ ordem.valor_pago|reais }}</dd></div>
+      {% else %}
+        <div><dt>Pagamento</dt><dd>{% if ordem.total %}Nada recebido ainda{% else %}Sem custo{% endif %}</dd></div>
+      {% endif %}
+      {% if condicao_previa %}<div class="longo"><dt>Condição (Cláusula 7ª)</dt><dd>{{ condicao_previa }}</dd></div>{% endif %}
+      {% if garantia_previa %}<div class="longo"><dt>Garantia (Cláusula 6ª)</dt><dd>{{ garantia_previa }}</dd></div>{% endif %}
+      <div><dt>Agenda</dt><dd>{% if ordem.agendada_para %}{{ ordem.agendada_para|date:"d/m/Y H:i" }}{% else %}A combinar{% endif %}</dd></div>
+    </dl>
+  {% endif %}
+</aside>

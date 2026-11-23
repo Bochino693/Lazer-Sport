@@ -314,6 +314,13 @@ def e_contrato(conteudo) -> bool:
     return _e_contrato(conteudo)
 
 
+def e_servico(conteudo) -> bool:
+    """O documento é a ORDEM DE SERVIÇO (manutenção e serviços, seção 124)?"""
+    from .documento_servico import e_servico as _e_servico
+
+    return _e_servico(conteudo)
+
+
 def hash_do_retrato(conteudo: dict) -> str:
     """SHA-256 do retrato em JSON canônico (chaves ordenadas, sem espaço).
 
@@ -381,6 +388,11 @@ def motivo_da_suspensao(documento, orcamento=None) -> str:
     entrar dinheiro (ou corrigir o valor) depois de gerar ou de assinar não
     mexe no documento, que conta o recebido até a emissão.
     """
+    if documento.ordem_servico_id and not documento.orcamento_id:
+        # o documento da O.S. (seção 124): cancelada ou substituída suspende
+        from .documento_servico import motivo_da_suspensao_da_ordem
+
+        return motivo_da_suspensao_da_ordem(documento)
     orcamento = orcamento or documento.orcamento
     if orcamento.status != Orcamento.Status.APROVADO:
         return "aprovacao"
@@ -407,7 +419,7 @@ def situacao_do_cartao(orcamento, documento) -> str:
     return documento.situacao
 
 
-def gerar(orcamento, usuario, *, motivo=""):
+def gerar(orcamento, usuario, *, motivo="", modelo=None):
     """Congela o orçamento num documento novo. Só para orçamento APROVADO.
 
     Seja qual for o pagamento: o termo vem antes dele (aprovado ->
@@ -419,6 +431,11 @@ def gerar(orcamento, usuario, *, motivo=""):
     `motivo`: por que foi refeito sem ninguém apertar "Gerar de novo" --
     a proposta mudou na janela antes da assinatura (seção 123,
     `edicao_orcamento`). Vai para o histórico e para o diário do novo.
+
+    `modelo`: o papel ("compra_venda" ou "servico", os chips do cartão).
+    Sem ele, o do documento que está sendo refeito ou, no primeiro, o que
+    os itens sugerem -- a ORDEM DE SERVIÇO do orçamento de manutenção
+    (`documento_servico`, LEIA-ME-V10 seção 124). Também sem pagamento.
     """
     with transaction.atomic():
         # A linha do orçamento travada: dois cliques em "Gerar" de duas
@@ -460,7 +477,13 @@ def gerar(orcamento, usuario, *, motivo=""):
             doc.situacao = DocumentoAssinatura.Situacao.SUBSTITUIDO
             doc.save(update_fields=["situacao", "atualizado"])
 
-        conteudo = retrato(orcamento, dados)
+        from . import documento_servico
+
+        escolhido = documento_servico.modelo_do_orcamento(orcamento, modelo, anteriores)
+        if escolhido == documento_servico.MODELO_SERVICO:
+            conteudo = documento_servico.retrato_do_orcamento(orcamento, dados)
+        else:
+            conteudo = retrato(orcamento, dados)
         documento = DocumentoAssinatura.objects.create(
             orcamento=orcamento,
             conteudo=conteudo,
@@ -468,7 +491,7 @@ def gerar(orcamento, usuario, *, motivo=""):
             criado_por=usuario if getattr(usuario, "is_authenticated", False) else None,
         )
 
-    resumo = f"Contrato de compra e venda · integridade {documento.hash_conteudo[:12]}…"
+    resumo = f"{documento_servico.papel_curto(conteudo)} · integridade {documento.hash_conteudo[:12]}…"
     if anteriores:
         resumo = (
             ("Contrato refeito: " + motivo + " " if motivo else "Documento refeito ")
@@ -615,21 +638,24 @@ def _hora(texto):
 def linhas_do_diario(documento) -> list[dict]:
     """O diário em frases, do mais novo ao mais antigo: [{"quando", "icone", "texto"}]."""
     linhas = []
+    # a ordem de serviço (seção 124) fala dela mesma; o resto, do contrato
+    os_ = e_servico(documento.conteudo)
+    papel, artigo = ("Ordem de serviço", "a ordem de serviço") if os_ else ("Contrato", "o contrato")
     for evento in reversed(list(documento.diario or [])):
         tipo = evento.get("tipo")
         quando = _hora(evento.get("fim") or evento.get("quando"))
         if tipo == "gerado" and evento.get("motivo"):
             # refeito sozinho porque a proposta mudou antes da assinatura (seção 123)
-            icone, texto = "bi-arrow-repeat", f"Contrato refeito por {evento.get('por') or 'equipe'}: {evento['motivo']}"
+            icone, texto = "bi-arrow-repeat", f"{papel} refeit{'a' if os_ else 'o'} por {evento.get('por') or 'equipe'}: {evento['motivo']}"
         elif tipo == "gerado":
-            icone, texto = "bi-file-earmark-plus", f"Contrato gerado por {evento.get('por') or 'equipe'}"
+            icone, texto = "bi-file-earmark-plus", f"{papel} gerad{'a' if os_ else 'o'} por {evento.get('por') or 'equipe'}"
         elif tipo == "link":
             canal = CANAIS_DO_LINK.get(evento.get("canal"), "painel")
             de, ate = evento.get("numero"), evento.get("ate")
             numeros = f"links {de} a {ate}" if ate and ate != de else f"link {de}"
             icone, texto = "bi-qr-code", f"{numeros.capitalize()} · {canal}"
         elif tipo == "aberto":
-            icone, texto = "bi-phone", f"O cliente abriu o contrato ({evento.get('aparelho') or 'aparelho'})"
+            icone, texto = "bi-phone", f"O cliente abriu {artigo} ({evento.get('aparelho') or 'aparelho'})"
         elif tipo == "recusa":
             vezes = int(evento.get("vezes") or 1)
             icone = "bi-exclamation-circle"
@@ -755,7 +781,7 @@ def ler_link(token, *, bloquear=False) -> LeituraDoLink:
 
     pk, _, pedaco = carga.partition(".")
     consulta = DocumentoAssinatura.objects.select_related(
-        "orcamento", "orcamento__cliente",
+        "orcamento", "orcamento__cliente", "ordem_servico",
     )
     if bloquear:
         consulta = consulta.select_for_update(of=("self",))
@@ -826,9 +852,17 @@ def mensagem_whatsapp(documento, link) -> str:
     orçamento aprovado e pago.
     """
     conteudo = documento.conteudo or {}
+    if e_servico(conteudo) and conteudo.get("origem") == "ordem":
+        from .documento_servico import mensagem_whatsapp as da_ordem
+
+        return da_ordem(documento, link)
     numero = (conteudo.get("orcamento") or {}).get("numero", "")
     nome = (conteudo.get("cliente") or {}).get("nome", "")
-    papel = "o contrato de compra e venda" if e_contrato(conteudo) else "o termo de compra"
+    papel = (
+        "a ordem de serviço" if e_servico(conteudo)
+        else "o contrato de compra e venda" if e_contrato(conteudo)
+        else "o termo de compra"
+    )
     return "\n".join([
         f"Olá, {nome}! 👋" if nome else "Olá! 👋",
         "",
@@ -954,14 +988,23 @@ def assinar(documento, *, nome, cpf_cnpj, png, ip, navegador):
         "assinatura_png", "assinatura_ip", "assinatura_navegador",
         "hash_assinado", "atualizado",
     ])
+    if documento.ordem_servico_id and not documento.orcamento_id:
+        # a ordem de serviço da O.S. (seção 124): assinar é a ciência dela
+        from .documento_servico import depois_de_assinar
+
+        depois_de_assinar(documento)
+        return documento
     links = documento.links_gerados
+    from .documento_servico import papel_curto
+
     registrar_no_historico(
         documento.orcamento,
         None,
         AtividadeOrcamento.Tipo.ASSINATURA,
         (
-            ("Contrato de compra e venda" if e_contrato(documento.conteudo) else "Termo de compra")
-            + " assinado no celular · "
+            papel_curto(documento.conteudo)
+            + (" assinada" if e_servico(documento.conteudo) else " assinado")
+            + " no celular · "
             f"{mascarar_documento(cpf_cnpj)} · {links} link{'s' if links != 1 else ''} "
             f"gerado{'s' if links != 1 else ''} até a assinatura"
         ),

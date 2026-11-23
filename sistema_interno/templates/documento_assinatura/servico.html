@@ -1,0 +1,188 @@
+{% load static interno_extras contrato_extras %}
+{% comment %}
+  A ORDEM DE SERVIÇO -- o papel padronizado de manutenção e serviços que o
+  cliente assina no celular (LEIA-ME-V10, seção 124).
+
+  O dono: "também deve emitir contrato ou ordem de serviço, destinado a
+  manutenções e serviços, para padronizar" -- inclusive dos orçamentos e
+  das O.S. sem pagamento recebido.
+
+  A MESMA FOLHA DO CONTRATO DE VENDA (as classes .ct-* de
+  site/paginas/assinatura.css, e as .ct-os-* da seção dela): a capa com a
+  empresa e o número, o título, o QUADRO DO SERVIÇO (tipo, equipamento,
+  identificação, local, agenda, técnico, garantia, defeito, diagnóstico,
+  serviço executado), o QUADRO DE VALORES (linhas de serviço e peça,
+  frete, desconto, total e a SITUAÇÃO DO PAGAMENTO na emissão -- "nenhum
+  valor recebido" quando nada entrou), o preâmbulo com CONTRATADA e
+  CONTRATANTE lado a lado, as onze cláusulas, o fecho e as assinaturas.
+
+  TUDO SAI DO RETRATO (`doc`), inclusive o texto das cláusulas
+  (`documento_servico.py`): o que foi assinado não muda se o arquivo mudar.
+{% endcomment %}
+<article class="contrato contrato-os" aria-label="{{ doc.titulo_curto|default:'Ordem de serviço' }}" lang="pt-BR">
+
+  <header class="ct-capa">
+    <div class="ct-marca">
+      <img src="{% static 'images/logoofi.png' %}" alt="" width="60" height="60">
+      <div>
+        <strong>{{ doc.prestador.nome_fantasia }}</strong>
+        <span>{{ doc.prestador.razao_social }}</span>
+        <span>CNPJ {{ doc.prestador.cnpj }}{% if doc.empresa.telefone %} · {{ doc.empresa.telefone }}{% endif %}</span>
+      </div>
+    </div>
+    <dl class="ct-meta">
+      <div><dt>{% if doc.origem == "ordem" %}Ordem de serviço{% else %}Orçamento nº{% endif %}</dt><dd>{{ doc.numero }}{% if doc.versao > 1 %} · v{{ doc.versao }}{% endif %}</dd></div>
+      {% if doc.codigo %}<div><dt>Código</dt><dd class="ct-codigo">{{ doc.codigo }}</dd></div>{% endif %}
+      <div><dt>Emitido em</dt><dd>{{ doc.emitido_em_texto }}</dd></div>
+    </dl>
+  </header>
+
+  <h1 class="ct-titulo">{{ doc.titulo }}</h1>
+
+  {# O QUADRO DO SERVIÇO: o que se combina antes das cláusulas. #}
+  <section class="ct-os-quadro" aria-label="O serviço">
+    <h2 class="ct-secao-titulo">O serviço</h2>
+    <dl class="ct-os-dados">
+      <div><dt>Tipo de serviço</dt><dd>{{ doc.servico.tipo }}</dd></div>
+      <div><dt>Situação na emissão</dt><dd>{{ doc.servico.situacao }}</dd></div>
+      {% if doc.servico.equipamento %}<div class="largo"><dt>Equipamento</dt><dd>{{ doc.servico.equipamento }}</dd></div>{% endif %}
+      {% if doc.servico.numero_serie %}<div><dt>Identificação / série</dt><dd>{{ doc.servico.numero_serie }}</dd></div>{% endif %}
+      <div><dt>{% if doc.servico.concluida_em %}Conclusão{% else %}Agenda{% endif %}</dt><dd>{% if doc.servico.concluida_em %}{{ doc.servico.concluida_em }}{% elif doc.servico.agendada_para %}{{ doc.servico.agendada_para }}{% else %}A combinar{% endif %}</dd></div>
+      {% if doc.servico.tecnico %}<div><dt>Técnico</dt><dd>{{ doc.servico.tecnico }}</dd></div>{% endif %}
+      <div><dt>Garantia do serviço</dt><dd>{{ doc.garantia.rotulo }}</dd></div>
+      {% if doc.servico.local %}<div class="largo"><dt>Local do serviço</dt><dd>{{ doc.servico.local }}{% if doc.servico.contato_local %} · contato: {{ doc.servico.contato_local }}{% endif %}</dd></div>{% endif %}
+    </dl>
+    {% if doc.servico.defeito %}<div class="ct-os-texto"><h3>Defeito relatado / solicitação</h3><p>{{ doc.servico.defeito|linebreaksbr }}</p></div>{% endif %}
+    {% if doc.servico.diagnostico %}<div class="ct-os-texto"><h3>Diagnóstico técnico</h3><p>{{ doc.servico.diagnostico|linebreaksbr }}</p></div>{% endif %}
+    {% if doc.servico.servico_executado %}<div class="ct-os-texto"><h3>Serviço executado</h3><p>{{ doc.servico.servico_executado|linebreaksbr }}</p></div>{% endif %}
+    {% if doc.servico.observacoes %}<div class="ct-os-texto"><h3>Observações</h3><p>{{ doc.servico.observacoes|linebreaksbr }}</p></div>{% endif %}
+  </section>
+
+  {# O QUADRO DE VALORES: cada linha com a conta, e a situação do pagamento na emissão. #}
+  <section class="ct-os-valores" aria-label="Serviços, peças e valores">
+    <h2 class="ct-secao-titulo">Serviços, peças e valores</h2>
+    <ul class="ct-os-itens">
+      {% for item in doc.itens %}
+        <li>
+          <span class="ct-os-item-nome"><small>{{ item.tipo }}</small><strong>{{ item.descricao }}</strong></span>
+          <span class="ct-os-item-conta">{{ item.quantidade }} × {{ item.valor_unitario_texto }}</span>
+          <b class="ct-os-item-total">{{ item.subtotal_texto }}</b>
+        </li>
+      {% empty %}
+        <li class="ct-os-sem-itens">Nenhuma linha de serviço ou peça nesta ordem de serviço.</li>
+      {% endfor %}
+    </ul>
+    <dl class="ct-os-contas">
+      <div><dt>Subtotal</dt><dd>{{ doc.valores_texto.subtotal }}</dd></div>
+      {% if doc.valores.frete != "0.00" %}<div><dt>Frete / deslocamento</dt><dd>{{ doc.valores_texto.frete }}</dd></div>{% endif %}
+      {% if doc.valores.acrescimo != "0.00" %}<div><dt>Acréscimo</dt><dd>{{ doc.valores_texto.acrescimo }}</dd></div>{% endif %}
+      {% if doc.valores.desconto != "0.00" %}<div><dt>Desconto</dt><dd>− {{ doc.valores_texto.desconto }}</dd></div>{% endif %}
+      <div class="ct-os-total"><dt>Total</dt><dd>{{ doc.valores_texto.total }}</dd></div>
+    </dl>
+    <p class="ct-os-pagamento ct-os-pg-{{ doc.pagamento.codigo }}"><span class="ct-os-selo">{{ doc.pagamento.rotulo }}</span><span>{{ doc.pagamento.texto }}{% if doc.pagamento.codigo != "pago" and doc.pagamento.codigo != "sem_custo" %} Condição: {{ doc.condicao_pagamento }}.{% endif %}</span></p>
+  </section>
+
+  <section class="ct-preambulo" aria-label="Partes">
+    <p>{{ doc.preambulo.abertura|destaque_contrato }}</p>
+    <div class="ct-partes">
+      <div class="ct-parte">
+        <h2>Contratada</h2>
+        <strong>{{ doc.prestador.nome_fantasia }}</strong>
+        <dl>
+          <div><dt>Razão social</dt><dd>{{ doc.prestador.razao_social }}</dd></div>
+          <div><dt>CNPJ</dt><dd>{{ doc.prestador.cnpj }}</dd></div>
+          <div><dt>Sede</dt><dd>{{ doc.prestador.endereco_sede }}</dd></div>
+          <div><dt>Representante</dt><dd>{{ doc.prestador.representante_nome|default:"Representante legal" }}{% if doc.prestador.representante_rg %} · RG {{ doc.prestador.representante_rg }}{% endif %}</dd></div>
+        </dl>
+      </div>
+      <div class="ct-parte comprador">
+        <h2>Contratante</h2>
+        <strong>{{ doc.cliente.nome }}</strong>
+        <dl>
+          <div><dt>CPF ou CNPJ</dt><dd>{% if cliente_documento %}{{ cliente_documento }}{% elif assinante_documento %}{{ assinante_documento }}{% else %}<span class="ct-vazio">informado na assinatura</span>{% endif %}</dd></div>
+          <div><dt>Endereço completo</dt><dd>{{ doc.cliente.endereco|default:"—" }}</dd></div>
+          <div><dt>E-mail</dt><dd>{{ doc.cliente.email|default:"—" }}</dd></div>
+          <div><dt>Telefone</dt><dd>{{ doc.cliente.telefone|default:"—" }}</dd></div>
+        </dl>
+      </div>
+    </div>
+    <p>{{ doc.preambulo.fechamento }}</p>
+  </section>
+
+  {% for secao in doc.secoes %}
+    <section class="ct-secao" aria-label="{{ secao.titulo|capfirst }}">
+      <h2 class="ct-secao-titulo">{{ secao.titulo }}</h2>
+      {% for clausula in secao.clausulas %}
+        <div class="ct-clausula" id="clausula-{{ clausula.numero }}">
+          <p><strong class="ct-rotulo">{{ clausula.rotulo }}</strong> {{ clausula.texto|destaque_contrato }}</p>
+          {% if clausula.complemento %}<p class="ct-complemento">{{ clausula.complemento|destaque_contrato }}</p>{% endif %}
+          {% if clausula.situacao %}<p class="ct-complemento ct-os-situacao">{{ clausula.situacao|destaque_contrato }}</p>{% endif %}
+          {% for paragrafo in clausula.paragrafos %}
+            <p class="ct-paragrafo"><strong class="ct-rotulo">{{ paragrafo.rotulo }}</strong> {{ paragrafo.texto|destaque_contrato }}</p>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </section>
+  {% endfor %}
+
+  {# O fecho e as assinaturas: um bloco só, que nunca se parte entre duas folhas. #}
+  <section class="ct-final{% if documento.assinado %} assinada{% endif %}" aria-label="Assinaturas">
+    <p class="ct-fecho">{{ doc.fecho }}</p>
+    <p class="ct-local">{{ doc.local_data }}</p>
+    <div class="ct-assinaturas">
+      <div class="ct-assina">
+        <span class="ct-assina-linha" aria-hidden="true"></span>
+        <strong>CONTRATADA</strong>
+        <span>{{ doc.prestador.representante_nome|default:"Representante legal" }}</span>
+        <span>{{ doc.prestador.nome_fantasia }}</span>
+      </div>
+      <div class="ct-assina ct-assina-comprador">
+        <span class="ct-assina-linha"{% if not assinatura_img %} aria-hidden="true"{% endif %}>
+          {% if assinatura_img %}<img src="{{ assinatura_img }}" alt="Assinatura de {{ documento.assinante_nome }}">{% endif %}
+        </span>
+        <strong>CONTRATANTE</strong>
+        {% if documento.assinado %}
+          <span>{{ documento.assinante_nome }}{% if assinante_documento %} · {{ assinante_documento }}{% endif %}</span>
+          <span class="ct-assina-eletronica">Assinado eletronicamente em {{ documento.assinado_em|date:"d/m/Y \à\s H:i" }}</span>
+        {% else %}
+          <span>{{ doc.cliente.nome }}</span>
+          <span class="ct-assina-eletronica">Assinatura eletrônica, no celular</span>
+        {% endif %}
+      </div>
+      <div class="ct-assina">
+        <span class="ct-assina-linha" aria-hidden="true"></span>
+        <strong>TESTEMUNHA 1</strong>
+        <span class="ct-campo">Nome:</span>
+        <span class="ct-campo">CPF:</span>
+      </div>
+      <div class="ct-assina">
+        <span class="ct-assina-linha" aria-hidden="true"></span>
+        <strong>TESTEMUNHA 2</strong>
+        <span class="ct-campo">Nome:</span>
+        <span class="ct-campo">CPF:</span>
+      </div>
+    </div>
+  </section>
+
+  {% if documento.assinado %}
+    <section class="ct-auditoria" aria-label="Registro da assinatura eletrônica">
+      <h2>Registro da assinatura eletrônica</h2>
+      <dl>
+        <div><dt>Documento</dt><dd>{{ documento.codigo_publico }}</dd></div>
+        <div><dt>Ordem de serviço</dt><dd>{{ doc.numero }} · versão {{ doc.versao }}{% if doc.codigo %} · {{ doc.codigo }}{% endif %}</dd></div>
+        <div><dt>Assinado em</dt><dd>{{ documento.assinado_em|date:"d/m/Y H:i:s O" }}</dd></div>
+        <div><dt>Assinante</dt><dd>{{ documento.assinante_nome }} · {{ assinante_documento }}</dd></div>
+        <div><dt>IP</dt><dd>{{ documento.assinatura_ip|default:"não informado" }}</dd></div>
+        <div><dt>Links gerados</dt><dd>{{ documento.links_gerados }} (cada um válido por {% minutos_do_link %} minutos)</dd></div>
+        <div class="largo"><dt>Aparelho (navegador)</dt><dd>{{ documento.assinatura_navegador|default:"não informado" }}</dd></div>
+        <div class="largo"><dt>SHA-256 do documento</dt><dd class="hash">{{ documento.hash_conteudo }}</dd></div>
+        <div class="largo"><dt>SHA-256 conferido na assinatura</dt><dd class="hash">{{ documento.hash_assinado }}</dd></div>
+      </dl>
+    </section>
+  {% endif %}
+
+  <footer class="ct-rodape">
+    <span>{{ codigo_contrato }}</span>
+    <span>{{ doc.prestador.nome_fantasia }} · CNPJ {{ doc.prestador.cnpj }} · lazersport.com.br · modelo {{ doc.modelo }}</span>
+  </footer>
+</article>

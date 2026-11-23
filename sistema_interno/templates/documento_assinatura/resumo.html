@@ -27,6 +27,11 @@
         <div><dt>Recebido até a emissão</dt><dd>{{ conteudo.valores.pago|reais }}</dd></div>
       {% endif %}
       {% if conteudo.condicoes.forma_envio %}<div><dt>Envio</dt><dd>{{ conteudo.condicoes.forma_envio }}</dd></div>{% endif %}
+      {% if conteudo.tipo == "servico" %}
+        <div><dt>Documento</dt><dd>Ordem de serviço</dd></div>
+        <div><dt>Pagamento na emissão</dt><dd>{{ conteudo.pagamento.rotulo }}</dd></div>
+        <div><dt>Garantia (Cláusula 6ª)</dt><dd>{{ conteudo.garantia.rotulo }}</dd></div>
+      {% endif %}
       {% if conteudo.tipo == "contrato" %}
         <div><dt>Entrega (Cláusula 3ª)</dt><dd>{% if conteudo.prazo.dias == 0 %}Pronta entrega{% else %}{{ conteudo.prazo.numero }} {{ conteudo.prazo.unidade }}{% endif %}</dd></div>
         <div><dt>Vendedor</dt><dd>{{ conteudo.vendedor.representante_nome }}</dd></div>
@@ -50,7 +55,7 @@
         <div><dt>Já recebido</dt><dd>{{ orcamento.valor_pago|reais }}</dd></div>
       {% endif %}
       {% if orcamento.forma_envio %}<div><dt>Envio</dt><dd>{{ orcamento.forma_envio }}</dd></div>{% endif %}
-      <div><dt>Entrega (Cláusula 3ª)</dt><dd>{{ prazo_entrega }} dia{{ prazo_entrega|pluralize }} út{{ prazo_entrega|pluralize:"il,eis" }}{% if orcamento.prazo_producao_dias is None %} <small>(padrão)</small>{% endif %}</dd></div>
+      <div data-doc-so-modelo="compra_venda"{% if modelo_sugerido == "servico" %} hidden{% endif %}><dt>Entrega (Cláusula 3ª)</dt><dd>{{ prazo_entrega }} dia{{ prazo_entrega|pluralize }} út{{ prazo_entrega|pluralize:"il,eis" }}{% if orcamento.prazo_producao_dias is None %} <small>(padrão)</small>{% endif %}</dd></div>
     </dl>
   {% endif %}
 </aside>

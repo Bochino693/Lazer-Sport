@@ -617,7 +617,7 @@ def condicao_de_pagamento(orcamento) -> tuple[str, str]:
         return f"à vista, em parcela única, quitado{em}", "pagamento"
     if pago > 0:
         return (
-            f"entrada de {dinheiro(pago)} paga{em} e o saldo de {dinheiro(total - pago)} "
+            f"entrada de {dinheiro(pago, prefixo='R$')} paga{em} e o saldo de {dinheiro(total - pago, prefixo='R$')} "
             "até a entrega do equipamento"
         ), "pagamento"
     return "à vista, na confirmação do pedido", "padrao"

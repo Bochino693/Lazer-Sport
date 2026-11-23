@@ -5,6 +5,7 @@
 
   O documento de agora é o CONTRATO de compra e venda (LEIA-ME-V10, seção
   107); os termos de compra gerados antes dele continuam com a folha
-  deles (`folha_termo.html`).
+  deles (`folha_termo.html`). A ORDEM DE SERVIÇO de manutenção e serviços
+  (seção 124) tem a dela (`servico.html`).
 {% endcomment %}
-{% if doc.tipo == "contrato" %}{% include "documento_assinatura/contrato.html" %}{% else %}{% include "documento_assinatura/folha_termo.html" %}{% endif %}
+{% if doc.tipo == "contrato" %}{% include "documento_assinatura/contrato.html" %}{% elif doc.tipo == "servico" %}{% include "documento_assinatura/servico.html" %}{% else %}{% include "documento_assinatura/folha_termo.html" %}{% endif %}

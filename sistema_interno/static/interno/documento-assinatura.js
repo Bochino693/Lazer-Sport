@@ -231,8 +231,19 @@
   folha.addEventListener("click", aoClicarFolha);
   document.addEventListener("keydown", aoTeclar);
 
-  function gerar() {
-    return postar(URL_PAGINA, { action: "gerar" }).then(function (corpo) {
+  /* O papel escolhido nos chips (seção 124): contrato de compra e venda ou
+     ordem de serviço. Sem chips (a O.S., ou "Gerar de novo"), o servidor
+     decide: o mesmo papel do documento refeito. */
+  function modeloEscolhido() {
+    var marcado = raiz.querySelector('[data-doc-modelo][aria-checked="true"]');
+    return marcado ? marcado.getAttribute("data-doc-modelo") : "";
+  }
+
+  function gerar(comModelo) {
+    var dados = { action: "gerar" };
+    var modelo = comModelo ? modeloEscolhido() : "";
+    if (modelo) dados.modelo = modelo;
+    return postar(URL_PAGINA, dados).then(function (corpo) {
       trocar(corpo);
       aviso(corpo.msg, "ok");
     });
@@ -248,24 +259,39 @@
   }
 
   function aoClicar(evento) {
+    var chip = evento.target.closest("[data-doc-modelo]");
+    if (chip && raiz.contains(chip)) {
+      raiz.querySelectorAll("[data-doc-modelo]").forEach(function (outro) {
+        outro.setAttribute("aria-checked", outro === chip ? "true" : "false");
+      });
+      // o que só vale para um dos papéis (a Cláusula 2ª e a 3ª da venda)
+      var escolhido = chip.getAttribute("data-doc-modelo");
+      raiz.querySelectorAll("[data-doc-so-modelo]").forEach(function (no) {
+        no.hidden = no.getAttribute("data-doc-so-modelo") !== escolhido;
+      });
+      return;
+    }
     var botao = evento.target.closest("[data-doc-acao]");
     if (!botao || !raiz.contains(botao)) return;
     var acao = botao.getAttribute("data-doc-acao");
 
     if (acao === "gerar") {
+      var servico = modeloEscolhido() === "servico" || raiz.getAttribute("data-doc-papel") === "servico";
       abrirFolha({
-        titulo: "Gerar o documento para assinatura?",
-        texto: "O termo de compra é montado com os itens, o total e as condições de pagamento deste orçamento aprovado, e fica congelado: editar o orçamento — ou registrar o pagamento — depois não muda o que o cliente assina.",
-        botao: "Gerar documento",
-        acao: gerar,
+        titulo: servico ? "Gerar a ordem de serviço?" : "Gerar o documento para assinatura?",
+        texto: raiz.getAttribute("data-texto-gerar") || (servico
+          ? "A ordem de serviço é montada com o serviço, as peças, os valores e a situação do pagamento de agora, e fica congelada: o pagamento pode vir antes ou depois da assinatura."
+          : "O termo de compra é montado com os itens, o total e as condições de pagamento deste orçamento aprovado, e fica congelado: editar o orçamento — ou registrar o pagamento — depois não muda o que o cliente assina."),
+        botao: servico ? "Gerar a ordem de serviço" : "Gerar documento",
+        acao: function () { return gerar(true); },
       });
     } else if (acao === "refazer") {
       abrirFolha({
         titulo: "Gerar o documento de novo?",
-        texto: "Use quando o orçamento mudou. O documento atual é substituído e todos os links dele deixam de valer na hora — inclusive o que o cliente tiver aberto.",
+        texto: raiz.getAttribute("data-texto-refazer") || "Use quando o orçamento mudou. O documento atual é substituído e todos os links dele deixam de valer na hora — inclusive o que o cliente tiver aberto.",
         botao: "Gerar de novo",
         perigo: true,
-        acao: gerar,
+        acao: function () { return gerar(false); },
       });
     } else if (acao === "mostrar-qr") {
       // outro aparelho, ou o cliente fechou a página: o QR volta a girar

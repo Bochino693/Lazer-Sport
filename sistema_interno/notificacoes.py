@@ -199,6 +199,8 @@ def avisar_documento_assinado(documento):
     cliente fora da tela de bloqueio. Não vibra -- é um fecho, não uma
     urgência.
     """
+    if documento.ordem_servico_id and not documento.orcamento_id:
+        return avisar_ordem_servico_assinada(documento)
     orcamento = documento.orcamento
     return _entregar(
         _quem_cuida_de_orcamento(orcamento),
@@ -228,6 +230,41 @@ def avisar_orcamento_vinculado(orcamento):
             "corpo": "Ele agora acompanha as fases em Meus pedidos. Veja a conta no histórico.",
             "url": "/orcamentos/",
             "marca": _marca(f"orcamento-vinculado:{orcamento.pk}"),
+            "urgente": False,
+        },
+    )
+
+
+def _quem_cuida_de_ordem(ordem):
+    """Produção, Financeiro e Gestão, mais o responsável e o técnico da O.S."""
+    pessoas = {}
+    for usuario in User.objects.filter(is_active=True):
+        if (
+            tem_funcao(usuario, PRODUCAO)
+            or tem_funcao(usuario, FINANCEIRO)
+            or tem_funcao(usuario, GESTAO)
+        ):
+            pessoas[usuario.pk] = usuario
+    for usuario in (ordem.responsavel, ordem.tecnico):
+        if usuario is not None and usuario.is_active:
+            pessoas[usuario.pk] = usuario
+    return list(pessoas.values())
+
+
+def avisar_ordem_servico_assinada(documento):
+    """O cliente assinou no celular a ordem de serviço (LEIA-ME-V10, seção 124).
+
+    O número no título e o nome do cliente fora da tela de bloqueio, como
+    os outros avisos. Não vibra: é um fecho, não uma urgência.
+    """
+    ordem = documento.ordem_servico
+    return _entregar(
+        _quem_cuida_de_ordem(ordem),
+        {
+            "titulo": f"{ordem.numero_documento}: ordem de serviço assinada",
+            "corpo": "O cliente assinou a ordem de serviço. O PDF está no cartão do documento.",
+            "url": f"/ordens-servico/{ordem.pk}/assinatura/",
+            "marca": _marca(f"documento-assinatura:{documento.pk}"),
             "urgente": False,
         },
     )

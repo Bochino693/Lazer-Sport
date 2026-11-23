@@ -1281,7 +1281,8 @@
     var cabeca = criar("div", "ls-res-passo-topo");
     cabeca.appendChild(criar("span", "ls-res-passo-numero", item.prazo ? "2" : "1"));
     var textos = criar("div");
-    var papel = contrato.papel === "termo de compra" ? "Termo de compra" : "Contrato";
+    var papel = contrato.papel === "termo de compra" ? "Termo de compra"
+      : contrato.papel === "ordem de serviço" ? "Ordem de serviço" : "Contrato";
     textos.appendChild(criar("strong", "", papel));
     var situacao = criar("small", "ls-res-nota");
     textos.appendChild(situacao);

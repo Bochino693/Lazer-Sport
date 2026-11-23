@@ -148,6 +148,12 @@
   {% csrf_token %}<input type="hidden" name="action" value="save"><input type="hidden" name="id" id="osId"><input type="hidden" name="revisao" id="osRevisao"><input type="hidden" name="itens" id="osItens">
   <div class="modal-header"><div><span class="ls-modal-kicker">Execução operacional</span><h5 class="modal-title" id="osTitulo">Nova Ordem de Serviço</h5></div><button class="btn-close" type="button" data-bs-dismiss="modal"></button></div>
   <div class="modal-body ls-compact-form"><div id="osErro" class="visually-hidden" role="alert"></div>
+    {# A ordem de serviço para assinatura (LEIA-ME-V10, seção 124): a faixa diz em que pé está e leva ao cartão do QR ou ao PDF. #}
+    <section id="osDocumento" class="ls-janela-trava ls-os-doc-faixa" role="status" hidden>
+      <span class="ls-nota-app-icone" aria-hidden="true"><i class="bi bi-pen" id="osDocumentoIcone"></i></span>
+      <div class="ls-nota-app-corpo"><strong id="osDocumentoTitulo">Ordem de serviço para assinatura</strong><span id="osDocumentoTexto"></span></div>
+      <a class="ls-janela-trava-acao" id="osDocumentoAcao" href="#"><i class="bi bi-qr-code" aria-hidden="true" id="osDocumentoAcaoIcone"></i><span id="osDocumentoAcaoTexto">Abrir</span></a>
+    </section>
     <section id="osCongelada" class="ls-janela-trava" role="status" hidden><span class="ls-nota-app-icone" aria-hidden="true"><i class="bi bi-clock-history"></i></span><div class="ls-nota-app-corpo"><strong>Versão preservada</strong><span id="osCongeladaTexto"></span></div></section>
     {% comment %}
       As versões desta O.S., pelo mesmo motivo da proposta: a lista as
@@ -1301,7 +1307,7 @@ LSTela.pronto(function () {
      perdendo a revisão. Guardando a O.S. de origem junto do rascunho, e
      aceitando-a de volta em `dados`, ela volta como o que é. */
   var osEmEdicao=null;
-  function abrir(id,dados){var o=dados||(id?achar(id):null);osEmEdicao=o||null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);limparItens();valor("osId",o?o.id:"");valor("osRevisao",o?o.revisao:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:(PADRAO_NOVA[chave]||""));});garantirClienteDaOS(o);buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();aplicarEtapas();desenharVersoesOS(o);aplicarSomenteLeitura(o);Painel.erro("osErro","");contarEspelho(null);Painel.abrir("modalOS");}
+  function abrir(id,dados){var o=dados||(id?achar(id):null);osEmEdicao=o||null;document.getElementById("formOS").reset();buscaClienteOS.definirValor("",false);resumoCliente(null);limparItens();valor("osId",o?o.id:"");valor("osRevisao",o?o.revisao:"");document.getElementById("osTitulo").textContent=o?"Editar "+("OS-"+String(o.id).padStart(5,"0")):"Nova Ordem de Serviço";["manutencao","nome_cliente","contato","whatsapp_cliente","email_cliente","endereco_servico","tipo","status","prioridade","equipamento","numero_serie","agendada_para","garantia_ate","tecnico","defeito_relatado","diagnostico","servico_executado","frete","desconto","forma_pagamento","observacoes"].forEach(function(chave){var mapa={manutencao:"osManutencao",nome_cliente:"osNome",contato:"osContato",whatsapp_cliente:"osWhatsapp",email_cliente:"osEmail",endereco_servico:"osEndereco",tipo:"osTipo",status:"osStatus",prioridade:"osPrioridade",equipamento:"osEquipamento",numero_serie:"osSerie",agendada_para:"osAgenda",garantia_ate:"osGarantia",tecnico:"osTecnico",defeito_relatado:"osDefeito",diagnostico:"osDiagnostico",servico_executado:"osExecutado",frete:"osFrete",desconto:"osDesconto",forma_pagamento:"osFormaPagamento",observacoes:"osObservacoes"};valor(mapa[chave],o?o[chave]:(PADRAO_NOVA[chave]||""));});garantirClienteDaOS(o);buscaClienteOS.definirValor(o?o.cliente:"",false);if(o&&o.cliente){resumoCliente(clientes.find(function(c){return String(c.valor)===String(o.cliente);})||null);}(o&&o.itens&&o.itens.length?o.itens:[null]).forEach(linha);recalcular();aplicarEtapas();desenharVersoesOS(o);aplicarSomenteLeitura(o);desenharDocumentoOS(o);Painel.erro("osErro","");contarEspelho(null);Painel.abrir("modalOS");}
 
   /* A corrente de versões desta O.S. Cada uma abre na PRÉVIA: a
      substituída não está na lista da página -- é por isso que ela
@@ -1371,6 +1377,50 @@ LSTela.pronto(function () {
         +"outra e mantida como está: ela é o documento que o cliente leu. "
         +(o.motivo_refacao?"Motivo da troca: "+o.motivo_refacao:"");
     }
+  }
+  /* A ORDEM DE SERVIÇO PARA ASSINATURA (seção 124), no alto da janela.
+
+     Diz em que pé está o papel que o cliente assina -- falta gerar,
+     esperando a assinatura, assinado, suspenso -- e leva ao cartão do QR
+     (ou ao PDF, quando assinado). ASSINADA, O DINHEIRO NÃO MUDA: serviços,
+     peças, frete e desconto ficam travados (o servidor recusa do mesmo
+     jeito); o andamento continua livre. Mudar o que foi assinado é
+     "Refazer O.S.", que sai para uma nova assinatura. */
+  var TEXTO_DOCUMENTO_OS = {
+    gerar: ["Ordem de serviço para assinatura", "Gere o documento padronizado de manutenção e serviços para o cliente assinar no celular, com ou sem pagamento.", "Gerar documento", "bi-pen", "bi-file-earmark-plus"],
+    aguardando: ["Esperando a assinatura do cliente", "A ordem de serviço já saiu: o QR e o link de 10 minutos estão no cartão do documento.", "Abrir o QR e o link", "bi-hourglass-split", "bi-qr-code"],
+    suspenso: ["Documento suspenso", "A O.S. foi cancelada ou substituída depois de o documento sair: ele não vale mais para assinar.", "Ver o documento", "bi-pause-circle", "bi-eye"],
+    bloqueado: ["Ordem de serviço para assinatura", "", "Ver por quê", "bi-lock", "bi-info-circle"],
+    assinado: ["Ordem de serviço assinada", "", "Ver o PDF", "bi-patch-check-fill", "bi-file-earmark-arrow-down"]
+  };
+  function desenharDocumentoOS(o){
+    var faixa=document.getElementById("osDocumento");
+    var doc=o&&o.documento;
+    ["osFrete","osDesconto"].forEach(function(id){var campo=document.getElementById(id);campo.readOnly=false;campo.removeAttribute("title");});
+    faixa.hidden=!doc||o.pode_editar===false&&doc.situacao!=="assinado";
+    faixa.classList.remove("ok","alerta");
+    if(!doc)return;
+    var texto=TEXTO_DOCUMENTO_OS[doc.situacao]||TEXTO_DOCUMENTO_OS.gerar;
+    var assinado=doc.situacao==="assinado";
+    document.getElementById("osDocumentoTitulo").textContent=texto[0];
+    document.getElementById("osDocumentoTexto").textContent=assinado
+      ? "Por "+(doc.assinante||"o cliente")+(doc.assinado_em?" em "+doc.assinado_em:"")+". Serviços, peças e valores não mudam mais; o andamento continua. Para cobrar outra coisa, use “Refazer O.S.”."
+      : (doc.situacao==="bloqueado"?(doc.motivo||texto[1]):texto[1]);
+    document.getElementById("osDocumentoIcone").className="bi "+texto[3];
+    document.getElementById("osDocumentoAcaoIcone").className="bi "+texto[4];
+    document.getElementById("osDocumentoAcaoTexto").textContent=texto[2];
+    var acao=document.getElementById("osDocumentoAcao");
+    acao.href=assinado?doc.via+"?imprimir=1":doc.url;
+    if(assinado){acao.target="_blank";acao.rel="noopener";}else{acao.removeAttribute("target");acao.removeAttribute("rel");}
+    if(assinado)faixa.classList.add("ok");
+    if(doc.situacao==="suspenso"||doc.situacao==="bloqueado")faixa.classList.add("alerta");
+    if(!assinado||o.pode_editar===false)return;
+    /* o que o cliente assinou fica como está */
+    if(!(o.itens&&o.itens.length))limparItens();
+    ["osFrete","osDesconto"].forEach(function(id){var campo=document.getElementById(id);campo.readOnly=true;campo.title="Assinado pelo cliente: não muda mais";});
+    corpo.querySelectorAll("input,select,button[data-remover]").forEach(function(campo){campo.disabled=true;});
+    corpo.querySelectorAll("tr").forEach(function(l){if(l.buscaItem)l.buscaItem.entrada.disabled=true;});
+    document.getElementById("adicionarItemOS").disabled=true;
   }
   document.getElementById("novaOS")?.addEventListener("click",function(){abrir(null);});document.getElementById("adicionarItemOS")?.addEventListener("click",function(){linha();});
   /* OS BLOCOS SEGUEM A SITUAÇÃO.
@@ -1712,6 +1762,19 @@ LSTela.pronto(function () {
       limpa.searchParams.delete("novo");
       limpa.searchParams.delete("manutencao");
       history.replaceState(history.state, "", limpa.pathname + limpa.search + limpa.hash);
+    } catch (e) {}
+  }
+
+  /* De volta da tela do documento para assinatura (seção 124): "Voltar à
+     O.S." traz ?editar=<id> -- a janela abre nela, uma vez, e o pedido
+     sai da URL (como o ?novo=1 acima). */
+  var pedidaEdicao = params.get("editar");
+  if (pedidaEdicao && achar(pedidaEdicao) && document.querySelector('[data-editar-os="' + pedidaEdicao.replace(/\D/g, "") + '"]')) {
+    abrir(pedidaEdicao);
+    try {
+      var semEditar = new URL(location.href);
+      semEditar.searchParams.delete("editar");
+      history.replaceState(history.state, "", semEditar.pathname + semEditar.search + semEditar.hash);
     } catch (e) {}
   }
 

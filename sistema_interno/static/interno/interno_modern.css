@@ -7111,3 +7111,24 @@ body.modal-open .ls-folha-veu{display:none!important}
   }
   .ls-action-fab-menu[data-folha="1"] > button.ls-folha-cancelar{min-height:52px!important;font-size:.98rem!important}
 }
+
+/* ======================================================================
+   A ORDEM DE SERVIÇO ASSINADA NA LISTA E NA JANELA DA O.S. (LEIA-ME-V10,
+   seção 124). O selo da linha ("Assinada", que abre o PDF; "Assinatura
+   pendente"; "Documento suspenso") e a faixa do documento no alto da
+   janela, que reaproveita a `.ls-janela-trava` (avisos-janela.css) com o
+   tom de cada situação. Só variáveis do tema. (Seção nova, fora da "LISTA
+   OU CARDS, SEGUNDA PARTE".)
+   ====================================================================== */
+.ls-doc-selo-os{
+  display:inline-flex;align-items:center;gap:5px;width:max-content;max-width:100%;
+  padding:3px 9px;border-radius:999px;font-size:.7rem;font-weight:800;line-height:1.3;text-decoration:none;
+  color:var(--yellow-texto);background:rgba(var(--yellow-rgb),.12);border:1px solid rgba(var(--yellow-rgb),.34);
+}
+.ls-doc-selo-os.assinada{color:var(--green-texto);background:rgba(var(--green-rgb),.12);border-color:rgba(var(--green-rgb),.36)}
+.ls-doc-selo-os.assinada:hover,.ls-doc-selo-os.assinada:focus-visible{color:var(--green-texto);background:rgba(var(--green-rgb),.2)}
+.ls-doc-selo-os.suspensa{color:var(--muted);background:rgba(var(--muted-rgb),.1);border-color:var(--line)}
+.ls-os-doc-faixa.ok{--nota-cor:var(--green-texto);--nota-rgb:var(--green-rgb)}
+.ls-os-doc-faixa.ok .ls-janela-trava-acao{background:var(--green);color:var(--acento-tinta)}
+.ls-os-doc-faixa.alerta{--nota-cor:var(--yellow-texto);--nota-rgb:var(--yellow-rgb)}
+#osFrete[readonly],#osDesconto[readonly]{opacity:.72;cursor:not-allowed}

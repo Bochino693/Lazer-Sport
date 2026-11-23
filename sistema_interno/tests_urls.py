@@ -43,6 +43,7 @@ SO_POST = {
     "atualizar_etapa_producao": "avança etapa da ordem",
     "logout_inner": "encerra a sessão",
     "documento_assinatura_link": "gera um link de 10 minutos e conta no documento",
+    "assinatura_os_link": "o link de 10 minutos da ordem de serviço (tests_documento_os.py)",
     "prazo_producao": "grava o prazo de produção (tests_funil_vendas.py)",
     "andamento_pedido": "muda a situação do pedido e acerta a venda",
     "envio_pedido": "grava a transportadora e o rastreio (core/tests_fases_do_pedido.py)",

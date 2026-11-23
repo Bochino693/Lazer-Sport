@@ -55,6 +55,12 @@ from .views_notas_entrada import ArquivoNotaEntradaView, NotaEntradaView, NotasE
 from .views_transportadoras import TransportadorasInnerView
 from .views_dados_contrato import DadosContratoInnerView
 from .views_etapas import EtapasDoOrcamentoView
+from .views_assinatura_os import (
+    AssinaturaOSInnerView,
+    EstadoAssinaturaOSView,
+    LinkAssinaturaOSView,
+    ViaAssinaturaOSView,
+)
 from .views_documento_assinatura import (
     DocumentoAssinaturaInnerView,
     EstadoDocumentoAssinaturaView,
@@ -403,6 +409,29 @@ urlpatterns = [
         'ordens-servico/<int:pk>/documentos/',
         DocumentosDaOrdemView.as_view(),
         name='documentos_da_ordem_servico',
+    ),
+    # A ORDEM DE SERVIÇO ASSINADA NO CELULAR (LEIA-ME-V10, seção 124): o
+    # mesmo cartão do contrato (QR, link de 10 minutos, estado, via em PDF),
+    # da O.S. e com ou sem pagamento. Ver `views_assinatura_os.py`.
+    path(
+        'ordens-servico/<int:pk>/assinatura/',
+        AssinaturaOSInnerView.as_view(),
+        name='assinatura_os_inner',
+    ),
+    path(
+        'ordens-servico/<int:pk>/assinatura/link/',
+        LinkAssinaturaOSView.as_view(),
+        name='assinatura_os_link',
+    ),
+    path(
+        'ordens-servico/<int:pk>/assinatura/estado/',
+        EstadoAssinaturaOSView.as_view(),
+        name='assinatura_os_estado',
+    ),
+    path(
+        'ordens-servico/<int:pk>/assinatura/via/',
+        ViaAssinaturaOSView.as_view(),
+        name='assinatura_os_via',
     ),
 
     # ---------------- produção ----------------

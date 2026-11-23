@@ -17,7 +17,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import Paginator
 from django.core.validators import validate_email
 from django.db import transaction
-from django.db.models import Count, Prefetch, Q, Sum
+from django.db.models import Count, OuterRef, Prefetch, Q, Subquery, Sum
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -39,8 +39,10 @@ from .busca_local import montar_indice
 from . import clientes as svc_clientes
 from . import fragmento
 from .sincronia import revisao_modulo
+from . import documento_servico as servico_doc
 from .models import (
     Cliente,
+    DocumentoAssinatura,
     EnderecoCliente,
     EnvioOrdemServico,
     ItemOrdemServico,
@@ -373,6 +375,11 @@ class OrdensServicoInnerView(
         # seguinte" em vez de responder "nada encontrado".
         indice_busca = self.indice_de_busca(consulta)
 
+        # A ORDEM DE SERVIÇO PARA ASSINATURA DE CADA LINHA (seção 124), na
+        # mesma consulta da página: a situação, quem assinou e quando, por
+        # subconsulta -- sem uma ida ao banco por O.S. e sem trazer o retrato.
+        consulta = self.com_documento_assinatura(consulta)
+
         paginador = Paginator(consulta, self.POR_PAGINA)
         if not busca:
             # O total da página é o número do cartão escolhido: o mesmo
@@ -386,6 +393,14 @@ class OrdensServicoInnerView(
         base_publica = endereco_do_site(request)
         origem = origem_empresa()
         for ordem in ordens:
+            ordem.situacao_documento = servico_doc.situacao_do_cartao_da_ordem(
+                ordem, None, situacao_documento=getattr(ordem, "documento_situacao", None),
+            )
+            # O botão aparece quando há o que fazer ou ver; a agenda vencida
+            # também, para o cartão dizer "reagende" (seção 124).
+            ordem.mostra_documento = (
+                ordem.situacao_documento != "bloqueado" or ordem.agenda_vencida
+            )
             # Mesma regra do orçamento: a página do cliente recusa uma
             # O.S. que ainda não foi enviada, então o painel não mostra o
             # endereço dela. Ver `OrdemServico.publicado`.
@@ -701,6 +716,47 @@ class OrdensServicoInnerView(
         ]
 
     @staticmethod
+    def com_documento_assinatura(consulta):
+        """A situação do documento para assinatura de cada O.S., por subconsulta."""
+        vivo = (
+            DocumentoAssinatura.objects
+            .filter(ordem_servico=OuterRef("pk"))
+            .exclude(situacao=DocumentoAssinatura.Situacao.SUBSTITUIDO)
+            .order_by("-id")
+        )
+        return consulta.annotate(
+            documento_situacao=Subquery(vivo.values("situacao")[:1]),
+            documento_assinante=Subquery(vivo.values("assinante_nome")[:1]),
+            documento_assinado_em=Subquery(vivo.values("assinado_em")[:1]),
+        )
+
+    @staticmethod
+    def documento_da_janela(ordem):
+        """O atalho da ordem de serviço para assinatura na janela da O.S.
+
+        A situação já veio com a linha (`com_documento_assinatura`); o
+        endereço é a tela do cartão, e o PDF a via. Rascunho não tem.
+        """
+        situacao = getattr(ordem, "situacao_documento", "") or servico_doc.situacao_do_cartao_da_ordem(
+            ordem, None, situacao_documento=getattr(ordem, "documento_situacao", None),
+        )
+        if ordem.status == OrdemServico.Status.RASCUNHO:
+            return None
+        quando = getattr(ordem, "documento_assinado_em", None)
+        return {
+            "situacao": situacao,
+            "url": reverse("assinatura_os_inner", args=[ordem.pk], urlconf="sistema_interno.urls"),
+            "via": reverse("assinatura_os_via", args=[ordem.pk], urlconf="sistema_interno.urls"),
+            "assinante": getattr(ordem, "documento_assinante", "") or "",
+            "assinado_em": (
+                timezone.localtime(quando).strftime("%d/%m/%Y às %H:%M") if quando else ""
+            ),
+            "motivo": (
+                servico_doc.motivo_para_nao_gerar(ordem) if situacao == "bloqueado" else ""
+            ),
+        }
+
+    @staticmethod
     def serializar(ordem):
         # Importado aqui, e não no topo: `views_gestao` já importa deste
         # módulo, e subir a dependência fecharia o ciclo na carga do app.
@@ -749,6 +805,8 @@ class OrdensServicoInnerView(
             "versao": ordem.versao,
             "motivo_refacao": ordem.motivo_refacao,
             "pode_editar": ordem.pode_editar,
+            # A ordem de serviço para assinatura (seção 124): a faixa da janela.
+            "documento": OrdensServicoInnerView.documento_da_janela(ordem),
             # As versões viajam com a O.S., e não na lista -- mesma regra
             # da proposta. A prévia é o caminho de cada uma: a
             # substituída não está na lista da página, então reabri-la
@@ -791,7 +849,12 @@ class OrdensServicoInnerView(
             return self.erro(request, "Somente Produção ou Gestão edita a O.S.", status=403)
 
         ordem_id = (request.POST.get("id") or "").strip()
-        ordem = get_object_or_404(OrdemServico.objects.select_for_update(), pk=ordem_id) if ordem_id else OrdemServico()
+        # Quem assinou a ordem de serviço (seção 124) vem na mesma consulta.
+        ordem = get_object_or_404(
+            self.com_assinatura(OrdemServico.objects.select_for_update()), pk=ordem_id,
+        ) if ordem_id else OrdemServico()
+        assinada_por = getattr(ordem, "assinada_por", None) if ordem.pk else None
+        valores_antes = (ordem.frete, ordem.desconto)
         if ordem.pk and "revisao" in request.POST:
             atual = ordem.atualizado.isoformat() if ordem.atualizado else ""
             if request.POST["revisao"] != atual:
@@ -841,6 +904,28 @@ class OrdensServicoInnerView(
         )
         if ordem.frete < 0 or ordem.desconto < 0:
             raise ErroDeFormulario("Frete e desconto não podem ser negativos.")
+        # ASSINADA, O DINHEIRO NÃO MUDA (seção 124): o cliente assinou estes
+        # serviços, peças e valores. O andamento (situação, diagnóstico,
+        # serviço executado, agenda, técnico) continua sendo registrado; o
+        # que mudar o que foi assinado é uma versão nova ("Refazer O.S."),
+        # com a assinatura dela -- a mesma regra do contrato de venda.
+        itens_novos = None
+        if assinada_por is not None:
+            itens_novos = self._ler_itens(ordem, request.POST.get("itens"))
+            if self._valores_mudaram(ordem, valores_antes, itens_novos):
+                raise ErroDeFormulario(
+                    f"{assinada_por} já assinou esta ordem de serviço com estes serviços, "
+                    "peças e valores, e eles não mudam mais. O andamento (situação, "
+                    "diagnóstico, serviço executado, agenda) continua livre. Para cobrar "
+                    "outra coisa, use “Refazer O.S.”: a versão nova sai para uma nova "
+                    "assinatura.",
+                    titulo="Ordem de serviço assinada",
+                    acao={
+                        "rotulo": "Ver o documento assinado",
+                        "url": reverse("assinatura_os_inner", args=[ordem.pk], urlconf="sistema_interno.urls"),
+                    },
+                    status=409,
+                )
 
         tipo = (request.POST.get("tipo") or "").strip()
         status = (request.POST.get("status") or "").strip()
@@ -901,7 +986,8 @@ class OrdensServicoInnerView(
         if not ordem.numero_serie:
             ordem.numero_serie = f"LS-PAT-{ordem.pk:06d}"
             ordem.save(update_fields=["numero_serie", "atualizado"])
-        self._gravar_itens(ordem, request.POST.get("itens"))
+        if itens_novos is None:
+            self._gravar_itens(ordem, request.POST.get("itens"))
 
         return self.sucesso(
             request,
@@ -910,7 +996,42 @@ class OrdensServicoInnerView(
         )
 
     @staticmethod
+    def com_assinatura(consulta):
+        """Quem assinou a ordem de serviço desta O.S. (None se ninguém)."""
+        return consulta.annotate(
+            assinada_por=Subquery(
+                DocumentoAssinatura.objects
+                .filter(ordem_servico=OuterRef("pk"), situacao=DocumentoAssinatura.Situacao.ASSINADO)
+                .order_by("-id").values("assinante_nome")[:1]
+            ),
+        )
+
+    @staticmethod
+    def _valores_mudaram(ordem, valores_antes, itens_novos):
+        """Os serviços, peças, frete ou desconto pedidos diferem dos gravados?"""
+        if (ordem.frete, ordem.desconto) != tuple(Decimal(v or 0) for v in valores_antes):
+            return True
+
+        def chave(item):
+            return (
+                item.tipo, item.descricao, int(item.quantidade),
+                Decimal(item.valor_unitario).quantize(Decimal("0.01")), item.peca_id or None,
+            )
+
+        return [chave(i) for i in ordem.itens.all()] != [chave(i) for i in itens_novos]
+
+    @staticmethod
     def _gravar_itens(ordem, bruto):
+        itens = OrdensServicoInnerView._ler_itens(ordem, bruto)
+        ordem.itens.all().delete()
+        ItemOrdemServico.objects.bulk_create(itens)
+        cache_relacoes = getattr(ordem, "_prefetched_objects_cache", {})
+        cache_relacoes["itens"] = itens
+        ordem._prefetched_objects_cache = cache_relacoes
+
+    @staticmethod
+    def _ler_itens(ordem, bruto):
+        """As linhas pedidas, conferidas e montadas (sem gravar)."""
         try:
             linhas = json.loads(bruto or "[]")
         except (TypeError, ValueError):
@@ -999,11 +1120,7 @@ class OrdensServicoInnerView(
                 quantidade=quantidade,
                 valor_unitario=valor,
             ))
-        ordem.itens.all().delete()
-        ItemOrdemServico.objects.bulk_create(itens)
-        cache_relacoes = getattr(ordem, "_prefetched_objects_cache", {})
-        cache_relacoes["itens"] = itens
-        ordem._prefetched_objects_cache = cache_relacoes
+        return itens
 
     def acao_pagamento(self, request):
         if not capacidades(request.user)["ordens_servico_pagamento"]:

@@ -397,7 +397,10 @@ def _aprovada(user, acesso, orcamento):
         documento = svc.documento_atual(orcamento)
         situacao = svc.situacao_do_cartao(orcamento, documento)
         papel = "contrato"
-        if documento is not None and not svc.e_contrato(documento.conteudo or {}):
+        if documento is not None and svc.e_servico(documento.conteudo or {}):
+            # a ordem de serviço do orçamento de manutenção (seção 124)
+            papel = "ordem de serviço"
+        elif documento is not None and not svc.e_contrato(documento.conteudo or {}):
             papel = "termo de compra"
         saida["contrato"] = {
             "situacao": situacao,

@@ -32,6 +32,7 @@ from django.views.generic import View
 
 from . import contrato
 from . import documento_assinatura as svc
+from . import documento_servico
 from .etapas_do_pedido import etapas as etapas_do_pedido
 from .context_processors import invalidar_avisos
 from .models import DocumentoAssinatura, Orcamento
@@ -110,7 +111,16 @@ class _BaseDocumento(OrcamentoInternoRequiredMixin, View):
             if documento is None and orcamento.status == Orcamento.Status.APROVADO
             else []
         )
+        # O PAPEL (seção 124): contrato de compra e venda ou ordem de serviço
+        # de manutenção. Os chips do "Gerar" chegam com a sugestão dos itens.
+        modelo_sugerido, motivo_sugestao = ("", "")
+        if documento is None and orcamento.status == Orcamento.Status.APROVADO:
+            modelo_sugerido, motivo_sugestao = documento_servico.sugestao_do_orcamento(orcamento)
         return {
+            "modelos": documento_servico.MODELOS,
+            "modelo_sugerido": modelo_sugerido,
+            "motivo_sugestao": motivo_sugestao,
+            "e_servico": svc.e_servico(conteudo),
             "pendencias": [],
             "observacoes_contrato": observacoes,
             # A Cláusula 3ª de um contrato gerado agora (o lugar único do prazo).
@@ -170,7 +180,9 @@ class DocumentoAssinaturaInnerView(_BaseDocumento):
         if request.POST.get("action") != "gerar":
             return JsonResponse({"status": "erro", "msg": "Ação inválida."}, status=400)
         try:
-            documento = svc.gerar(orcamento, request.user)
+            documento = svc.gerar(
+                orcamento, request.user, modelo=request.POST.get("modelo") or None,
+            )
         except ErroDeFormulario as erro:
             if pede_json(request):
                 return JsonResponse({"status": "erro", "msg": str(erro)}, status=409)

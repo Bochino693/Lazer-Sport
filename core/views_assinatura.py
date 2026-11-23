@@ -32,6 +32,7 @@ from django.views.decorators.http import require_http_methods
 
 from core.registro_cadastro import ip_da_requisicao
 from sistema_interno import documento_assinatura as svc
+from sistema_interno.documento_servico import numero_do_documento, papel_curto
 from sistema_interno.models import DocumentoAssinatura
 from sistema_interno.validacoes import mascarar_documento
 
@@ -66,6 +67,14 @@ def codigo_do_documento(documento) -> str:
     """
     conteudo = documento.conteudo or {}
     orcamento = conteudo.get("orcamento") or {}
+    if svc.e_servico(conteudo):
+        # a ordem de serviço (seção 124): "Ordem de serviço OS-00042/2026 · ..."
+        partes = [f"Ordem de serviço {numero_do_documento(conteudo)}".strip()]
+        if conteudo.get("codigo"):
+            partes.append(conteudo["codigo"])
+        if documento.hash_conteudo:
+            partes.append(f"integridade {documento.hash_conteudo[:10]}")
+        return " · ".join(partes)
     partes = [
         f"{'Contrato' if svc.e_contrato(conteudo) else 'Documento'} nº {orcamento.get('numero', '')}".strip(),
     ]
@@ -91,6 +100,11 @@ def contexto_da_folha(documento, *, painel=False):
         "doc": conteudo,
         "painel": painel,
         "e_contrato": svc.e_contrato(conteudo),
+        # A ORDEM DE SERVIÇO (seção 124): a página fala dela, e o número é
+        # o da O.S. (ou o do orçamento de manutenção).
+        "e_servico": svc.e_servico(conteudo),
+        "numero_documento": numero_do_documento(conteudo),
+        "papel_curto": papel_curto(conteudo),
         # O código que vai no rodapé de cada página impressa e no pé da folha.
         "codigo_contrato": codigo_do_documento(documento),
         "cliente_documento": (
@@ -110,9 +124,10 @@ def _tela_de_aviso(request, situacao, documento=None, *, status, mensagem="", mo
     """Expirou, foi trocado ou não existe: uma tela de app, e não um erro."""
     numero = ""
     if documento is not None:
-        numero = ((documento.conteudo or {}).get("orcamento") or {}).get("numero", "")
+        numero = numero_do_documento(documento.conteudo)
     contexto = {
         "estado": situacao,
+        "e_servico": documento is not None and svc.e_servico(documento.conteudo),
         "numero": numero,
         "mensagem_extra": mensagem,
         # Por que o termo está suspenso: "aprovacao" ou "pagamento" (ver
@@ -217,6 +232,8 @@ def _enviar_assinatura(request, token):
                 "suspenso": (
                     "Este documento está suspenso: o pagamento do pedido mudou. Nada foi salvo; fale com o atendente."
                     if leitura.motivo == "pagamento" else
+                    "Esta ordem de serviço está suspensa: a O.S. foi cancelada ou trocada por uma versão nova. Nada foi salvo; fale com o atendente."
+                    if leitura.motivo == "ordem" else
                     "Este documento está suspenso: o pedido mudou depois que ele saiu. Nada foi salvo; fale com o atendente."
                 ),
                 "invalido": "Link inválido. Nada foi salvo.",
@@ -289,7 +306,7 @@ def documento_assinado(request, codigo):
     token da proposta: é a cópia do cliente, e quem tem o link a abre.
     """
     documento = get_object_or_404(
-        DocumentoAssinatura.objects.select_related("orcamento"),
+        DocumentoAssinatura.objects.select_related("orcamento", "ordem_servico"),
         codigo_publico=codigo,
     )
     if not documento.assinado:

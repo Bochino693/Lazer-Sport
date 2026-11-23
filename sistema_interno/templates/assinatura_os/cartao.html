@@ -1,0 +1,203 @@
+{% load interno_extras %}
+{% comment %}
+  O CARTÃO DA ORDEM DE SERVIÇO PARA ASSINATURA (LEIA-ME-V10, seção 124) --
+  o mesmo HTML na tela e no JSON do estado, com as mesmas marcas
+  (data-doc-*) do cartão do contrato de venda: o script é um só
+  (`interno/documento-assinatura.js`).
+
+  As caras: bloqueado (rascunho, cancelada, substituída ou agenda vencida:
+  o motivo e a saída), sem documento (o botão grande de gerar), aguardando
+  (o QR, o relógio de 10 minutos, o link, o WhatsApp), suspenso (a O.S. foi
+  cancelada ou substituída depois de o papel sair) e assinado (quem,
+  quando, a assinatura e o PDF). O PAGAMENTO NÃO TRAVA NADA: pendente,
+  parcial ou pago, o papel sai e diz em que pé está.
+
+  O LINK NÃO VEM AQUI: o script o pede ao abrir e a cada 10 minutos.
+{% endcomment %}
+<section class="ls-doc-cartao ls-doc-{{ situacao_cartao }}"
+         id="docAssinaturaCartao"
+         data-doc-cartao
+         data-documento="{{ documento.pk|default:'' }}"
+         data-situacao="{{ situacao_cartao }}"
+         data-aberto="{% if cliente_com_o_contrato %}1{% else %}0{% endif %}"
+         data-diario="{{ marca_do_diario }}"
+         data-whatsapp-cliente="{{ whatsapp_cliente }}"
+         aria-live="polite">
+
+{% if situacao_cartao == "bloqueado" %}
+  <div class="ls-doc-vazio">
+    <span class="ls-doc-icone neutro"><i class="bi bi-lock" aria-hidden="true"></i></span>
+    <h2>A ordem de serviço não sai agora</h2>
+    <p>{{ motivo_bloqueio }}</p>
+    <a class="btn btn-outline-secondary" href="{{ urls.lista }}?q={{ ordem.numero_documento|urlencode }}&amp;editar={{ ordem.pk }}"><i class="bi bi-pencil me-1" aria-hidden="true"></i> Abrir a O.S.</a>
+  </div>
+
+{% elif not documento %}
+  <div class="ls-doc-vazio">
+    <span class="ls-doc-icone acento"><i class="bi bi-tools" aria-hidden="true"></i></span>
+    <h2>Gerar a ordem de serviço para assinatura</h2>
+    <p>
+      O documento padronizado de <strong>manutenção e serviços</strong> sai desta O.S. — o
+      equipamento, o defeito, o serviço, as peças e os valores, a garantia, a situação do
+      pagamento e as onze cláusulas — e fica <strong>congelado</strong>. O cliente assina no
+      telefone dele por um link que vale {{ validade_minutos }} minutos e se renova sozinho
+      aqui. <strong>Com ou sem pagamento</strong>: hoje,
+      {% if ordem.quitado %}pago{% else %}{{ ordem.get_status_pagamento_display|lower }}{% endif %}.
+    </p>
+    {% if observacoes_contrato %}
+      <ul class="ls-doc-pendencias ls-doc-observacoes" role="note">
+        {% for nota in observacoes_contrato %}
+          <li data-observacao="{{ nota.chave }}">
+            <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+            <span>{{ nota.texto }}
+              {% if nota.chave == "dados" and pode_dados_contrato %}<a href="{{ url_dados_contrato }}">Preencher agora</a>{% endif %}
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+    <button type="button" class="btn btn-success btn-lg ls-doc-gerar" data-doc-acao="gerar">
+      <i class="bi bi-file-earmark-plus me-1" aria-hidden="true"></i> Gerar a ordem de serviço
+    </button>
+  </div>
+
+{% elif documento.assinado %}
+  <header class="ls-doc-topo">
+    <span class="ls-doc-icone verde"><i class="bi bi-patch-check-fill" aria-hidden="true"></i></span>
+    <div>
+      <span class="ls-doc-kicker">Ordem de serviço assinada</span>
+      <h2>Assinada por {{ documento.assinante_nome }} em {{ documento.assinado_em|date:"d/m \à\s H:i" }}</h2>
+      <p>CPF/CNPJ {{ documento_assinante }} · {{ documento.assinado_em|date:"d/m/Y" }}</p>
+    </div>
+  </header>
+  <div class="ls-doc-grade-assinada">
+    <figure class="ls-doc-traco">
+      {% if assinatura_img %}<img src="{{ assinatura_img }}" alt="Assinatura de {{ documento.assinante_nome }}">{% endif %}
+      <figcaption>{{ documento.assinante_nome }}</figcaption>
+    </figure>
+    <dl class="ls-doc-dados">
+      <div><dt>Ordem de serviço</dt><dd>{{ conteudo.numero }}{% if conteudo.versao > 1 %} · v{{ conteudo.versao }}{% endif %}</dd></div>
+      <div><dt>Total do serviço</dt><dd>{{ conteudo.valores.total|reais }}</dd></div>
+      {# O pagamento de AGORA (pode ter mudado depois da assinatura), e não o do papel. #}
+      <div><dt>Pagamento hoje</dt><dd>{% if ordem.quitado %}Pago · {{ ordem.valor_pago|reais }}{% elif ordem.valor_pago %}{{ ordem.valor_pago|reais }} de {{ ordem.total|reais }}{% elif ordem.total %}A receber{% else %}Sem custo{% endif %}</dd></div>
+      <div><dt>IP</dt><dd>{{ documento.assinatura_ip|default:"—" }}</dd></div>
+      <div><dt>Links gerados</dt><dd>{{ documento.links_gerados }}</dd></div>
+      <div class="largo"><dt>Integridade (SHA-256)</dt><dd class="ls-doc-hash">{{ documento.hash_conteudo }}</dd></div>
+    </dl>
+  </div>
+  <div class="ls-doc-acoes">
+    <a class="btn btn-success btn-lg" href="{{ urls.via }}?imprimir=1" target="_blank" rel="noopener" data-doc-pdf>
+      <i class="bi bi-file-earmark-arrow-down me-1" aria-hidden="true"></i> Baixar PDF
+    </a>
+    <a class="btn btn-outline-secondary btn-lg" href="{{ urls.via }}" target="_blank" rel="noopener">
+      <i class="bi bi-file-text me-1" aria-hidden="true"></i> Ver documento
+    </a>
+  </div>
+
+{% elif situacao_cartao == "suspenso" %}
+  <div class="ls-doc-vazio">
+    <span class="ls-doc-icone ambar"><i class="bi bi-pause-circle" aria-hidden="true"></i></span>
+    <h2>Ordem de serviço suspensa</h2>
+    <p>
+      A O.S. está como <strong>{{ ordem.get_status_display|lower }}</strong>: o serviço que este
+      documento descreve não é mais o combinado, e nenhum link de assinatura sai.
+      {% if ordem.arquivada and ordem.ordem_refeita %}Gere o documento da versão que vale ({{ ordem.ordem_refeita.numero_com_versao }}).{% endif %}
+    </p>
+    <a class="btn btn-outline-secondary" href="{{ urls.via }}" target="_blank" rel="noopener"><i class="bi bi-eye me-1" aria-hidden="true"></i> Conferir documento</a>
+  </div>
+
+{% else %}
+  <header class="ls-doc-topo">
+    <span class="ls-doc-icone ambar"><i class="bi bi-hourglass-split" aria-hidden="true"></i></span>
+    <div>
+      <span class="ls-doc-kicker">Aguardando assinatura</span>
+      {% if cliente_com_o_contrato %}
+      <h2>O cliente está lendo a ordem de serviço</h2>
+      <p>Esta tela troca sozinha quando ele assinar.</p>
+      {% else %}
+      <h2>Peça para o cliente apontar a câmera</h2>
+      <p>O link vale {{ validade_minutos }} minutos para abrir e se renova sozinho. Quem abriu tem {{ tempo_para_assinar_min }} minutos para assinar naquele aparelho.</p>
+      {% endif %}
+    </div>
+  </header>
+
+  <div class="ls-doc-aberto" data-doc-aberto>
+    <span class="ls-doc-icone verde"><i class="bi bi-phone-vibrate" aria-hidden="true"></i></span>
+    <div>
+      <strong>O cliente está com a ordem de serviço aberta{% if documento.aberto_em %} desde {{ documento.aberto_em|date:"H:i" }}{% endif %}</strong>
+      <p>Ele tem {{ tempo_para_assinar_min }} minutos para assinar naquele aparelho, sem link novo. Esta tela avisa sozinha quando ele assinar.</p>
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-doc-acao="mostrar-qr">
+        <i class="bi bi-qr-code me-1" aria-hidden="true"></i> Mostrar o QR de novo
+      </button>
+    </div>
+  </div>
+
+  <div class="ls-doc-corpo">
+    <div class="ls-doc-qr" data-doc-qr aria-busy="true">
+      <span class="ls-doc-qr-espera"><span class="ls-doc-giro" aria-hidden="true"></span> Gerando link seguro…</span>
+    </div>
+
+    <div class="ls-doc-painel">
+      <div class="ls-doc-tempo">
+        <div class="ls-doc-relogio" data-doc-relogio data-validade="{{ validade_segundos }}">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="fundo" cx="60" cy="60" r="52"/>
+            <circle class="arco" cx="60" cy="60" r="52" pathLength="100" data-doc-arco/>
+          </svg>
+          <div class="ls-doc-relogio-texto">
+            <strong data-doc-tempo>{{ validade_minutos }}:00</strong>
+            <span>para expirar</span>
+          </div>
+        </div>
+        <p class="ls-doc-link-numero" data-doc-numero>Link nº {{ documento.links_gerados|add:1 }} · renova sozinho</p>
+      </div>
+
+      <label class="form-label" for="docAssinaturaLink">Link de assinatura</label>
+      <div class="ls-doc-link">
+        <input class="form-control" id="docAssinaturaLink" type="text" readonly value="" data-doc-link
+               aria-label="Link de assinatura (vale {{ validade_minutos }} minutos)" placeholder="Gerando…">
+        <button type="button" class="btn btn-outline-primary" data-doc-acao="copiar" aria-label="Copiar o link">
+          <i class="bi bi-clipboard" aria-hidden="true"></i><span>Copiar</span>
+        </button>
+      </div>
+
+      <div class="ls-doc-acoes">
+        <button type="button" class="btn btn-success btn-lg" data-doc-acao="whatsapp">
+          <i class="bi bi-whatsapp me-1" aria-hidden="true"></i> Enviar no WhatsApp
+        </button>
+        <button type="button" class="btn btn-outline-secondary btn-lg" data-doc-acao="renovar">
+          <i class="bi bi-arrow-clockwise me-1" aria-hidden="true"></i> Gerar novo link
+        </button>
+      </div>
+      <div class="ls-doc-acoes discretas">
+        <a class="btn btn-sm btn-outline-secondary" href="{{ urls.via }}" target="_blank" rel="noopener">
+          <i class="bi bi-eye me-1" aria-hidden="true"></i> Conferir documento
+        </a>
+        <button type="button" class="btn btn-sm btn-outline-warning" data-doc-acao="refazer">
+          <i class="bi bi-arrow-repeat me-1" aria-hidden="true"></i> Gerar de novo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="ls-doc-rodape">
+    <span><i class="bi bi-person" aria-hidden="true"></i> Gerada por {% if documento.criado_por %}{{ documento.criado_por.get_full_name|default:documento.criado_por.username }}{% else %}equipe{% endif %} em {{ documento.criacao|date:"d/m/Y \à\s H:i" }}</span>
+    <span><i class="bi bi-shield-check" aria-hidden="true"></i> Integridade {{ documento.hash_conteudo|slice:":12" }}…</span>
+    <span><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Confere a assinatura a cada 10 s</span>
+  </footer>
+{% endif %}
+{% if diario %}
+  <details class="ls-doc-diario" {% if documento.aguardando %}open{% endif %}>
+    <summary><i class="bi bi-journal-text" aria-hidden="true"></i> Diário de bordo <span>{{ diario|length }}</span></summary>
+    <ol>
+      {% for linha in diario %}
+        <li class="ls-doc-diario-{{ linha.tipo }}">
+          <i class="bi {{ linha.icone }}" aria-hidden="true"></i>
+          <span>{{ linha.texto }}</span>
+          <time>{{ linha.quando|date:"d/m H:i" }}</time>
+        </li>
+      {% endfor %}
+    </ol>
+  </details>
+{% endif %}
+</section>

@@ -2959,7 +2959,12 @@ class AceiteOrcamento(models.Model):
 
 
 class DocumentoAssinatura(Prime):
-    """O termo de compra que o cliente assina no telefone, depois de pagar.
+    """O documento que o cliente assina no telefone: contrato ou ordem de serviço.
+
+    Nasceu como o termo de compra do orçamento pago; hoje é o contrato de
+    compra e venda do orçamento aprovado e, desde a seção 124 do
+    LEIA-ME-V10, também a ORDEM DE SERVIÇO (manutenção e serviços), que sai
+    da O.S. ou do orçamento de serviço -- com ou sem pagamento.
 
     O pedido do cliente: "após o orçamento estar como pago (...) vc deve
     pôr uma opção de gerar documento, no qual vc gera um documento de
@@ -2994,10 +2999,25 @@ class DocumentoAssinatura(Prime):
     # do que foi vendido e recebido. Só o superusuário apaga o orçamento
     # mesmo assim, e a exclusão registrada conta que ele foi junto (ver
     # `exclusoes.remover`).
+    #
+    # DUAS ORIGENS, UMA DE CADA VEZ (LEIA-ME-V10, seção 124): o orçamento
+    # aprovado (o contrato de compra e venda, ou a ordem de serviço quando
+    # a proposta é de manutenção) OU a ordem de serviço (o documento de
+    # manutenção e serviços, `documento_servico.py`). O link de 10 minutos,
+    # a página do cliente, a assinatura e o PDF são os mesmos.
     orcamento = models.ForeignKey(
         Orcamento,
         on_delete=models.PROTECT,
         related_name="documentos_assinatura",
+        null=True,
+        blank=True,
+    )
+    ordem_servico = models.ForeignKey(
+        "OrdemServico",
+        on_delete=models.PROTECT,
+        related_name="documentos_assinatura",
+        null=True,
+        blank=True,
     )
     #: A chave da cópia assinada que o cliente baixa depois. Aleatória,
     #: como o token da proposta: não se chega a um documento chutando outro.
@@ -3055,12 +3075,24 @@ class DocumentoAssinatura(Prime):
         return self.situacao == self.Situacao.AGUARDANDO
 
     def __str__(self):
+        if self.ordem_servico_id:
+            return f"Documento de assinatura #{self.pk} da O.S. #{self.ordem_servico_id}"
         return f"Documento de assinatura #{self.pk} do orçamento #{self.orcamento_id}"
 
     class Meta:
         verbose_name = "Documento para assinatura"
         verbose_name_plural = "Documentos para assinatura"
         ordering = ("-criacao", "-id")
+        constraints = [
+            # Ou do orçamento, ou da O.S. -- nunca dos dois, nunca de nenhum.
+            models.CheckConstraint(
+                condition=(
+                    models.Q(orcamento__isnull=False, ordem_servico__isnull=True)
+                    | models.Q(orcamento__isnull=True, ordem_servico__isnull=False)
+                ),
+                name="documento_assinatura_uma_origem",
+            ),
+        ]
 
 
 class DadosContrato(Prime):

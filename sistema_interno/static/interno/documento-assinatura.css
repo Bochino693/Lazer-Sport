@@ -218,3 +218,38 @@
 .ls-doc-diario-aberto i{color:var(--green-texto)!important}
 .ls-doc-diario-recusa i{color:var(--yellow-texto)!important}
 .ls-doc-diario-assinado i{color:var(--green-texto)!important}
+
+/* ======================================================================
+   QUAL PAPEL: CONTRATO DE COMPRA E VENDA OU ORDEM DE SERVIÇO (seção 124)
+   Os chips do "Gerar" no orçamento aprovado: dois cartões de toque, um
+   marcado por vez (aria-checked), a sugestão dos itens já marcada. Só
+   variáveis do tema.
+   ====================================================================== */
+.ls-doc-modelos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;max-width:560px;margin:2px 0 4px}
+.ls-doc-modelo{
+  display:flex;align-items:flex-start;gap:10px;min-height:64px;padding:12px 14px;text-align:left;cursor:pointer;
+  border:1.5px solid var(--line);border-radius:16px;background:rgba(var(--verniz-rgb),.04);color:var(--text-2);
+  transition:border-color .15s ease,background .15s ease,box-shadow .15s ease;
+}
+.ls-doc-modelo i{flex:none;font-size:1.3rem;color:var(--muted);margin-top:1px}
+.ls-doc-modelo span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ls-doc-modelo strong{font-size:.9rem;font-weight:800;color:var(--text);line-height:1.25}
+.ls-doc-modelo small{font-size:.76rem;color:var(--muted);line-height:1.35}
+.ls-doc-modelo:hover{border-color:var(--line-forte);background:rgba(var(--acento-rgb),.08)}
+.ls-doc-modelo:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.ls-doc-modelo[aria-checked="true"]{border-color:var(--acento);background:rgba(var(--acento-rgb),.14);box-shadow:0 0 0 3px rgba(var(--acento-rgb),.16)}
+.ls-doc-modelo[aria-checked="true"] i{color:var(--acento-texto)}
+.ls-doc-modelos-nota{display:flex;gap:6px;align-items:flex-start;max-width:560px;margin:0 0 6px!important;font-size:.82rem;color:var(--muted)!important;text-align:left}
+.ls-doc-modelos-nota i{color:var(--yellow-texto)}
+@media (max-width:560px){.ls-doc-modelos{grid-template-columns:1fr}}
+
+/* No resumo da ordem de serviço, o valor comprido (a condição de pagamento,
+   a garantia, o equipamento) vai embaixo do rótulo, inteiro. */
+.ls-doc-totais .longo{flex-direction:column;align-items:flex-start;gap:2px}
+.ls-doc-totais .longo dd{text-align:left}
+
+/* A folha que sobe de baixo fica ACIMA das abas do celular (z-index 1100,
+   interno_modern.css): antes o "Cancelar" ficava escondido atrás delas. */
+.ls-doc-folha{z-index:1110}
+/* o que só vale para um dos papéis some quando o outro chip é o escolhido */
+[data-doc-so-modelo][hidden]{display:none!important}

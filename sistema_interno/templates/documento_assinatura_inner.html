@@ -26,7 +26,7 @@
   <div class="ls-page-hero-copy">
     <span class="ls-page-kicker">Orçamento #{{ orcamento.pk }}{% if orcamento.versao > 1 %} · v{{ orcamento.versao }}{% endif %} · {{ orcamento.get_status_display|lower }} · {% if orcamento.quitado %}pago{% else %}{{ orcamento.get_status_pagamento_display|lower }}{% endif %}</span>
     <h1>Documento para assinatura</h1>
-    <p>{{ orcamento.destinatario }} · contrato de compra e venda do orçamento aprovado, assinado no telefone do cliente. O pagamento vem depois.</p>
+    <p>{{ orcamento.destinatario }} · {% if e_servico %}ordem de serviço (manutenção e serviços){% elif documento %}contrato de compra e venda{% else %}contrato de compra e venda ou ordem de serviço{% endif %} do orçamento aprovado, assinado no telefone do cliente. O pagamento vem depois.</p>
     {# O código e a conta do site (LEIA-ME-V10, seção 104): vinculado, o cliente também pede o link da assinatura em Meus pedidos. #}
     <p class="ls-doc-codigo">
       <i class="bi bi-ticket-perforated me-1" aria-hidden="true"></i>

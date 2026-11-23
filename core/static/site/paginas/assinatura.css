@@ -573,3 +573,73 @@ a{color:var(--ls-ciano)}
   .contrato::before,.ct-quadro thead th,.ct-quadro tfoot th,.ct-quadro tfoot td,.ct-parte,.ct-complemento,
   .ct-foto-quadro.sem-foto,.ct-auditoria,.ct-secao-titulo::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+
+/* ================================================================
+   A ORDEM DE SERVIÇO (LEIA-ME-V10, seção 124): manutenção e serviços
+
+   A mesma folha do contrato de compra e venda (.contrato, .ct-*), com o
+   que só a ordem de serviço tem: o QUADRO DO SERVIÇO (tipo, equipamento,
+   identificação, agenda, técnico, garantia, local e os textos do defeito,
+   do diagnóstico e do serviço) e o QUADRO DE VALORES (cada linha com a
+   conta, o frete, o desconto, o total e o selo da situação do pagamento
+   na emissão). As linhas são uma lista, e não uma tabela de cinco
+   colunas: no celular cada uma vira dois andares, sem rolar de lado.
+   ================================================================ */
+.contrato-os .ct-os-quadro,.contrato-os .ct-os-valores{margin:0 0 16px}
+.ct-os-dados{margin:0 0 10px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;
+  padding:12px 14px;border:1px solid var(--ct-linha);border-top:3px solid var(--ct-azul);border-radius:12px;background:var(--ct-fundo)}
+.ct-os-dados div{min-width:0;display:flex;flex-direction:column}
+.ct-os-dados .largo{grid-column:1 / -1}
+.ct-os-dados dt{font-size:.66rem;font-weight:850;text-transform:uppercase;letter-spacing:.7px;color:var(--ct-vermelho)}
+.ct-os-dados dd{margin:0;font-size:.9rem;font-weight:700;color:var(--tinta);overflow-wrap:anywhere}
+.ct-os-texto{margin:0 0 8px;padding:9px 12px;border-left:3px solid var(--ct-azul);border-radius:0 10px 10px 0;background:var(--ct-fundo)}
+.ct-os-texto h3{margin:0 0 3px;font-size:.7rem;font-weight:850;text-transform:uppercase;letter-spacing:.7px;color:var(--ct-azul)}
+.contrato .ct-os-texto p{margin:0;text-align:left}
+
+.ct-os-itens{list-style:none;margin:0;padding:0;border:1px solid var(--ct-linha);border-radius:12px;overflow:hidden}
+.ct-os-itens li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:9px 12px;border-top:1px solid var(--ct-linha)}
+.ct-os-itens li:first-child{border-top:0}
+.ct-os-item-nome{display:flex;flex-direction:column;min-width:0}
+.ct-os-item-nome small{font-size:.66rem;font-weight:850;text-transform:uppercase;letter-spacing:.6px;color:var(--tinta-3)}
+.ct-os-item-nome strong{font-size:.92rem;line-height:1.35;color:var(--tinta);overflow-wrap:anywhere}
+.ct-os-item-conta{grid-column:1;font-size:.8rem;color:var(--tinta-2);font-variant-numeric:tabular-nums}
+.ct-os-item-total{grid-column:2;grid-row:1 / span 2;align-self:center;font-size:.95rem;color:var(--ct-azul);white-space:nowrap;font-variant-numeric:tabular-nums}
+.ct-os-sem-itens{font-size:.88rem;color:var(--tinta-2);font-style:italic}
+.ct-os-contas{margin:10px 0 0 auto;max-width:360px;display:grid;gap:4px}
+.ct-os-contas div{display:flex;justify-content:space-between;gap:12px;font-size:.88rem}
+.ct-os-contas dt{font-weight:700;color:var(--tinta-2)}
+.ct-os-contas dd{margin:0;font-weight:800;color:var(--tinta);font-variant-numeric:tabular-nums}
+.ct-os-contas .ct-os-total{margin-top:4px;padding-top:6px;border-top:2px solid var(--ct-azul)}
+.ct-os-contas .ct-os-total dt,.ct-os-contas .ct-os-total dd{font-size:1.04rem;color:var(--ct-azul);font-weight:850}
+.contrato .ct-os-pagamento{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 10px;margin:12px 0 0;padding:10px 12px;
+  border:1px solid var(--ct-linha);border-radius:12px;background:var(--ct-fundo);font-size:.88rem;text-align:left}
+.ct-os-selo{display:inline-block;padding:2px 10px;border-radius:999px;font-size:.72rem;font-weight:850;text-transform:uppercase;letter-spacing:.5px;
+  background:#eef2f8;color:var(--marca);white-space:nowrap}
+.ct-os-pg-pago .ct-os-selo{background:#e9f8f0;color:var(--verde-papel)}
+.ct-os-pg-parcial .ct-os-selo,.ct-os-pg-pendente .ct-os-selo{background:#fff4e0;color:#8a4b00}
+.ct-os-situacao{border-left-color:var(--ct-azul)}
+
+@media (min-width:620px){
+  .ct-os-dados{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .ct-os-dados .largo{grid-column:span 2}
+}
+@media print{
+  .contrato-os .ct-os-quadro,.contrato-os .ct-os-valores{margin:0 0 3.4mm}
+  .ct-os-dados{grid-template-columns:repeat(4,minmax(0,1fr));gap:1.4mm 4mm;padding:2.2mm 3mm;border-radius:2mm;border-top-width:.8mm;break-inside:avoid}
+  .ct-os-dados .largo{grid-column:span 2}
+  .ct-os-dados dt{font-size:6.4pt}
+  .ct-os-dados dd{font-size:8.6pt}
+  .ct-os-texto{margin:0 0 1.8mm;padding:1.6mm 3mm;border-left-width:.8mm;break-inside:avoid}
+  .ct-os-texto h3{font-size:6.6pt}
+  .ct-os-itens{border-radius:2mm}
+  .ct-os-itens li{padding:1.4mm 3mm;break-inside:avoid}
+  .ct-os-item-nome small{font-size:6.2pt}
+  .ct-os-item-nome strong{font-size:8.8pt}
+  .ct-os-item-conta{font-size:7.6pt}
+  .ct-os-item-total{font-size:9pt}
+  .ct-os-contas{max-width:80mm;margin-top:2mm;break-inside:avoid}
+  .ct-os-contas div{font-size:8.6pt}
+  .ct-os-contas .ct-os-total dt,.ct-os-contas .ct-os-total dd{font-size:10pt}
+  .contrato .ct-os-pagamento{margin-top:2.4mm;padding:1.8mm 3mm;font-size:8.4pt;break-inside:avoid}
+  .ct-os-dados,.ct-os-texto,.ct-os-selo,.ct-os-pagamento{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}

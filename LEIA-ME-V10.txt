@@ -8985,3 +8985,208 @@ Dependência nova: rjsmin (requirements.txt).
    recusada com Refazer, pagamento sem valor; clientes, estoque e O.S.) no
    PC 1366 e no celular 390, sol, lua e eclipse, sem rolagem lateral e
    sem erro de JS.
+
+124) A ORDEM DE SERVIÇO ASSINADA NO CELULAR: MANUTENÇÃO E SERVIÇOS, COM OU SEM PAGAMENTO
+   O PEDIDO, nas palavras do dono: "VEJA TAMBEM REFERENTE AOS ORÇAMENTOS E
+   OS SEM RECEBER O PAGAMENTO, TAMBEM DEVE EMITIR CONTRATO O ORDEM DE
+   SERVIÇO, DESTINADO A MANUTENÇÕES E SERVIÇOS PARA PADRONIZAR."
+   O QUE JÁ EXISTIA: o contrato de compra e venda (seções 81, 109, 117 e
+   123) sai do orçamento APROVADO -- o pagamento nunca foi exigido
+   (aprovado -> assinatura -> pagamento) -- com o link de 10 minutos, o QR,
+   o WhatsApp, a página do cliente, a assinatura com o dedo, o diário de
+   bordo, a via em PDF e a trilha. A O.S. tinha só o link permanente de
+   consulta, com o "confirmar ciência" (o cliente digita o nome).
+   CONFERIDO NO ORÇAMENTO SEM PAGAMENTO: o contrato do aprovado não pago
+   diz "à vista, na confirmação do pedido" quando o orçamento não traz a
+   forma de pagamento, nada de "entrada recebida" nem "quitado", e as três
+   entradas levam a ele sem pagamento (o botão da lista, a régua da janela
+   "Gerar o contrato" e a folha "Propostas em aberto" -> "Cliente aprovou"
+   -> "Gerar o contrato"). Corrigido um detalhe: com pagamento PARCIAL a
+   condição saía "entrada de 1.500,00 paga..." sem o cifrão; agora "entrada
+   de R$ 1.500,00 paga ... e o saldo de R$ 1.500,00 até a entrega"
+   (contrato.condicao_de_pagamento).
+   O QUE MUDOU:
+     * O PAPEL PADRONIZADO DE SERVIÇO: "ORDEM DE SERVIÇO E CONTRATO DE
+       PRESTAÇÃO DE SERVIÇOS" (sistema_interno/documento_servico.py, modelo
+       "2026-11-os1"). Na ordem do papel: a capa com a empresa (os MESMOS
+       dados do contrato de venda: DadosContrato, o representante só o que
+       o dono preencheu -- nada pessoal no código) e o número; o QUADRO DO
+       SERVIÇO (tipo, situação na emissão, equipamento, identificação/série,
+       agenda ou conclusão, técnico, garantia, local, e os textos do
+       defeito relatado, do diagnóstico e do serviço executado -- estes dois
+       só a partir da execução, como a janela da O.S.); o QUADRO DE VALORES
+       (cada linha com "2 × R$ 25,00 = R$ 50,00", subtotal, frete/
+       deslocamento, desconto, total) e o SELO DO PAGAMENTO NA EMISSÃO,
+       escrito do jeito certo: "Nenhum valor foi recebido até a emissão
+       deste documento. Valor a pagar: R$ X" (pendente), "Recebido até a
+       emissão: R$ A. Saldo a pagar: R$ B" (parcial), "Valor integralmente
+       pago" (só quando pago) ou "não há valor a pagar" (sem custo, ex.
+       garantia); o preâmbulo com CONTRATADA e CONTRATANTE lado a lado; as
+       ONZE CLÁUSULAS em nove seções -- 1ª objeto (o tipo do serviço e o
+       equipamento; serviço ou peça fora da O.S. só com novo orçamento), 2ª
+       execução e prazo (a agenda, a execução ou a conclusão; diagnóstico
+       diferente vira versão nova da O.S.; prorrogação por acesso, clima e
+       peça), 3ª acesso ao local (o que o contratante garante; visita
+       perdida), 4ª peças de reposição (novas e originais ou com a
+       especificação do fabricante, art. 21 do CDC; as peças trocadas ficam
+       à disposição), 5ª obrigações do contratante, 6ª garantia (a da O.S.
+       -- "até dd/mm/aaaa" -- ou 90 dias da conclusão, sem prejuízo da
+       garantia legal do art. 26, II, do CDC; o que não cobre; como
+       acionar), 7ª preço (o total em número e por extenso, a condição de
+       pagamento e a situação na emissão), 8ª atraso (multa de 2%, juros de
+       1% ao mês e correção, como no contrato de venda; tolerância não é
+       novação), 9ª cancelamento (antes da execução sem ônus; depois, o que
+       foi feito; art. 49 do CDC quando cabível), 10ª dados pessoais (LGPD,
+       Lei 13.709/2018) e 11ª foro (Comarca de São Paulo, como o contrato de
+       venda, ressalvado o foro do consumidor, art. 101, I, do CDC) --; o
+       fecho com cidade e data, as assinaturas (CONTRATADA, CONTRATANTE com
+       o traço do celular, duas testemunhas) e a trilha de auditoria depois
+       de assinado. Tudo vai no RETRATO (o JSON congelado com o SHA-256):
+       editar a O.S. ou registrar pagamento depois não muda o que foi
+       assinado.
+       >>> O DONO DEVE REVISAR O TEXTO DAS CLÁUSULAS. É um modelo genérico
+       de prestação de serviço de manutenção, no estilo do contrato de
+       venda da empresa (que veio do contrato real dela); ele não foi
+       escrito por advogado. Os pontos que pedem decisão do dono: a
+       garantia padrão de 90 dias, a multa de 2% e os juros de 1%, a
+       cobrança da visita perdida (Cláusula 3ª), o descarte das peças
+       trocadas (4ª), o foro de São Paulo (11ª) e as duas testemunhas. O
+       texto mora em documento_servico.secoes/preambulo/FECHO; ao mudar,
+       troque VERSAO_DO_MODELO -- os já assinados continuam como eram.
+     * A O.S. GERA O DOCUMENTO, COM OU SEM PAGAMENTO: em qualquer situação
+       que não seja rascunho, cancelada ou substituída. A agenda vencida
+       (marcada para um dia que passou, serviço parado) também não gera --
+       o papel afirmaria uma data que não existe mais; a tela diz
+       "Reagende" (a mesma regra do "Enviar O.S."). Tela nova
+       /ordens-servico/<id>/assinatura/ (o mesmo cartão do contrato: QR,
+       relógio de 10 minutos, "Gerar novo link", WhatsApp com a mensagem da
+       O.S., "Gerar de novo", diário de bordo, "Assinada por ... ", "Baixar
+       PDF"), com o resumo do que entra (itens, frete, desconto, total,
+       pagamento na emissão, condição, garantia, equipamento). Os avisos de
+       antes de gerar: de onde veio a condição de pagamento e o
+       representante em branco (não travam nada).
+     * NA LISTA E NA JANELA DA O.S.: o botão "Documento" / "Assinatura" /
+       "Assinado" / "Suspenso" na linha (no cartão, na barra: Editar,
+       Documento, Enviar e "Mais", com Imprimir), para quem edita a O.S.; o
+       selo na situação ("Assinatura pendente", "Assinada" -- que abre o
+       PDF, também para o Financeiro --, "Documento suspenso"); e, no alto
+       da janela da O.S., a faixa do documento ("Gerar documento", "Abrir o
+       QR e o link", "Ver o PDF"). A situação de cada linha vem por
+       subconsulta na MESMA consulta da página (nenhuma ida ao banco por
+       O.S.). "Voltar à O.S." da tela do documento reabre a janela dela
+       (?editar=<id>).
+     * ASSINADA, TRAVA COMO O CONTRATO DE VENDA: não se gera de novo ("a
+       ordem de serviço assinada é o documento que vale"); na O.S., os
+       SERVIÇOS, PEÇAS, FRETE E DESCONTO que o cliente assinou não mudam
+       mais -- a janela os mostra travados e o servidor recusa com a janela
+       de erro "Ordem de serviço assinada" e o botão "Ver o documento
+       assinado" (409, as convenções da seção 123) --; o ANDAMENTO
+       (situação, diagnóstico, serviço executado, agenda, técnico,
+       observações, pagamento) continua livre. Mudar o que foi assinado é
+       "Refazer O.S.": a versão nova sai para uma nova assinatura e a
+       antiga fica com o papel dela. Cancelada ou substituída depois de o
+       papel sair, o documento que esperava fica SUSPENSO (o link responde
+       "suspensa: a O.S. foi cancelada ou trocada", nenhum link novo sai).
+     * A CIÊNCIA E O LINK DA O.S. NÃO COMPETEM COM A ASSINATURA: o link
+       permanente da O.S. continua sendo o da consulta, das fotos e do Pix.
+       A ASSINATURA É A CIÊNCIA: assinar registra "cliente ciente" com o
+       nome de quem assinou (e "Aguardando ciência" passa a "Aberta"). Com o
+       documento esperando, a página da O.S. troca o "Confirmar ciência"
+       por "Falta assinar a ordem de serviço" (com "Pedir o link" no
+       WhatsApp da empresa); assinado, mostra "Ordem de serviço assinada"
+       com "Ver a cópia assinada". Um caminho só para o cliente aceitar.
+       A equipe recebe o aviso no telefone ("OS-00042/2026: ordem de
+       serviço assinada"), como o do contrato.
+     * O ORÇAMENTO DE MANUTENÇÃO E SERVIÇO: no "Gerar" do orçamento
+       aprovado aparecem dois chips -- "Contrato de compra e venda" e
+       "Ordem de serviço (manutenção e serviços)" -- com a SUGESTÃO pelos
+       itens já marcada e o porquê (documento_servico.sugestao_do_
+       orcamento): equipamento do catálogo ou da fábrica é venda; só linhas
+       de serviço (manutenção, conserto, mão de obra, instalação, revisão,
+       visita, troca, deslocamento...) e peças, com ao menos um serviço ou
+       item de manutenção, é ordem de serviço; o resto (peças da loja
+       sozinhas, linhas que não dizem o que são) fica na venda e a tela
+       pede para conferir. Escolher a ordem de serviço esconde o que é só
+       da venda (a nota da Cláusula 2ª e a "Entrega (Cláusula 3ª)"). Sem
+       chip (Meus pedidos, a folha dos avisos), vale a sugestão; "Gerar de
+       novo" e o contrato refeito pela edição (seção 123) mantêm o papel
+       que já tinha. A ordem de serviço do orçamento usa o mesmo papel (com
+       "Orçamento nº", o código LS-..., o prazo de produção como prazo de
+       execução e, se houver O.S. ligada, o equipamento e o defeito dela);
+       Meus pedidos, o histórico ("Ordem de serviço · integridade ...",
+       "Ordem de serviço assinada no celular"), o WhatsApp ("assinar a
+       ordem de serviço") e a folha dos avisos ("Ordem de serviço") falam
+       dela.
+     * A página do cliente (/assinar/<link>/) fala do papel certo: "Assinar
+       a ordem de serviço", "OS-00042/2026 · pagamento pendente", "Leia a
+       ordem de serviço abaixo — o equipamento, o serviço, as peças, os
+       valores e a garantia", "Li e concordo com o serviço, os valores e
+       todas as cláusulas desta ordem de serviço", os pedidos de link novo
+       com o número da O.S.; a via e o rodapé de cada folha impressa
+       ("Ordem de serviço OS-00042/2026 · integridade ... · Página X de Y").
+     * Um conserto que valia para as duas telas: a folha que sobe de baixo
+       ("Gerar o documento?") ficava ATRÁS das abas do celular, e o
+       "Cancelar" não aparecia; agora fica acima delas.
+   QUEM PODE: gerar, renovar o link e acompanhar a ordem de serviço é de
+   quem edita a O.S. (capacidades["ordens_servico_editar"]: Produção e
+   Gestão), também por URL direta (403). A VIA/PDF é leitura: abre para
+   quem vê a O.S. (o Financeiro, que cobra pelo papel assinado), como a
+   prévia de impressão. No orçamento, o de sempre (Comercial).
+   BANCO: sistema_interno/0082_documento_assinatura_da_os (SÓ ESQUEMA: o
+   documento ganha `ordem_servico` (PROTECT, como o do orçamento),
+   `orcamento` fica opcional e uma regra do banco exige UMA origem -- o
+   orçamento ou a O.S.). Os documentos que existem são todos de orçamento
+   e continuam iguais. (Se outra seção tiver usado o 0082, renumere.)
+       python manage.py migrate sistema_interno
+   CONSULTAS (o banco a ~170 ms): a tela do documento da O.S. faz 7
+   consultas com ou sem documento (teto de 8 no teste, os itens lidos uma
+   vez), o "já assinou?" 7, o link 10, o gerar 16; a lista de O.S. não
+   ganha consulta por linha (teste com 5 O.S. com documento).
+   Código: sistema_interno/documento_servico.py (novo: o papel, as
+   cláusulas, o pagamento escrito, a sugestão do orçamento, gerar da O.S.,
+   suspensão, ciência), views_assinatura_os.py (novo: tela, link, estado,
+   via), templates assinatura_os_inner.html, assinatura_os/{cartao,
+   resumo}.html e documento_assinatura/servico.html (novos);
+   COMPARTILHADOS, mexidos pouco: models.py (DocumentoAssinatura),
+   documento_assinatura.py (gerar(modelo=), e_servico, o link com a O.S.,
+   a suspensão e a assinatura da O.S., o WhatsApp e o diário com o nome do
+   papel), views_documento_assinatura.py (os chips), documento_assinatura/
+   {cartao,folha,resumo}.html, contrato.py (o cifrão do parcial),
+   templatetags/contrato_extras.py (CONTRATADA/CONTRATANTE em negrito),
+   notificacoes.py (o aviso da O.S. assinada), resolver_avisos.py e
+   avisos-resolver.js (o nome "Ordem de serviço"), views_ordens_servico.py
+   (a subconsulta da lista, a faixa, a trava dos valores), partes/
+   os_lista.html, ordens_servico_inner.html, urls.py, core/views_assinatura
+   .py, core/templates/assinatura_publica.html e assinatura_via.html,
+   core/views_ordem_servico.py e ordem_servico_publica.html; CSS:
+   site/paginas/assinatura.css (seção nova da ordem de serviço),
+   interno/documento-assinatura.css (os chips, a folha acima das abas) e
+   interno_modern.css (seção nova no fim: o selo e a faixa; só variáveis do
+   tema); JS: interno/documento-assinatura.js (o chip, os textos da folha).
+   Testes: sistema_interno/tests_documento_os.py (23): a O.S. sem
+   pagamento gera pela tela e o papel diz "nenhum valor recebido", o
+   parcial, o pago e o sem custo; rascunho, cancelada, substituída e
+   agenda vencida não geram; o papel congelado; gerar de novo mata os
+   links; o orçamento aprovado sem pagamento gera o contrato pelas três
+   entradas; o parcial com cifrão; o orçamento de serviço vira ordem de
+   serviço e o "gerar de novo" mantém; o chip e o valor estranho; a
+   sugestão pelos itens; as permissões por URL (Financeiro 403, Vendas
+   fora, Gestão gera) e o PDF do Financeiro; a assinatura de ponta a ponta
+   (link do painel, página no celular, CPF mascarado, envio, comprovante,
+   ciência na O.S., a sondagem do painel, não assina duas vezes); o CPF que
+   não confere; a página da O.S. trocando a ciência pela assinatura; a via
+   com as cláusulas e a trilha; a trava (não gera de novo, o andamento
+   salva, frete/desconto/itens recusados com titulo e acao); a cancelada
+   suspendendo; o botão e o selo da lista; os tetos de consultas.
+   Comando da suíte: DJANGO_SETTINGS_MODULE=lazer.settings_test python
+   manage.py test core sistema_interno contas rh --parallel 1
+   CONFERIDO NO CHROMIUM (Playwright, servidor local, banco SQLite com
+   dados SINTÉTICOS): a lista em linhas e cartões com os selos e o botão; a
+   janela da O.S. assinada (faixa verde, valores travados) e da que espera;
+   a tela do documento assinada e esperando (QR e relógio); o orçamento de
+   manutenção com os chips e a folha; o fluxo inteiro -- gerar pela folha,
+   o QR, o link aberto no celular 390, nome, CPF, "Li e concordo", o traço
+   no quadro, a confirmação, o comprovante, e o painel trocando sozinho
+   para "Assinada" com o toast -- e o PDF da via (4 folhas A4 com "Página X
+   de Y"). No PC 1366 e no celular 390, temas Lua e Sol, sem rolagem
+   lateral, sem erro de JavaScript e sem alert/confirm.
