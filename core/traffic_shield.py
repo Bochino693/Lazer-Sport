@@ -31,7 +31,12 @@ _PUBLIC_EXPENSIVE = ("/brinquedos/", "/loja/", "/produto-tag/")
 # 10 a 20 estáticos por página; no teste de carga (docs/TESTE_DE_CARGA.md)
 # 13 % dos cortes do escudo eram em CSS, e cada CSS cortado é uma página
 # que abre sem estilo. As sondas (`_PROBE_RE`) continuam barradas antes.
-_LIGHT_PREFIXES = ("/static/", "/media/")
+# /midia/banco/ (as fotos guardadas no banco, seção 130) também: a foto que já
+# está no disco sai em ~1 ms, e a leitura do banco e a redução da foto têm a
+# própria fila curta (core/arquivos_no_banco.py, seção 132). Antes, cada foto
+# da home disputava as 4 vagas públicas com as páginas: com 70 fotos, a página
+# seguinte esperava ou voltava 503, e a foto cortada não aparecia.
+_LIGHT_PREFIXES = ("/static/", "/media/", "/midia/")
 _LIGHT_PATHS = frozenset({
     "/favicon.ico", "/robots.txt", "/manifest.webmanifest", "/sw.js",
 })

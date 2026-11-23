@@ -419,7 +419,18 @@ def _com_trava(funcao):
 def _laco():
     from django.db import close_old_connections, connection
 
-    time.sleep(90)  # o processo acabou de subir: a primeira tela é de quem abriu o site
+    time.sleep(20)  # o processo acabou de subir: a primeira tela é de quem abriu o site
+    try:
+        # o disco desta instância começa vazio: as fotos vêm do banco agora, uma leva por vez,
+        # e não na primeira visita, todas juntas (seção 132)
+        from .arquivos_no_banco import aquecer_disco
+
+        log.info("midia: %s fotos trazidas para o disco", aquecer_disco())
+    except Exception:  # noqa: BLE001
+        log.exception("midia: não deu para trazer as fotos para o disco")
+    finally:
+        connection.close()
+    time.sleep(70)
     try:
         from . import restaurar_midia
 

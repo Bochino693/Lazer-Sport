@@ -687,6 +687,9 @@ except ValueError:
 # Os documentos privados (RH, O.S., notas): "banco" (o padrão em produção),
 # "local" (o padrão no computador) ou "cloudinary" (o de antes). Ver rh/armazenamento.py.
 RH_ARMAZENAMENTO = os.getenv("RH_ARMAZENAMENTO", "").strip().lower()
+# A tela vencida no cache sai na hora e se remonta numa linha de fundo
+# (core/home_cache.py, seção 132). Nos testes, na mesma linha.
+CACHE_RENOVA_EM_SEGUNDO_PLANO = True
 # O Cloudinary fora do ar (seção 132): "auto" segue o que o espelho viu; "1"
 # força o site a não pedir foto nenhuma a ele; "0" força pedir.
 MIDIA_CLOUDINARY_FORA = os.getenv("MIDIA_CLOUDINARY_FORA", "auto").strip().lower() or "auto"

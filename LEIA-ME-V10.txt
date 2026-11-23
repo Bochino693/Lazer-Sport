@@ -9876,3 +9876,74 @@ Dependência nova: rjsmin (requirements.txt).
    desligada fora do Render; uma linha por processo e outra depois do fork;
    a visita liga a linha; o middleware está ligado).
        DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test core sistema_interno contas rh --parallel 1
+132) O SITE RÁPIDO E FIRME SEM O CLOUDINARY: FOTOS NA BORDA DO CLOUDFLARE, NENHUM PEDIDO PERDIDO
+   O PEDIDO DO DONO (23/11/2026): "eu queria baixar em zip mas o sistema me
+   brecha e me joga para pagamento, revise os pontos que eu falei e faça o
+   site ficar redondo [...] fora que o carregamento ficou ruim do site,
+   imagens e etc, deixe bem rápido e robusto."
+   O QUE FOI MEDIDO NO AR (Chromium, PC 1366 e celular 390, antes desta seção):
+     * home no PC: 4,7 s até carregar, maior pintura (LCP) em 3,8 s; as 72
+       fotos do banco levavam em média 0,8 s cada (até 1,9 s);
+     * 25 fotos por visita ainda pediam o Cloudinary e voltavam 401;
+     * a primeira visita à home depois de o cache vencer esperou 8,8 s (a
+       vitrine remontada na frente do visitante, ~50 idas ao Supabase).
+   AS CAUSAS E O QUE MUDOU:
+   1. O CLOUDFLARE NÃO GUARDAVA NENHUMA FOTO. Ele só guarda na borda o
+      endereço que termina numa extensão de arquivo; "/midia/banco/<foto>?w=480"
+      passava sempre ("cf-cache-status: DYNAMIC") e cada foto de cada visita
+      atravessava até o Render. Agora a foto do banco sai como
+      "/midia/banco/<foto>.w480.webp" (core.arquivos_no_banco.FORMA_GUARDAVEL
+      e endereco_com_largura; core.fotos.reduzir_imagem): o mesmo conteúdo,
+      a mesma ETag, cache de um ano -- e o Cloudflare guarda. O "?w=" antigo
+      continua valendo (páginas guardadas, e-mails).
+   2. CADA FOTO DISPUTAVA AS 4 VAGAS PÚBLICAS DO ESCUDO (core/traffic_shield.py)
+      com as páginas: com 70 fotos na home, a página seguinte esperava ou
+      voltava 503, e a foto cortada não aparecia. "/midia/" agora é leve como
+      "/static/". O trabalho pesado da entrega (ler a foto do banco, reduzir a
+      largura) tem a própria fila curta, de 3 por vez (TRABALHOS_JUNTOS); a
+      foto que espera mais de 20 s vira 503 curto (Retry-After 2), nunca 500.
+   3. O CLOUDINARY FORA DO AR NÃO RECEBE MAIS PEDIDO. O espelho grava o estado
+      dele no SinalDoSite (chave "cloudinary-fora": o instante em que viu a
+      conta desativada; 0 quando voltou), e cada processo do site lê ao subir
+      e a cada minuto (core/sinais.py, seção 131). Com ele fora:
+        * o nome antigo de foto (o que só existe lá) vira o quadro
+          site/foto-em-atualizacao.svg, servido daqui, sem o 401 e sem o
+          ícone de foto quebrada piscando antes da reserva da seção 128;
+        * o filtro `{% if x.foto|tem_foto %}` (core.fotos.foto_disponivel) é
+          falso para essa foto: cada tela escolhe a reserva certa (seção 133).
+      MIDIA_CLOUDINARY_FORA="1"/"0" força; "auto" (o padrão) segue o espelho
+      onde a linha de fundo lê os sinais (o Render). Quando a conta voltar, o
+      espelho marca "voltou", copia tudo para o banco e o site volta a pedir.
+   4. A TELA VENCIDA SAI NA HORA E SE REMONTA ATRÁS (core/home_cache.py,
+      com_renovacao). A vitrine da home, os metadados e as páginas do catálogo
+      são guardados com a hora em que foram montados e vivem 6 vezes o prazo.
+      Vencido o prazo (30 min), quem chega leva a versão de antes, na hora, e
+      uma linha de fundo remonta (uma por chave, com trava no próprio cache).
+      Na home, a vitrine nova tira o HTML guardado e o aquecimento (core/
+      aquecer.py) monta a home de novo antes da próxima visita; o
+      aquecimento agora SOMA as telas pedidas (um aquecimento só da home não
+      cancela o completo). Só o cache VAZIO (o site acabou de subir, alguém
+      editou o catálogo) ainda monta na frente -- e esse o aquecimento cobre.
+      CACHE_RENOVA_EM_SEGUNDO_PLANO=False nos testes (na mesma linha).
+   5. O DISCO CHEIO LOGO DEPOIS DE SUBIR. O disco da instância começa vazio a
+      cada publicação, e a primeira visita pedia dezenas de fotos ao banco de
+      uma vez (cada uma segurando uma thread). Agora a linha de fundo do
+      espelho, 20 s depois de subir, traz para o disco todas as fotos
+      públicas, dez por consulta, uma leva por vez
+      (core.arquivos_no_banco.aquecer_disco); a restauração das cópias segue
+      ~90 s depois de subir, como antes.
+   TESTES: core/tests_cache_renovacao.py (monta uma vez; vencido sai o de
+   antes e se remonta; a remontagem que falha mantém o de antes; uma por vez;
+   formato antigo conta como vazio; descartável não fica; vive mais que o
+   prazo; a home remontada tira o HTML e pede o aquecimento da home; o
+   catálogo também; o aquecimento soma as telas); core/tests_sinais.py
+   (CloudinaryForaTests: marcar só quando muda; outro processo lê e limpa;
+   estado antigo vale desde a primeira leitura; o nome antigo vira o quadro
+   daqui, o do banco e o raw seguem; a variável força; o filtro tem_foto; o
+   espelho marca fora e marca de volta); core/tests_arquivos_no_banco.py (a
+   forma que o Cloudflare guarda entrega a mesma foto, sem cookie; fila cheia
+   é 503 curto; reduzir_imagem na forma nova; aquecer_disco traz as públicas,
+   deixa as privadas e a entrega depois não consulta o banco);
+   core/test_traffic_shield.py
+   (/midia/ nunca recebe 503 com as vagas tomadas).
+       DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test core sistema_interno contas rh --parallel 1

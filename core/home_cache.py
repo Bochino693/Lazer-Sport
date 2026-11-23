@@ -28,6 +28,8 @@ versão do worker A; o B segue com a cópia velha até o TTL. Antes de subir
 """
 
 import hashlib
+import logging
+import threading
 import time
 
 from django.conf import settings
@@ -59,12 +61,85 @@ def catalog_cache_timeout():
         return 1800
 
 
+log = logging.getLogger("core.home_cache")
+
+# ----------------------------------------------------------------------
+# A TELA VENCIDA SAI NA HORA E SE REMONTA EM SEGUNDO PLANO (seção 132)
+# ----------------------------------------------------------------------
+# Antes, quando o prazo da home (30 min) vencia, o PRÓXIMO visitante
+# esperava a remontagem inteira: ~50 consultas ao Supabase, 8,8 s medidos no
+# ar em 23/11. Agora cada valor é guardado com a hora em que foi montado e
+# vive no cache por GUARDA vezes o prazo. Vencido o prazo, quem chega leva a
+# versão de antes, na hora, e uma linha de fundo remonta (uma por chave: a
+# trava no próprio cache). Só o cache VAZIO (o site acabou de subir, alguém
+# editou o catálogo) ainda monta na frente do visitante -- e esse caso o
+# aquecimento (core/aquecer.py) já cobre.
+GUARDA = 6
+
+
+def _envelope(valor):
+    return {"_feito_em": time.time(), "_valor": valor}
+
+
+def _e_envelope(guardado):
+    return isinstance(guardado, dict) and "_feito_em" in guardado and "_valor" in guardado
+
+
+def _renovar(chave, builder, prazo, depois=None):
+    """Remonta `chave` sem tirar a versão de antes do lugar (uma linha por chave)."""
+    trava = chave + ":renovando"
+    if not cache.add(trava, 1, 120):
+        return False
+
+    def tarefa():
+        from django.db import close_old_connections, connection
+
+        try:
+            close_old_connections()
+            valor = builder()
+            if not (isinstance(valor, dict) and valor.pop("_descartavel", False)):
+                cache.set(chave, _envelope(valor), prazo * GUARDA)
+            if depois is not None:
+                depois()
+        except Exception:  # noqa: BLE001 -- quem chega segue com a versão de antes
+            log.warning("cache: não deu para remontar %s", chave, exc_info=True)
+        finally:
+            cache.delete(trava)
+            if threading.current_thread() is not threading.main_thread():
+                connection.close()
+
+    if getattr(settings, "CACHE_RENOVA_EM_SEGUNDO_PLANO", True):
+        threading.Thread(target=tarefa, name="renovar-cache", daemon=True).start()
+    else:  # nos testes: na mesma linha, para dar para conferir
+        tarefa()
+    return True
+
+
+def com_renovacao(chave, builder, prazo, depois=None):
+    """O valor de `chave`: montado na hora só se o cache não tem nenhum; vencido, sai e se remonta."""
+    guardado = cache.get(chave)
+    if not _e_envelope(guardado):
+        valor = builder()
+        if isinstance(valor, dict) and valor.pop("_descartavel", False):
+            return valor
+        cache.set(chave, _envelope(valor), prazo * GUARDA)
+        return valor
+    if time.time() - guardado["_feito_em"] > prazo:
+        _renovar(chave, builder, prazo, depois)
+    return guardado["_valor"]
+
+
+def _home_remontada():
+    # a vitrine nova pede o HTML novo: o fragmento sai e o aquecimento o monta
+    cache.delete(make_template_fragment_key(HOME_FRAGMENT_NAME))
+    from .aquecer import agendar
+
+    agendar(atraso=0.5, motivo="home remontada", paginas=("/",))
+
+
 def get_cached_home_context(builder):
     """Retorna a vitrine pública em cache ou a constrói uma única vez."""
-    context = cache.get(HOME_CONTEXT_CACHE_KEY)
-    if context is None:
-        context = builder()
-        cache.set(HOME_CONTEXT_CACHE_KEY, context, home_cache_timeout())
+    context = com_renovacao(HOME_CONTEXT_CACHE_KEY, builder, home_cache_timeout(), depois=_home_remontada)
 
     # Evita que uma view altere acidentalmente o dicionário armazenado.
     return dict(context)
@@ -77,15 +152,7 @@ def get_cached_catalog_metadata(builder):
     chave. Assim, categorias, voltagens, totais e limites de preço deixam de
     consultar o banco a cada visita sem compartilhar informação privada.
     """
-    metadata = cache.get(CATALOG_METADATA_CACHE_KEY)
-    if metadata is None:
-        metadata = builder()
-        cache.set(
-            CATALOG_METADATA_CACHE_KEY,
-            metadata,
-            catalog_cache_timeout(),
-        )
-
+    metadata = com_renovacao(CATALOG_METADATA_CACHE_KEY, builder, catalog_cache_timeout())
     return dict(metadata)
 
 
@@ -157,12 +224,7 @@ def get_cached_catalog_page(tela, partes, builder):
     página fora do intervalo, que um robô poderia pedir aos milhares.
     """
     chave = chave_de_tela(tela, *partes)
-    dados = cache.get(chave)
-    if dados is None:
-        dados = builder()
-        if not dados.pop("_descartavel", False):
-            cache.set(chave, dados, catalog_cache_timeout())
-    return dados
+    return com_renovacao(chave, builder, catalog_cache_timeout())
 
 
 def dados_da_pagina(page_obj):

@@ -32,26 +32,36 @@ NAVEGADOR = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTM
 
 _trava = threading.Lock()
 _agendado = None
+#: As telas pedidas até o disparo (um aquecimento só da home não cancela o completo).
+_pendentes = set()
 
 
 def ligado():
     return bool(getattr(settings, "AQUECER_CACHE", False))
 
 
-def agendar(atraso=4.0, motivo="cache vazio"):
-    """Aquece as telas daqui a `atraso` segundos (um pedido novo adia o anterior)."""
+def agendar(atraso=4.0, motivo="cache vazio", paginas=PAGINAS):
+    """Aquece as telas daqui a `atraso` segundos (um pedido novo adia o anterior e soma as telas)."""
     global _agendado
     if not ligado():
         return
     with _trava:
+        _pendentes.update(paginas)
         if _agendado is not None:
             _agendado.cancel()
-        _agendado = threading.Timer(atraso, aquecer, kwargs={"motivo": motivo})
+        _agendado = threading.Timer(atraso, _disparar, kwargs={"motivo": motivo})
         _agendado.daemon = True
         _agendado.start()
 
 
-def aquecer(motivo=""):
+def _disparar(motivo=""):
+    with _trava:
+        paginas = [p for p in PAGINAS if p in _pendentes] + sorted(_pendentes - set(PAGINAS))
+        _pendentes.clear()
+    aquecer(motivo, paginas)
+
+
+def aquecer(motivo="", paginas=PAGINAS):
     """Pede as telas principais como um visitante sem conta (o cache fica cheio)."""
     from django.db import connections
     from django.test import Client
@@ -60,7 +70,7 @@ def aquecer(motivo=""):
     cliente = Client(HTTP_USER_AGENT=NAVEGADOR, HTTP_ACCEPT="text/html")
     feitas = []
     try:
-        for caminho in PAGINAS:
+        for caminho in paginas:
             try:
                 resposta = cliente.get(caminho, HTTP_HOST=host, secure=True)
                 feitas.append(f"{caminho}={resposta.status_code}")

@@ -90,6 +90,7 @@ class TrafficShieldTests(SimpleTestCase):
                 "/static/site/ls-base.css",
                 "/static/images/logoofi.png",
                 "/media/brinquedos/foto.webp",
+                "/midia/banco/imagens_brinquedos/foto_ab12cd.w480.webp",
                 "/favicon.ico",
                 "/robots.txt",
                 "/manifest.webmanifest",
@@ -101,7 +102,7 @@ class TrafficShieldTests(SimpleTestCase):
             self.assertTrue(_call(self.shield, _environ("/brinquedos/"))["status"].startswith("503"))
         finally:
             self._liberar(acquired)
-        self.assertEqual(self.calls, 7)
+        self.assertEqual(self.calls, 8)
 
     def test_estatico_nao_devolve_vaga_que_nao_pegou(self):
         """Passar direto não pode 'liberar' uma vaga a mais (o semáforo é limitado)."""

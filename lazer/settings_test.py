@@ -102,3 +102,5 @@ RECORTE_PECAS_AUTOMATICO = False  # nos testes, o recorte só roda quando o test
 # suíte inteira: desligado, um teste não tranca o login do seguinte. Os testes
 # dele (contas/tests_freio.py) o ligam.
 LOGIN_FREIO_ATIVO = False
+# A remontagem do cache vencido na mesma linha (seção 132): dá para conferir.
+CACHE_RENOVA_EM_SEGUNDO_PLANO = False

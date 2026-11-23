@@ -101,10 +101,15 @@ class NomesETiposTests(SimpleTestCase):
 
     def test_reduzir_imagem_pede_a_largura_da_lista(self):
         url = "/midia/banco/imagens_brinquedos/foto_ab12cd.webp"
-        self.assertEqual(reduzir_imagem(url, 768), url + "?w=960")
-        self.assertEqual(reduzir_imagem(url, 160), url + "?w=160")
-        self.assertEqual(reduzir_imagem(url, 5000), url + "?w=1600")
+        # a forma que o Cloudflare guarda na borda (seção 132)
+        self.assertEqual(reduzir_imagem(url, 768), url + ".w960.webp")
+        self.assertEqual(reduzir_imagem(url, 160), url + ".w160.webp")
+        self.assertEqual(reduzir_imagem(url, 5000), url + ".w1600.webp")
+        self.assertEqual(reduzir_imagem(url + ".w480.webp", 160), url + ".w480.webp")
+        # o endereço antigo com ?w= continua como veio
         self.assertEqual(reduzir_imagem(url + "?w=480", 160), url + "?w=480")
+        sem_extensao = "https://www.lazersport.com.br/midia/banco/categorias/area-ninja-97fe6ad9c5_q7l6oi"
+        self.assertEqual(reduzir_imagem(sem_extensao, 480), sem_extensao + ".w480.webp")
         nuvem = "https://res.cloudinary.com/conta/image/upload/v1/imagens_brinquedos/foto"
         self.assertIn("/upload/c_limit,w_768,f_auto,q_auto/", reduzir_imagem(nuvem, 768))
 
@@ -268,6 +273,41 @@ class EntregaTests(CacheTemporario, TestCase):
         self.assertTrue(resposta["ETag"].endswith('-w480"'))
         de_novo = self.client.get("/midia/" + self.nome + "?w=480")  # agora do disco
         self.assertEqual(de_novo["Content-Type"], "image/webp")
+
+    def test_a_forma_que_o_cloudflare_guarda_entrega_a_mesma_foto(self):
+        antiga = self.client.get("/midia/" + self.nome + "?w=480")
+        nova = self.client.get("/midia/" + self.nome + ".w480.webp")
+        self.assertEqual(nova.status_code, 200)
+        self.assertEqual(nova["Content-Type"], "image/webp")
+        self.assertEqual(nova["ETag"], antiga["ETag"])
+        self.assertIn("immutable", nova["Cache-Control"])
+        self.assertNotIn("Set-Cookie", nova)  # o Cloudflare não guarda resposta com cookie
+        corpo = b"".join(nova.streaming_content) if nova.streaming else nova.content
+        with Image.open(io.BytesIO(corpo)) as imagem:
+            self.assertEqual(imagem.width, 480)
+        self.assertEqual(self.client.get("/midia/" + self.nome + ".w333.webp").status_code, 404)
+        self.assertEqual(self.client.get("/midia/" + self.nome + ".w480.webp", **INTERNO).status_code, 200)
+
+    def test_aquecer_disco_traz_as_publicas_e_deixa_as_privadas(self):
+        anb.apagar_do_disco(self.nome)
+        privado = anb.guardar("banco/rh/ab/abcdef.pdf", b"%PDF-1.4 documento", publico=False)
+        self.assertEqual(anb.aquecer_disco(), 1)
+        self.assertIsNotNone(anb._meta_do_disco(self.nome))
+        self.assertIsNone(anb._meta_do_disco(privado))
+        # depois, a entrega não consulta o banco
+        with CaptureQueriesContext(connection) as consultas:
+            self.assertEqual(self.client.get("/midia/" + self.nome + ".w480.webp").status_code, 200)
+        self.assertEqual(len(consultas), 0)
+        self.assertEqual(anb.aquecer_disco(), 0)  # já está tudo no disco
+
+    def test_fila_cheia_vira_503_curto_e_nao_500(self):
+        anb.apagar_do_disco(self.nome)
+        with mock.patch.object(anb, "_vez") as vez:
+            vez.acquire.return_value = False
+            resposta = self.client.get("/midia/" + self.nome + ".w480.webp")
+        self.assertEqual(resposta.status_code, 503)
+        self.assertEqual(resposta["Retry-After"], "2")
+        self.assertEqual(resposta["Cache-Control"], "no-store")
 
     def test_largura_fora_da_lista_e_404(self):
         self.assertEqual(self.client.get("/midia/" + self.nome + "?w=333").status_code, 404)

@@ -42,6 +42,7 @@ import logging
 import mimetypes
 import os
 import posixpath
+import re
 import secrets
 import string
 import tempfile
@@ -66,6 +67,16 @@ ROTA = "/midia/"
 
 #: As larguras que `?w=` aceita. Fora da lista, 404 (um robô não gera mil variantes).
 LARGURAS = (160, 240, 320, 480, 720, 960, 1200, 1600)
+#: A FORMA QUE O CLOUDFLARE GUARDA (seção 132): "<caminho>.w480.webp". O
+#: Cloudflare na frente do site só guarda na borda o endereço que termina numa
+#: extensão de arquivo; "<caminho>?w=480" passava sempre ("DYNAMIC") e cada foto
+#: de cada visita atravessava o oceano até o Render. O `?w=` antigo segue valendo.
+FORMA_GUARDAVEL = re.compile(r"^(?P<nome>.+)\.w(?P<largura>\d{2,4})\.webp$")
+#: Quantas leituras do banco ou reduções de foto rodam juntas (o resto espera a
+#: vez, em vez de ocupar todas as threads de uma instância de meia CPU).
+TRABALHOS_JUNTOS = 3
+#: Quanto uma foto espera a vez antes de virar 503 curto (o navegador tenta de novo).
+ESPERA_DA_VEZ = 20
 #: A foto maior que isto (lado ou peso) entra como WebP de até LADO_MAXIMO px.
 LADO_MAXIMO = 2400
 PESO_MAXIMO = 700 * 1024
@@ -390,6 +401,31 @@ def apagar_do_disco(nome):
             pass
 
 
+def aquecer_disco(*, lote=10, limite=None) -> int:
+    """Traz para o disco as fotos públicas que ainda não estão nele (seção 132). Devolve quantas.
+
+    Logo depois de cada publicação o disco da instância está vazio: a primeira
+    visita pedia dezenas de fotos ao banco de uma vez. A linha de fundo do
+    espelho chama isto ao subir, uma leva de `lote` por consulta, uma leva
+    por vez -- quem visita depois já pega a foto no disco, em ~1 ms.
+    """
+    modelo = _modelo()
+    nomes = [n for n in modelo.objects.filter(publico=True).order_by("-id").values_list("nome", flat=True)
+             if _meta_do_disco(n) is None]
+    if limite is not None:
+        nomes = nomes[:limite]
+    trazidas = 0
+    for i in range(0, len(nomes), lote):
+        linhas = modelo.objects.filter(nome__in=nomes[i:i + lote], publico=True).values_list(
+            "nome", "conteudo", "tipo", "sha256", "exata")
+        for nome, conteudo, tipo, sha, exata in linhas:
+            if _escrito["bytes"] + len(conteudo) > _limite_do_disco():
+                return trazidas
+            _para_o_disco(nome, bytes(conteudo), {"tipo": tipo, "sha256": sha, "exata": bool(exata)})
+            trazidas += 1
+    return trazidas
+
+
 # ======================================================================
 # O ENDEREÇO
 # ======================================================================
@@ -624,6 +660,10 @@ def _variante(dados: bytes, largura: int):
         return None
 
 
+def _ler_publico(nome):
+    return ler(nome, so_publico=True)
+
+
 def _resposta_vazia(status, texto=""):
     from django.http import HttpResponse
 
@@ -631,6 +671,31 @@ def _resposta_vazia(status, texto=""):
     resposta["Cache-Control"] = "no-store" if status >= 500 else "public, max-age=60"
     resposta["X-Content-Type-Options"] = "nosniff"
     return resposta
+
+
+_vez = threading.BoundedSemaphore(TRABALHOS_JUNTOS)
+
+
+class _SemVez(Exception):
+    """A fila do trabalho pesado não andou a tempo."""
+
+
+def _na_vez(funcao, *args):
+    """Roda `funcao` (ler do banco, reduzir a foto) dentro da fila curta."""
+    if not _vez.acquire(timeout=ESPERA_DA_VEZ):
+        raise _SemVez()
+    try:
+        return funcao(*args)
+    finally:
+        _vez.release()
+
+
+def endereco_com_largura(url, largura) -> str:
+    """O endereço da foto do banco na largura da lista, na forma que o Cloudflare guarda."""
+    base = str(url).split("?", 1)[0].split("#", 1)[0]
+    if FORMA_GUARDAVEL.match(base):
+        return base
+    return f"{base}.w{largura_permitida(largura)}.webp"
 
 
 def servir(request, caminho):
@@ -642,6 +707,11 @@ def servir(request, caminho):
 
     try:
         return _servir(request, caminho)
+    except _SemVez:
+        log.warning("midia: fila cheia ao entregar %s", caminho)
+        resposta = _resposta_vazia(503, "Tente de novo em instantes.")
+        resposta["Retry-After"] = "2"
+        return resposta
     except DatabaseError:
         log.warning("midia: o banco não respondeu ao entregar %s", caminho, exc_info=True)
         resposta = _resposta_vazia(503, "Tente de novo em instantes.")
@@ -657,11 +727,15 @@ def _servir(request, caminho):
         resposta["Allow"] = "GET, HEAD"
         return resposta
     caminho = str(caminho or "")
+    guardavel = FORMA_GUARDAVEL.match(caminho)
+    if guardavel:
+        caminho, pedida = guardavel["nome"], guardavel["largura"]
+    else:
+        pedida = request.GET.get("w")
     nome = caminho if caminho.startswith(PREFIXO) else PREFIXO + caminho
     if not _nome_valido(nome[len(PREFIXO):]):
         return _resposta_vazia(404, "Arquivo não encontrado.")
     largura = None
-    pedida = request.GET.get("w")
     if pedida is not None:
         if not pedida.isdigit() or int(pedida) not in LARGURAS:
             return _resposta_vazia(404, "Largura fora da lista.")
@@ -670,7 +744,7 @@ def _servir(request, caminho):
     meta = _meta_do_disco(nome)
     dados = None
     if meta is None:
-        linha = ler(nome, so_publico=True)
+        linha = _na_vez(_ler_publico, nome)
         if linha is None:
             return _resposta_vazia(404, "Arquivo não encontrado.")
         dados, tipo, sha, exata = linha
@@ -709,11 +783,11 @@ def _servir(request, caminho):
         if dados is None:
             dados, _meta = _do_disco(nome)
             if dados is None:
-                linha = ler(nome, so_publico=True)
+                linha = _na_vez(_ler_publico, nome)
                 if linha is None:
                     return _resposta_vazia(404, "Arquivo não encontrado.")
                 dados = linha[0]
-        reduzida = _variante(dados, largura)
+        reduzida = _na_vez(_variante, dados, largura)
         if reduzida is not None:
             _gravar_no_disco(variante_no_disco, reduzida)
             return cabecalhos(HttpResponse(reduzida, content_type="image/webp"))
@@ -722,7 +796,7 @@ def _servir(request, caminho):
         original, _meta = _caminhos(nome)
         if original.is_file():
             return cabecalhos(FileResponse(open(original, "rb"), content_type=tipo))
-        linha = ler(nome, so_publico=True)
+        linha = _na_vez(_ler_publico, nome)
         if linha is None:
             return _resposta_vazia(404, "Arquivo não encontrado.")
         dados = linha[0]

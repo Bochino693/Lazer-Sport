@@ -31,16 +31,18 @@ _LIMITE_DE_URLS = 20000
 def reduzir_imagem(url, largura=768):
     """A mesma foto, com no máximo `largura` px de largura.
 
-    A foto do NOSSO banco (/midia/banco/, seção 130) ganha `?w=` com a
-    largura da lista que cobre a pedida (core.arquivos_no_banco.LARGURAS);
+    A foto do NOSSO banco (/midia/banco/, seção 130) ganha a largura da
+    lista que cobre a pedida (core.arquivos_no_banco.LARGURAS), na forma
+    "<foto>.w480.webp" que o Cloudflare guarda (seção 132);
     a do Cloudinary (o nome antigo), a transformação dele.
     """
     if url and "/midia/banco/" in url:
         if "?" in url:
             return url
-        from .arquivos_no_banco import largura_permitida
+        from .arquivos_no_banco import endereco_com_largura
 
-        return f"{url}?w={largura_permitida(largura)}"
+        # "<foto>.w480.webp": o Cloudflare guarda na borda (seção 132)
+        return endereco_com_largura(url, largura)
     if not url or "res.cloudinary.com" not in url or "/upload/" not in url:
         return url
     antes, depois = url.split("/upload/", 1)
