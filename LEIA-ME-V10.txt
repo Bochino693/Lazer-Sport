@@ -9051,3 +9051,13 @@ Dependência nova: rjsmin (requirements.txt).
      Teste: tests_localizacao.EnderecoLocalizavelTests.
    - Fotos: a reserva da seção 128 também usa a foto real do cabo HDMI
      (site/kits/itens/cabo-hdmi.webp) para a peça "Cabo HDMI".
+   - "Faça tudo ficar em conformidade" (páginas que fecham a fileira, seção
+     121) valia no painel; no site, a grade das peças (4/3/2 colunas)
+     paginava de 8 e a de eventos/projetos (3/2 colunas) de 9 -- no tablet
+     sobrava fileira pela metade. Agora as duas paginam de 12
+     (core/static/site/paginas/home.js). Teste: core/tests_paginas_do_site.py.
+   - "Tire as notificações de erros como um texto comum": a conferência dos
+     arquivos de um jogo (painel de Jogos) mostrava o que impede publicar só
+     como texto vermelho no quadro; agora abre também a janela de app
+     "Confira os arquivos do jogo" com a lista (uma vez por conjunto de
+     arquivos), e a lista usa a cor do tema (emulador-envio.js, games.css).

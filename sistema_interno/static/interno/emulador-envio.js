@@ -90,6 +90,21 @@
     (analise.ignorados || []).forEach(function (nome) { item(lista, "– " + nome + " — fica de fora", "text-muted"); });
     var erros = el(p + "Erros"); erros.innerHTML = "";
     (analise.erros || []).forEach(function (e) { item(erros, e); });
+    /* O que impede publicar vem numa janela de app, além da lista do
+       quadro (seção 129: "tire as notificações de erros como um texto
+       comum"). Uma janela por conjunto de arquivos, não a cada conferência. */
+    var chave = (analise.erros || []).join("|");
+    if (chave && chave !== this._ultimoErroMostrado && window.LSAviso && window.LSAviso.modal) {
+      this._ultimoErroMostrado = chave;
+      window.LSAviso.modal({
+        nivel: "erro",
+        titulo: "Confira os arquivos do jogo",
+        texto: "Do jeito que estão, os arquivos ainda não dão para publicar o jogo:",
+        lista: analise.erros.slice(0, 8)
+      });
+    } else if (!chave) {
+      this._ultimoErroMostrado = "";
+    }
     var avisos = el(p + "Avisos"); avisos.innerHTML = "";
     (analise.avisos || []).forEach(function (a) { item(avisos, a); });
   };
