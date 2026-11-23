@@ -91,3 +91,10 @@ class ContratoDoScriptTests(SimpleTestCase):
     def test_sem_copia_entra_o_quadro_e_nunca_o_icone_quebrado(self):
         self.assertIn("Foto em atualização", self.js)
         self.assertIn("removeAttribute('srcset')", self.js)
+
+
+class SemConexaoComOCloudinaryTests(SimpleTestCase):
+    def test_o_topo_das_paginas_nao_abre_conexao_com_o_cloudinary(self):
+        # seção 132: a conexão à toa também fazia o script da reserva entrar em toda página
+        base = (Path(__file__).resolve().parent / "templates" / "base.html").read_text(encoding="utf-8")
+        self.assertNotIn('href="https://res.cloudinary.com"', base)

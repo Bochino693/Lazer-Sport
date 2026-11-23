@@ -53,14 +53,11 @@
   {# a barra do navegador do celular na cor do topo do site (o tema escuro) #}
   <meta name="theme-color" content="#050b1f">
   {% comment %}
-    AS FOTOS DOS PRODUTOS MORAM NO CLOUDINARY, e a primeira delas costuma
-    ser a maior coisa da tela (a capa do quadro, a foto da ficha). Sem o
-    aviso, o navegador só abre a conexão com o res.cloudinary.com quando
-    encontra a primeira <img> -- DNS, TCP e TLS na fila, depois do HTML e
-    do CSS. Com ele, a conexão abre junto com o CSS. Sem `crossorigin`: a
-    <img> busca sem CORS, e é essa a conexão que precisa estar pronta.
+    SEM PRECONNECT PARA O CLOUDINARY (seção 132): as fotos moram no nosso
+    banco e saem do próprio domínio (/midia/banco/), na mesma conexão do
+    HTML. O aviso antigo abria uma conexão à toa com o res.cloudinary.com em
+    toda página.
   {% endcomment %}
-  <link rel="preconnect" href="https://res.cloudinary.com">
 
   {% comment %}
     FONTES E ÍCONES SAEM DO PRÓPRIO SERVIDOR.
