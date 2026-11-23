@@ -402,6 +402,37 @@ def url_publica(nome) -> str:
     return f"{base_do_endereco()}{ROTA}{quote(str(nome), safe='/')}"
 
 
+#: O quadro que entra no lugar da foto antiga enquanto o Cloudinary está fora (seção 132).
+FOTO_EM_ATUALIZACAO = "site/foto-em-atualizacao.svg"
+
+
+def legado_fora_do_ar() -> bool:
+    """O Cloudinary está fora? Então o site não pede foto nenhuma a ele (seção 132).
+
+    MIDIA_CLOUDINARY_FORA="1"/"0" força; "auto" (o padrão) segue o sinal que o
+    espelho grava quando vê a conta desativada (core/sinais.py), lido por cada
+    processo logo que ele sobe e depois a cada minuto.
+    """
+    forcado = str(getattr(settings, "MIDIA_CLOUDINARY_FORA", "auto") or "auto").strip().lower()
+    if forcado in ("1", "true", "sim", "on"):
+        return True
+    if forcado in ("0", "false", "nao", "não", "off"):
+        return False
+    from . import sinais
+
+    # "auto" vale onde a linha de fundo lê os sinais (o Render); no computador e
+    # nos testes o site segue pedindo ao Cloudinary, como antes
+    if not sinais.intervalo():
+        return False
+    return bool(sinais.valor(sinais.CLOUDINARY))
+
+
+def url_em_atualizacao() -> str:
+    from django.templatetags.static import static
+
+    return static(FOTO_EM_ATUALIZACAO)
+
+
 def largura_permitida(largura) -> int:
     """A largura da lista que cobre `largura` (a menor que não é menor); a maior, se passar."""
     try:
@@ -546,7 +577,14 @@ class MidiaNoBanco(Storage):
     def url(self, name):
         if e_do_banco(name):
             return url_publica(name)
+        if self.legado == "image" and legado_fora_do_ar():
+            # a foto que só existe no Cloudinary fora do ar: o quadro daqui, sem pedido perdido
+            return url_em_atualizacao()
         return self._legado().url(name)
+
+    def disponivel(self, name) -> bool:
+        """A foto sai de algum lugar agora? (Conta de texto: nada de banco nem de rede.)"""
+        return bool(name) and (e_do_banco(name) or self.legado != "image" or not legado_fora_do_ar())
 
     def listdir(self, path):
         raise NotImplementedError("O banco não lista pastas.")

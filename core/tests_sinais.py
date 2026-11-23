@@ -128,3 +128,102 @@ class LinhaDeFundoTests(EstadoLimpo):
 
     def test_o_middleware_esta_ligado(self):
         self.assertIn("core.sinais.SinaisMiddleware", settings.MIDDLEWARE)
+
+
+@override_settings(SINAIS_INTERVALO_S=60)
+class CloudinaryForaTests(EstadoLimpo):
+    """Seção 132: com o Cloudinary fora, o site não pede foto nenhuma a ele."""
+
+    def setUp(self):
+        super().setUp()
+        from core.arquivos_no_banco import MidiaNoBanco
+
+        self.storage = MidiaNoBanco()
+        self.raw = MidiaNoBanco(legado="raw")
+
+    def test_marcar_grava_so_quando_muda(self):
+        self.assertTrue(sinais.marcar(sinais.CLOUDINARY, True))
+        self.assertFalse(sinais.marcar(sinais.CLOUDINARY, True))
+        self.assertGreater(sinais.valor(sinais.CLOUDINARY), 0)
+        self.assertTrue(sinais.marcar(sinais.CLOUDINARY, False))
+        self.assertEqual(SinalDoSite.objects.get(chave=sinais.CLOUDINARY).versao, 0)
+        self.assertEqual(sinais.valor(sinais.CLOUDINARY), 0)
+
+    def test_outro_processo_le_o_estado_e_recomeca_o_cache(self):
+        SinalDoSite.objects.create(chave=sinais.CLOUDINARY, versao=time.time_ns() + 5)
+        cache.set(HOME_CONTEXT_CACHE_KEY, {"foto": "https://res.cloudinary.com/x/antiga"}, 1800)
+        self.assertEqual(sinais.conferir(), [sinais.CLOUDINARY])
+        self.assertGreater(sinais.valor(sinais.CLOUDINARY), 0)
+        self.assertIsNone(cache.get(HOME_CONTEXT_CACHE_KEY))
+
+    def test_estado_antigo_vale_desde_a_primeira_leitura(self):
+        # o processo novo não limpa nada, mas já sabe que o Cloudinary está fora
+        SinalDoSite.objects.create(chave=sinais.CLOUDINARY, versao=sinais._estado["inicio"] - 10)
+        self.assertEqual(sinais.conferir(), [])
+        self.assertGreater(sinais.valor(sinais.CLOUDINARY), 0)
+
+    def test_nome_antigo_com_o_cloudinary_fora_vira_o_quadro_daqui(self):
+        from core.arquivos_no_banco import legado_fora_do_ar
+
+        sinais.marcar(sinais.CLOUDINARY, True)
+        self.assertTrue(legado_fora_do_ar())
+        url = self.storage.url("logo_clientes/happymania_yn31so")
+        self.assertTrue(url.endswith("site/foto-em-atualizacao.svg"), url)
+        self.assertNotIn("cloudinary", url)
+        # o que já está no banco segue normal; o raw (3D, documento) não vira foto
+        self.assertIn("/midia/banco/", self.storage.url("banco/logo_clientes/x"))
+        self.assertFalse(self.storage.disponivel("logo_clientes/happymania_yn31so"))
+        self.assertTrue(self.storage.disponivel("banco/logo_clientes/x"))
+        self.assertTrue(self.raw.disponivel("objetos/modelo_ab12cd.glb"))
+        self.assertNotIn("foto-em-atualizacao", self.raw.url("objetos/modelo_ab12cd.glb"))
+
+    def test_com_o_cloudinary_no_ar_o_nome_antigo_segue_para_ele(self):
+        self.assertFalse(sinais.valor(sinais.CLOUDINARY))
+        self.assertIn("cloudinary", self.storage.url("logo_clientes/happymania_yn31so"))
+        self.assertTrue(self.storage.disponivel("logo_clientes/happymania_yn31so"))
+
+    @override_settings(SINAIS_INTERVALO_S=0)
+    def test_sem_a_linha_de_fundo_o_automatico_nao_vale(self):
+        sinais.marcar(sinais.CLOUDINARY, True)
+        self.assertIn("cloudinary", self.storage.url("logo_clientes/happymania_yn31so"))
+
+    @override_settings(MIDIA_CLOUDINARY_FORA="1")
+    def test_a_variavel_forca_fora(self):
+        self.assertIn("foto-em-atualizacao", self.storage.url("projetos/001_vmp7th"))
+
+    @override_settings(MIDIA_CLOUDINARY_FORA="0")
+    def test_a_variavel_forca_no_ar(self):
+        sinais.marcar(sinais.CLOUDINARY, True)
+        self.assertIn("cloudinary", self.storage.url("projetos/001_vmp7th"))
+
+    def test_o_filtro_tem_foto_conta_o_que_sai_de_algum_lugar(self):
+        from django.template import Context, Template
+
+        from core.models import Brinquedos
+
+        b = Brinquedos(nome_brinquedo="x", descricao="x", avaliacao=5, voltz="220V",
+                       imagem_brinquedo="imagens_brinquedos/BOLICHE_VIRTUAL_igkeus")
+        modelo = Template("{% load fotos %}{% if b.imagem_brinquedo|tem_foto %}sim{% else %}nao{% endif %}")
+        self.assertEqual(modelo.render(Context({"b": b})), "sim")
+        sinais.marcar(sinais.CLOUDINARY, True)
+        fotos._URLS.clear()
+        self.assertEqual(modelo.render(Context({"b": b})), "nao")
+        # o filtro foto entrega o quadro daqui, nunca o endereço que devolve 401
+        foto = Template("{% load fotos %}{{ b.imagem_brinquedo|foto:480 }}").render(Context({"b": b}))
+        self.assertIn("foto-em-atualizacao.svg", foto)
+        b.imagem_brinquedo = "banco/imagens_brinquedos/x"
+        self.assertEqual(modelo.render(Context({"b": b})), "sim")
+        self.assertEqual(Template("{% load fotos %}{{ ''|tem_foto }}").render(Context()), "False")
+
+    def test_o_espelho_marca_fora_e_marca_de_volta(self):
+        from core import arquivos_no_banco as anb
+        from core.models import Brinquedos
+
+        Brinquedos.objects.create(nome_brinquedo="x", descricao="x", avaliacao=5, voltz="220V",
+                                  imagem_brinquedo="imagens_brinquedos/antiga_ab12cd")
+        with mock.patch.object(anb, "baixar_endereco", side_effect=anb.CloudinaryForaDoAr("disabled")):
+            espelho_midia.espelhar()
+        self.assertGreater(SinalDoSite.objects.get(chave=sinais.CLOUDINARY).versao, 0)
+        with mock.patch.object(anb, "baixar_endereco", side_effect=FileNotFoundError("404")):
+            espelho_midia.espelhar()
+        self.assertEqual(SinalDoSite.objects.get(chave=sinais.CLOUDINARY).versao, 0)

@@ -69,6 +69,27 @@ def _url_do_arquivo(imagem):
     return url
 
 
+def foto_disponivel(imagem) -> bool:
+    """A foto sai de algum lugar agora? Falso para a foto que só existe no Cloudinary fora do ar.
+
+    Conta de texto (nada de banco nem de rede): o template escolhe a reserva
+    certa (o nome do cliente no lugar do logo, a foto do projeto que some da
+    galeria, a capa gerada do jogo) em vez do quadro "Foto em atualização".
+    """
+    if not imagem:
+        return False
+    if isinstance(imagem, str):
+        return bool(imagem.strip())
+    nome = getattr(imagem, "name", "") or ""
+    disponivel = getattr(getattr(imagem, "storage", None), "disponivel", None)
+    if callable(disponivel):
+        try:
+            return bool(disponivel(nome))
+        except Exception:  # noqa: BLE001
+            return bool(nome)
+    return bool(nome)
+
+
 def url_da_imagem(imagem):
     """A URL de um campo de imagem (ou de uma URL já pronta); "" se não houver."""
     if not imagem:

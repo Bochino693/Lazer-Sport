@@ -39,6 +39,10 @@ log = logging.getLogger("lazer.sinais")
 
 #: As fotos e os arquivos do site mudaram (seção 130): as telas guardadas recomeçam.
 MIDIA = "midia"
+#: O Cloudinary (o legado) está fora do ar: versão > 0 é o instante em que o
+#: espelho viu a conta desativada; 0, que voltou (seção 132). Com ele fora, o
+#: site não pede foto nenhuma a ele (core.arquivos_no_banco.legado_fora_do_ar).
+CLOUDINARY = "cloudinary-fora"
 
 _trava = threading.Lock()
 _estado = {
@@ -64,15 +68,15 @@ def _limpar_midia():
 
 
 #: O que cada chave limpa NESTE processo.
-LIMPEZAS = {MIDIA: _limpar_midia}
+LIMPEZAS = {MIDIA: _limpar_midia, CLOUDINARY: _limpar_midia}
 
 
-def _gravar(chave):
+def _gravar(chave, versao=None):
     from django.db import DatabaseError, IntegrityError, transaction
 
     from .models import SinalDoSite
 
-    versao = time.time_ns()
+    versao = time.time_ns() if versao is None else int(versao)
     try:
         if not SinalDoSite.objects.filter(chave=chave).update(versao=versao):
             try:
@@ -92,6 +96,31 @@ def avisar(chave=MIDIA):
     from django.db import transaction
 
     transaction.on_commit(lambda: _gravar(chave))
+
+
+def marcar(chave, ligado):
+    """Um estado (não um evento): grava só quando muda. True se mudou.
+
+    Ligado guarda o instante; desligado, 0. Os processos que leem a versão
+    nova limpam o cache (as telas trocam de foto) e passam a responder
+    `valor(chave)` com o estado novo.
+    """
+    from .models import SinalDoSite
+
+    atual = SinalDoSite.objects.filter(chave=chave).values_list("versao", flat=True).first()
+    if bool(atual) == bool(ligado):
+        return False
+    versao = time.time_ns() if ligado else 0
+    if _gravar(chave, versao) is None:
+        return False
+    with _trava:
+        _estado["visto"][chave] = versao
+    return True
+
+
+def valor(chave):
+    """A última versão que este processo leu de `chave` (0 se nunca leu)."""
+    return _estado["visto"].get(chave) or 0
 
 
 def conferir():
@@ -127,8 +156,12 @@ def conferir():
 def _laco(espera):
     from django.db import close_old_connections, connection
 
+    primeira = True
     while True:
-        time.sleep(espera)
+        # a primeira leitura sai logo: o estado do Cloudinary vale desde a primeira tela
+        if not primeira:
+            time.sleep(espera)
+        primeira = False
         try:
             close_old_connections()
             conferir()

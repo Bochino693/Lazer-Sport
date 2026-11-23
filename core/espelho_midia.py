@@ -243,6 +243,7 @@ def espelhar(*, avisar=None, simular=False, limite=None, parar_depois_de=None):
 
     seguidas = 0
     mudou = False
+    respondeu = False  # o Cloudinary respondeu (a foto ou "não existe"): a conta está no ar
     for ordem, (nome, grupo) in enumerate(pendentes.items(), start=1):
         if parar_depois_de and ordem > parar_depois_de:
             break
@@ -258,11 +259,13 @@ def espelhar(*, avisar=None, simular=False, limite=None, parar_depois_de=None):
         try:
             dados = grupo[0].storage.baixar_legado(nome)
             seguidas = 0
+            respondeu = True
         except CloudinaryForaDoAr as erro:
             resultado["fora_do_ar"] = True
             avisar(f"O Cloudinary está fora do ar ({erro}): o espelho tenta de novo mais tarde.")
             break
         except FileNotFoundError:
+            respondeu = True
             resultado["faltando"].append(nome)
             continue
         except Exception as erro:  # noqa: BLE001 -- rede: conta e segue; cinco seguidas, para
@@ -281,12 +284,30 @@ def espelhar(*, avisar=None, simular=False, limite=None, parar_depois_de=None):
         mudou = True
         avisar(f"Copiado: {nome}")
 
+    if not simular and (resultado["fora_do_ar"] or respondeu):
+        marcar_cloudinary_fora(resultado["fora_do_ar"])
     if not resultado["fora_do_ar"] and not simular:
         resultado["trocados"] = _trocar_reservas(avisar)
         mudou = mudou or bool(resultado["trocados"])
     if mudou:
         limpar_caches()
     return resultado
+
+
+def marcar_cloudinary_fora(fora: bool) -> bool:
+    """Grava o estado do Cloudinary para todos os processos (seção 132). True se mudou."""
+    try:
+        from . import sinais
+
+        mudou = sinais.marcar(sinais.CLOUDINARY, fora)
+    except Exception:  # noqa: BLE001 -- o estado é ajuda, não pode parar o espelho
+        log.warning("midia: não deu para gravar o estado do Cloudinary", exc_info=True)
+        return False
+    if mudou:
+        # este processo gravou: os outros limpam quando leem; este limpa agora
+        limpar_caches_locais()
+        log.info("midia: o Cloudinary %s", "está fora do ar: o site deixa de pedir fotos a ele" if fora else "voltou")
+    return mudou
 
 
 def _trocar_reservas(avisar):

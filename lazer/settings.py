@@ -687,6 +687,9 @@ except ValueError:
 # Os documentos privados (RH, O.S., notas): "banco" (o padrão em produção),
 # "local" (o padrão no computador) ou "cloudinary" (o de antes). Ver rh/armazenamento.py.
 RH_ARMAZENAMENTO = os.getenv("RH_ARMAZENAMENTO", "").strip().lower()
+# O Cloudinary fora do ar (seção 132): "auto" segue o que o espelho viu; "1"
+# força o site a não pedir foto nenhuma a ele; "0" força pedir.
+MIDIA_CLOUDINARY_FORA = os.getenv("MIDIA_CLOUDINARY_FORA", "auto").strip().lower() or "auto"
 # Os avisos entre os processos do site (core/sinais.py, seção 131): de quanto
 # em quanto tempo cada processo confere se outro trocou as fotos. 0 desliga
 # (o padrão fora do Render: no computador e nos testes há um processo só).
