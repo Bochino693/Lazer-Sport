@@ -9888,14 +9888,18 @@ Dependência nova: rjsmin (requirements.txt).
      * a primeira visita à home depois de o cache vencer esperou 8,8 s (a
        vitrine remontada na frente do visitante, ~50 idas ao Supabase).
    AS CAUSAS E O QUE MUDOU:
-   1. O CLOUDFLARE NÃO GUARDAVA NENHUMA FOTO. Ele só guarda na borda o
-      endereço que termina numa extensão de arquivo; "/midia/banco/<foto>?w=480"
-      passava sempre ("cf-cache-status: DYNAMIC") e cada foto de cada visita
-      atravessava até o Render. Agora a foto do banco sai como
+   1. O ENDEREÇO DA FOTO COM EXTENSÃO. A foto do banco sai como
       "/midia/banco/<foto>.w480.webp" (core.arquivos_no_banco.FORMA_GUARDAVEL
-      e endereco_com_largura; core.fotos.reduzir_imagem): o mesmo conteúdo,
-      a mesma ETag, cache de um ano -- e o Cloudflare guarda. O "?w=" antigo
-      continua valendo (páginas guardadas, e-mails).
+      e endereco_com_largura; core.fotos.reduzir_imagem): o mesmo conteúdo, a
+      mesma ETag, cache de um ano no navegador. O "?w=" antigo continua
+      valendo (páginas guardadas, e-mails).
+      CONFERIDO NO AR: o Cloudflare que aparece na frente do site
+      ("server: cloudflare", "rndr-id") é o DO RENDER, e ele não guarda
+      resposta de serviço web ("cf-cache-status: DYNAMIC" mesmo com a
+      extensão). Para as fotos ficarem na borda, perto de quem visita, o
+      domínio precisa do Cloudflare do próprio dono na frente (proxy laranja)
+      com uma regra de cache para /midia/banco/*: a forma ".wNNN.webp" já é a
+      que ele guarda por padrão, sem mais nenhuma mudança no código.
    2. CADA FOTO DISPUTAVA AS 4 VAGAS PÚBLICAS DO ESCUDO (core/traffic_shield.py)
       com as páginas: com 70 fotos na home, a página seguinte esperava ou
       voltava 503, e a foto cortada não aparecia. "/midia/" agora é leve como
