@@ -9818,3 +9818,61 @@ Dependência nova: rjsmin (requirements.txt).
    pela exata, a que ninguém usa listada); o card do nome antigo seguiu com
    a reserva da seção 128 enquanto não voltava; nenhuma foto quebrada,
    nenhum diálogo nativo, nenhuma rolagem lateral, nenhum erro de JS.
+131) AS FOTOS DE VOLTA EM TODAS AS TELAS: OS PROCESSOS DO SITE SE AVISAM PELO BANCO
+   O QUE SE VIU NO AR (23/11, depois da publicação da seção 130). A
+   restauração das cópias do repositório rodou sozinha no servidor e fez o
+   trabalho: as 79 fotos que têm cópia certa no projeto (as capas em cena,
+   as capas dos objetos 3D, as artes dos kits, as 16 fotos das categorias,
+   a arte da Black Friday, os recortes das peças) foram gravadas no banco, e
+   o endereço novo de cada uma (/midia/banco/...) respondia com a foto. A
+   página do produto, a página 2 do catálogo e as buscas já saíam com elas.
+   Mas a HOME e a PRIMEIRA PÁGINA DO CATÁLOGO continuavam com os endereços
+   antigos do Cloudinary (que a reserva da seção 128 tapa com a cópia ou o
+   quadro "Foto em atualização").
+   A CAUSA. As telas do catálogo ficam guardadas em cache, e o cache
+   (LocMemCache) mora na memória de CADA processo do servidor. A restauração
+   limpou o cache do processo em que rodou; o processo que atendia as
+   visitas continuou com a tela montada antes da troca até o fim do prazo
+   (30 min, renovado a cada nova montagem). O mesmo aconteceria com a
+   importação do ZIP feita num processo e a visita atendida por outro, com
+   um comando rodado no terminal do Render ou com WEB_WORKERS acima de 1.
+   O SINAL (core/sinais.py, tabela core.SinalDoSite, migração core 0217 --
+   só a tabela). Quem troca as fotos sem passar pelos signals chama
+   `espelho_midia.limpar_caches()`, que agora limpa o cache do próprio
+   processo E grava uma versão nova (o relógio em nanossegundos) na linha
+   "midia" do SinalDoSite, só depois do commit. Cada processo do site tem
+   uma linha de fundo que lê essas versões a cada SINAIS_INTERVALO_S
+   segundos (60 no Render, 0 = desligado no computador e nos testes) e, se
+   uma mudou, recomeça o próprio cache. Uma consulta por minuto por
+   processo, fora do caminho da visita; a conexão é fechada depois de cada
+   leitura (nada parado no pooler do Supabase).
+   * A linha de fundo é ligada pela PRIMEIRA VISITA de cada processo
+     (core.sinais.SinaisMiddleware, logo depois do MidiaNoBancoMiddleware),
+     não no ready(): assim ela nasce dentro do worker também com
+     `gunicorn --preload` e com mais de um worker. Depois de um fork o
+     processo novo não herda o que o pai leu.
+   * A primeira leitura de um processo só conta como mudança a versão
+     gravada DEPOIS que ele subiu (o processo novo já começa com o cache
+     vazio). Quem avisou também limpa de novo quando a linha de fundo vê a
+     versão: a tela que alguém montou no meio da troca não sobrevive.
+   * O banco fora do ar não derruba quem avisou: o aviso vira um registro
+     no log e os outros processos ficam com o prazo do cache.
+   * Depois de limpar, cada processo aquece sozinho as telas principais
+     (core/aquecer.py): a primeira visita depois da troca não paga a
+     remontagem.
+   * Para acrescentar outro aviso (uma chave nova), basta pôr a limpeza
+     dela em `sinais.LIMPEZAS` e chamar `sinais.avisar("<chave>")`.
+   O QUE AINDA FALTA, E SÓ O DONO RESOLVE: as fotos que nunca estiveram no
+   repositório (logos dos clientes, fotos dos projetos, combos, a foto do
+   Boliche Virtual e cinco fotos de peças) só voltam com a conta do
+   Cloudinary reativada (o espelho copia tudo sozinho para o banco em
+   seguida) ou com a exportação da Media Library enviada em "Restaurar
+   fotos" no painel. Até lá a reserva da seção 128 segura o visual.
+   TESTES: core/tests_sinais.py (o aviso grava uma versão nova a cada vez e
+   só depois do commit; banco fora do ar não derruba; limpar_caches avisa;
+   a home guardada some quando outro processo avisa; aviso de antes do
+   processo subir não limpa; sem mudança não limpa e o aviso seguinte limpa
+   de novo; chave desconhecida não quebra; a conferência é uma consulta;
+   desligada fora do Render; uma linha por processo e outra depois do fork;
+   a visita liga a linha; o middleware está ligado).
+       DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test core sistema_interno contas rh --parallel 1

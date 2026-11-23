@@ -182,8 +182,8 @@ def gravar_conteudo(nome_antigo, grupo, dados, *, origem, exata=True):
     return nome_novo, houve
 
 
-def limpar_caches():
-    """As páginas guardadas em cache ainda têm o endereço de antes: o cache recomeça."""
+def limpar_caches_locais():
+    """As telas guardadas NESTE processo ainda têm o endereço de antes: o cache recomeça."""
     try:
         from django.core.cache import cache
 
@@ -196,6 +196,24 @@ def limpar_caches():
         fotos._URLS.clear()
     except Exception:  # noqa: BLE001
         pass
+    try:
+        # as telas principais se montam de novo sozinhas: a primeira visita não paga
+        from .aquecer import agendar
+
+        agendar(motivo="fotos mudaram")
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def limpar_caches():
+    """Limpa o cache deste processo e avisa os outros (seção 131): cada um guarda o seu."""
+    limpar_caches_locais()
+    try:
+        from . import sinais
+
+        sinais.avisar(sinais.MIDIA)
+    except Exception:  # noqa: BLE001 -- o aviso nunca impede a restauração
+        log.warning("midia: não deu para avisar os outros processos", exc_info=True)
 
 
 def _limite():

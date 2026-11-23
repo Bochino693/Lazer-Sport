@@ -51,6 +51,28 @@ class ArquivoNoBanco(models.Model):
         return self.nome
 
 
+class SinalDoSite(models.Model):
+    """Um aviso entre os processos do site (LEIA-ME-V10, seção 131).
+
+    O cache das telas mora na memória de cada processo. Quando um deles (a
+    restauração das fotos, a importação do ZIP, um comando) troca o que as
+    telas mostram, grava aqui uma versão nova; cada processo do site confere
+    a versão a cada minuto e, se mudou, recomeça o próprio cache. Ver
+    core/sinais.py.
+    """
+
+    chave = models.CharField(max_length=40, unique=True)
+    versao = models.BigIntegerField(default=0)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Sinal entre processos"
+        verbose_name_plural = "Sinais entre processos"
+
+    def __str__(self):
+        return f"{self.chave} = {self.versao}"
+
+
 class EnderecoEmpresa(Prime):
     nome = models.CharField(max_length=100, default="Fabrica do Pery")
 

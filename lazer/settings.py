@@ -185,6 +185,9 @@ MIDDLEWARE = [
     # 130): atendido aqui, antes do GZip, da sessão e do login -- uma foto
     # não custa a consulta da sessão nem a do usuário.
     "core.arquivos_no_banco.MidiaNoBancoMiddleware",
+    # Liga, na primeira visita de cada processo, a linha de fundo que lê os
+    # avisos dos outros processos (fotos trocadas: o cache recomeça, seção 131).
+    "core.sinais.SinaisMiddleware",
     "django.middleware.gzip.GZipMiddleware",
     # Robôs de IA, programas de cópia e quem caiu na armadilha ficam fora dos
     # jogos (antes do WhiteNoise: os arquivos dos jogos da casa passam por ele).
@@ -684,6 +687,13 @@ except ValueError:
 # Os documentos privados (RH, O.S., notas): "banco" (o padrão em produção),
 # "local" (o padrão no computador) ou "cloudinary" (o de antes). Ver rh/armazenamento.py.
 RH_ARMAZENAMENTO = os.getenv("RH_ARMAZENAMENTO", "").strip().lower()
+# Os avisos entre os processos do site (core/sinais.py, seção 131): de quanto
+# em quanto tempo cada processo confere se outro trocou as fotos. 0 desliga
+# (o padrão fora do Render: no computador e nos testes há um processo só).
+try:
+    SINAIS_INTERVALO_S = max(0, int(os.getenv("SINAIS_INTERVALO_S", "60" if IS_RENDER else "0")))
+except ValueError:
+    SINAIS_INTERVALO_S = 60 if IS_RENDER else 0
 # Enquanto o Cloudinary responde "desativado", o espelho espera isto entre as tentativas.
 try:
     MIDIA_ESPELHO_ESPERA_MIN = max(5, int(os.getenv("MIDIA_ESPELHO_ESPERA_MIN", "30")))
