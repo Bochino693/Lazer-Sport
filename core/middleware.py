@@ -400,3 +400,62 @@ class LojaSomenteDeClienteMiddleware:
         if not user or not user.is_authenticated:
             return True
         return not e_da_equipe(user)
+
+
+class FotoReservaMiddleware:
+    """Põe a reserva das fotos (site/ls-foto-reserva.js) nas páginas com fotos do Cloudinary.
+
+    LEIA-ME-V10, seção 128; ver core/fotos_reserva.py. Um único ponto para
+    o site, a gestão, o painel e as páginas públicas avulsas (assinatura,
+    proposta, O.S.): toda página HTML que mostra foto do Cloudinary ganha o
+    script, que só age se uma dessas fotos falhar. Página sem foto do
+    Cloudinary sai como entrou.
+    """
+
+    MARCA = b"res.cloudinary.com"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+        self._tag = None
+
+    def tag(self):
+        if self._tag is None:
+            from django.templatetags.static import static
+
+            versao = "1"
+            try:
+                from pathlib import Path
+
+                arquivo = Path(__file__).resolve().parent / "static" / "site" / "ls-foto-reserva.js"
+                versao = str(int(arquivo.stat().st_mtime))
+            except OSError:
+                pass
+            self._tag = (
+                f'<script src="{static("site/ls-foto-reserva.js")}?v={versao}" '
+                f'data-indice="{static("site/fotos-reserva.json")}" defer></script>'
+            ).encode()
+        return self._tag
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        try:
+            if (
+                getattr(response, "streaming", False)
+                or response.status_code != 200
+                or "text/html" not in response.get("Content-Type", "")
+                or response.get("Content-Encoding")
+            ):
+                return response
+            conteudo = response.content
+            if self.MARCA not in conteudo or b"ls-foto-reserva.js" in conteudo:
+                return response
+            posicao = conteudo.find(b"</head>")
+            if posicao == -1:
+                return response
+            response.content = conteudo[:posicao] + self.tag() + conteudo[posicao:]
+            if response.has_header("Content-Length"):
+                response["Content-Length"] = str(len(response.content))
+        except Exception:
+            # a reserva nunca derruba a página
+            return response
+        return response

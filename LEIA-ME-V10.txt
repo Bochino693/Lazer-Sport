@@ -9190,3 +9190,80 @@ Dependência nova: rjsmin (requirements.txt).
    para "Assinada" com o toast -- e o PDF da via (4 folhas A4 com "Página X
    de Y"). No PC 1366 e no celular 390, temas Lua e Sol, sem rolagem
    lateral, sem erro de JavaScript e sem alert/confirm.
+
+128) AS FOTOS SUMIRAM: O CLOUDINARY DESATIVOU A CONTA, E O SITE GANHOU UMA RESERVA
+   O pedido do dono (23/11/2026, com o print da página do Air Game Home com
+   a foto quebrada): "minhas imagens sumiram, retorne com elas, confira o
+   cloudinari para testar se esta tudo bem."
+   A CAUSA (conferida no ar): TODA foto do Cloudinary volta
+   "401 cloud_name dgikjmki8 is disabled" -- a conta foi desativada do lado
+   do Cloudinary (a outra conta, a "demo" do próprio Cloudinary, responde
+   200 pela mesma rede). Não foi o código e nada foi apagado: quando a conta
+   for reativada no painel do Cloudinary, as fotos voltam sozinhas. O que
+   reativa (só o dono, no cloudinary.com, com o login da conta): ver o
+   aviso/e-mail do Cloudinary e a página de uso (Usage/Billing); a causa
+   comum é o limite de créditos do plano estourado (os jogos guardam disco
+   em pedaços no Cloudinary, seção dos jogos/armazenamento_pedacos, e as
+   fotos são servidas em vários tamanhos) -- aumentar o plano ou falar com o
+   suporte deles.
+   A RESERVA (no ar enquanto a conta não volta, e daí em diante como seguro):
+   - core/fotos_reserva.py + comando `python manage.py fotos_reserva`: lista
+     as cópias locais das fotos que nasceram no repositório (capas do
+     showroom em site/capas_catalogo, capas dos objetos 3D em
+     site/arena/modelos/<produto>/capa.webp, artes dos kits, fotos das
+     categorias e artes da Black Friday) em core/static/site/fotos-reserva.json.
+   - core/static/site/ls-foto-reserva.js: escuta (na captura) o erro de
+     <img> cujo endereço é do Cloudinary; pelo nome que a foto tem lá
+     ("cena-air-game-home-10bb33e058_ik4fg5" -> air-game-home) põe a cópia
+     local; sem cópia (logo de cliente, foto de peça, combo, foto real
+     cadastrada pela equipe), entra o quadro "Foto em atualização" em vez do
+     ícone quebrado. Também troca fundo em CSS escrito no elemento. Enquanto
+     o Cloudinary entrega, não faz nada.
+   - core.middleware.FotoReservaMiddleware: põe o script antes do </head> em
+     toda página HTML 200 que tem foto do Cloudinary (site, gestão, painel,
+     páginas públicas avulsas). Página sem foto do Cloudinary sai igual.
+   CONFERIDO no site no ar (com o Cloudinary desativado, script injetado pelo
+   Playwright): catálogo, página do Air Game Home e início, no PC e no
+   celular -- 0 foto quebrada; capas, kits e categorias com a cópia local;
+   o resto com o quadro.
+   LIMITE HONESTO: a foto que só existe no Cloudinary (fotos reais subidas
+   pela equipe, logos de clientes, fotos das peças, combos) só volta com a
+   conta reativada. Ao acrescentar capa/arte/categoria nova, rode
+   `python manage.py fotos_reserva` (o teste reprova a lista atrasada).
+   Testes: core/tests_foto_reserva.py.
+129) REVISÃO DOS PEDIDOS: CADA PONTO CONFERIDO CONTRA O CÓDIGO
+   O pedido do dono (23/11/2026): "reveja os pontos que pedi, analise os
+   trechos atuais e corresponda 100% com o pedido pois são os requisitos do
+   sistema." Conferência ponto a ponto, com o que faltava corrigido aqui:
+   - "veja que feio esta ação, eu falei tudo estilo app": a folha de ações
+     de app (seção 121) valia só no modo Cards; no modo Lista o "⋮" ainda
+     abria o menu antigo. Agora a Lista abre a MESMA folha (nome no topo com
+     as iniciais, ações com ícone, o que apaga no fim, "Cancelar"), no PC e
+     no celular. ls-listas.js: vestirMais() separado em vestirMais (o botão
+     "Mais" dos cartões) + vestirFolha (a folha, uma vez por menu);
+     prepararAcoes() marca data-folha="1" e data-folha-modo (lista/cards); na
+     Lista o que os cartões escondem por estar na barra (data-na-barra) volta
+     a aparecer (data-na-barra-guardado) e se esconde de novo nos Cards.
+     Conferido no navegador (Clientes em Lista, 1366 e 390): Editar,
+     Histórico, Nova proposta, Excluir (no fim, em vermelho) e Cancelar.
+     Teste: tests_cartao_cliente.FolhaDeAcoesNosDoisModosTests.
+   - "tem endereço e deve estar no mapa tudo que tiver" (seção 121): o
+     cadastro com endereço que NÃO tem como virar ponto (sem CEP e com a
+     cidade que a tabela do IBGE não reconhece -- erro de digitação, cidade
+     vazia) aparecia como "no mapa, localizando o endereço" para sempre.
+     Agora aparece "no mapa, confira cidade ou CEP" (aviso), dizendo o que
+     acertar; o resto segue "localizando" até o ponto entrar.
+     EnderecoCliente.localizavel (models.py, sem migração); clientes_inner.html.
+     Teste: tests_localizacao.EnderecoLocalizavelTests.
+   - Fotos: a reserva da seção 128 também usa a foto real do cabo HDMI
+     (site/kits/itens/cabo-hdmi.webp) para a peça "Cabo HDMI".
+   - "Faça tudo ficar em conformidade" (páginas que fecham a fileira, seção
+     121) valia no painel; no site, a grade das peças (4/3/2 colunas)
+     paginava de 8 e a de eventos/projetos (3/2 colunas) de 9 -- no tablet
+     sobrava fileira pela metade. Agora as duas paginam de 12
+     (core/static/site/paginas/home.js). Teste: core/tests_paginas_do_site.py.
+   - "Tire as notificações de erros como um texto comum": a conferência dos
+     arquivos de um jogo (painel de Jogos) mostrava o que impede publicar só
+     como texto vermelho no quadro; agora abre também a janela de app
+     "Confira os arquivos do jogo" com a lista (uma vez por conjunto de
+     arquivos), e a lista usa a cor do tema (emulador-envio.js, games.css).

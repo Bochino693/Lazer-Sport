@@ -216,7 +216,7 @@
                       <span class="ls-perfil-ponto">· </span><span class="ls-map-linked"><i class="bi bi-geo-alt-fill"></i> no mapa</span>
                     {% elif cliente.publicar_no_mapa %}
                       {# Diz POR QUE não está desenhado (seção 121): arquivado, sem endereço ou o ponto ainda sendo procurado por trás. #}
-                      <span class="ls-perfil-ponto">· </span>{% if not cliente.ativo %}<span class="ls-status warning">arquivado, fora do mapa</span>{% elif not cliente.endereco_principal %}<span class="ls-status warning">no mapa, falta o endereço</span>{% else %}<span class="ls-status info">no mapa, localizando o endereço</span>{% endif %}
+                      <span class="ls-perfil-ponto">· </span>{% if not cliente.ativo %}<span class="ls-status warning">arquivado, fora do mapa</span>{% elif not cliente.endereco_principal %}<span class="ls-status warning">no mapa, falta o endereço</span>{% elif not cliente.endereco_principal.localizavel %}<span class="ls-status warning" title="Confira a cidade e a UF, ou informe o CEP: sem isso o ponto não tem como ser achado.">no mapa, confira cidade ou CEP</span>{% else %}<span class="ls-status info">no mapa, localizando o endereço</span>{% endif %}
                     {% endif %}
                   {% endif %}
                   {% if cliente.documento %}<span class="ls-perfil-ponto"> · </span><span class="ls-perfil-doc">{{ cliente.documento }}</span>{% endif %}

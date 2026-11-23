@@ -456,6 +456,7 @@ li.ls-vivo-vazio::before{display:none}
 .ls-jf-console{margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line,rgba(255,255,255,.12))}
 .ls-jf-console #jcLista li{color:var(--text-2,#e7ddcb)}
 .ls-jf-avisos{color:var(--acento-texto,#f2a93b)}
+.ls-jf-erros{color:var(--red-texto)}
 .ls-jf-guardados{display:grid;gap:6px;margin-top:12px;padding:10px 12px;border-radius:12px;border:1px dashed var(--line,rgba(255,255,255,.18));font-size:.8rem;color:var(--text-2,#e7ddcb)}
 .ls-jf-guardados strong{color:var(--text,#fcf8f1);font-size:.78rem}
 .ls-jf-mais{margin-top:10px}

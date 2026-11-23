@@ -420,6 +420,35 @@ class EnderecoCliente(Prime):
     def tem_local(self) -> bool:
         return self.latitude is not None and self.longitude is not None
 
+    @property
+    def localizavel(self) -> bool:
+        """Este endereço tem por onde virar ponto no mapa? (seção 129)
+
+        "Tem endereço, deve estar no mapa": a busca por trás (seção 121)
+        acha o ponto pelo CEP ou, no pior caso, pelo centro da cidade na
+        tabela do IBGE, que está no próprio site. Sem CEP e com uma cidade
+        que a tabela não reconhece (erro de digitação, cidade vazia), não
+        há busca que resolva -- e o painel dizia "localizando" para sempre.
+        Aqui ele passa a dizer o que falta acertar. Fora do Brasil a busca
+        é a de fora; não dá para saber antes, então vale como localizável.
+        """
+        import re
+
+        if self.tem_local:
+            return True
+        if (self.cep or "").strip():
+            return True
+        texto = " ".join(p for p in (self.endereco, self.complemento, self.bairro) if p)
+        if re.search(r"\b\d{5}-?\d{3}\b", texto):
+            return True
+        pais = (self.pais or "Brasil").strip().lower()
+        if pais not in ("", "brasil", "brazil", "br"):
+            return True
+        from core.utils import centro_do_municipio
+
+        latitude, _ = centro_do_municipio(self.cidade or "", self.estado or "")
+        return latitude is not None
+
     def localizar(self):
         """Procura a coordenada deste endereço, sem apagar a que já existe.
 

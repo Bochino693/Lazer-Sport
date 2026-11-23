@@ -399,8 +399,9 @@ function inicializarPecasClientSide() {
     const cards = Array.from(grid.querySelectorAll('.pecas-card-link'));
     if (!cards.length) return;
 
-    // quatro por linha no computador: duas linhas por página
-    const porPagina = 8;
+    // 12 fecha a fileira em qualquer tela (4, 3, 2 ou 1 por linha): com 8,
+    // a grade de 3 colunas deixava a última fileira pela metade (seção 129)
+    const porPagina = 12;
     let pagina = 1;
     let categoriaAtiva = '';
 
@@ -688,12 +689,12 @@ document.addEventListener("DOMContentLoaded", () => {
     inicializarProdutosClientSide();
     inicializarPecasClientSide();
     inicializarGridPaginado({
-        gridId: 'grid-eventos', cardSelector: '.evento-card', porPagina: 9,
+        gridId: 'grid-eventos', cardSelector: '.evento-card', porPagina: 12,
         prevId: 'eventos-prev', nextId: 'eventos-next', infoId: 'eventos-page-info',
         paginacaoWrapperId: 'paginacao-eventos', scrollTargetId: 'eventos'
     });
     inicializarGridPaginado({
-        gridId: 'grid-projetos', cardSelector: '.evento-card', porPagina: 9,
+        gridId: 'grid-projetos', cardSelector: '.evento-card', porPagina: 12,
         prevId: 'projetos-prev', nextId: 'projetos-next', infoId: 'projetos-page-info',
         paginacaoWrapperId: 'paginacao-projetos', scrollTargetId: 'projetos'
     });
