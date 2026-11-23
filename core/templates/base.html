@@ -898,13 +898,21 @@
               <p>Alguns clientes que levam diversão aos seus espaços.</p>
           </div>
 
-          <div class="ls-clientes-logos">
+          {# o logo que não sai de lugar nenhum vira o selo com o nome da casa (core/context_processors.py) #}
+          <div class="ls-clientes-logos{% if clientes_rodape|length < 6 %} ls-clientes-logos--poucos{% endif %}">
               {% for cliente in clientes_rodape %}
+                {% if cliente.logo_no_ar %}
                 <div class="ls-cliente-logo" title="{{ cliente.nome_no_site|default:'Cliente Lazer & Sport' }}">
                     <img src="{{ cliente.logo|foto:240 }}"
                          alt="Logo {{ cliente.nome_no_site|default:'de cliente da Lazer & Sport' }}"
                          loading="lazy" decoding="async">
                 </div>
+                {% else %}
+                <div class="ls-cliente-logo ls-cliente-selo" title="{{ cliente.nome_no_site }}">
+                    <i class="fa-solid fa-store" aria-hidden="true"></i>
+                    <span>{{ cliente.nome_no_site }}</span>
+                </div>
+                {% endif %}
               {% endfor %}
           </div>
       </section>

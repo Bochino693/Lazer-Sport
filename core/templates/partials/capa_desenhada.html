@@ -1,0 +1,20 @@
+{% comment %}
+  A CAPA DESENHADA (LEIA-ME-V10, seção 133): o que entra no lugar de uma foto que ainda não
+  voltou -- a que só o Cloudinary tinha, com a conta dele fora do ar -- quando não há outra
+  foto NOSSA para pôr. Não finge ser foto: é a arte do site (o azul da casa, os riscos de neon,
+  o ícone do que é) com o nome e o tipo, no lugar do quadro "Foto em atualização".
+  Preenche a caixa da foto (o pai já é `position: relative`). Estilo: site/ls-base-fim.css.
+
+    {% include "partials/capa_desenhada.html" with titulo=projeto.titulo tipo="Projeto sob medida" icone="fa-compass-drafting" %}
+
+  `classe` (opcional) acrescenta uma classe (o tamanho da letra na ficha grande, por exemplo);
+  `nota` (opcional), uma linha embaixo do nome ("As fotos deste projeto chegam em breve.").
+  O ícone precisa estar em core/static/vendor/fontawesome-site/icones.txt.
+{% endcomment %}<div class="ls-capa-desenhada{% if classe %} {{ classe }}{% endif %}" role="img" aria-label="{{ titulo }}{% if tipo %} · {{ tipo }}{% endif %}">
+    <span class="ls-capa-desenhada-marca" aria-hidden="true"><i class="fa-solid {{ icone|default:'fa-image' }}"></i></span>
+    <span class="ls-capa-desenhada-texto">
+        {% if tipo %}<small>{{ tipo }}</small>{% endif %}
+        <strong>{{ titulo }}</strong>
+        {% if nota %}<em>{{ nota }}</em>{% endif %}
+    </span>
+</div>

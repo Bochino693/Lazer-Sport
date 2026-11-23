@@ -962,7 +962,7 @@
             <span class="oferta-card-selo combo">
               <i class="fa-solid fa-layer-group" aria-hidden="true"></i> Combo
             </span>
-            {% if combo.imagem_combo %}
+            {% if combo.imagem_combo|tem_foto %}
               <img class="oferta-card-media-bg"
                    src="{{ combo.imagem_combo|foto:400 }}" alt="" aria-hidden="true"
                    loading="lazy" decoding="async">
@@ -970,12 +970,8 @@
                    src="{{ combo.imagem_combo|foto:720 }}" alt="{{ combo.descricao }}"
                    loading="lazy" decoding="async">
             {% else %}
-              <img class="oferta-card-media-bg"
-                   src="{% static 'images/sem-imagem.svg' %}" alt="" aria-hidden="true"
-                   loading="lazy" decoding="async">
-              <img class="oferta-card-produto"
-                   src="{% static 'images/sem-imagem.svg' %}" alt="Combo sem imagem"
-                   loading="lazy" decoding="async">
+              {# sem a foto do combo: as capas dos brinquedos dele (seção 133) #}
+              {% include "partials/combo_mosaico.html" with brinquedos=combo.fotos_do_mosaico titulo=combo.descricao largura=480 %}
             {% endif %}
           </div>
 
@@ -1137,17 +1133,14 @@
              aria-haspopup="dialog" aria-label="Ver o projeto {{ projeto.titulo }}">
 
             <div class="evento-thumb">
-                {% if projeto.brinquedo_projetado %}
-                    {% with imagem_projeto=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all.0 %}
-                        {% if imagem_projeto %}
-                            <img src="{{ imagem_projeto.imagem|foto:900 }}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
-                        {% else %}
-                            <img src="{% static 'images/sem-imagem.svg' %}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
-                        {% endif %}
-                    {% endwith %}
-                {% else %}
-                    <img src="{% static 'images/sem-imagem.svg' %}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
-                {% endif %}
+                {# só as fotos que saem de algum lugar; sem nenhuma, a capa desenhada (título e tipo), nunca o quadro #}
+                {% with imagem_projeto=projeto.brinquedo_projetado.fotos_no_site.0 %}
+                    {% if imagem_projeto %}
+                        <img src="{{ imagem_projeto.imagem|foto:900 }}" alt="{{ projeto.titulo }}" loading="lazy" decoding="async">
+                    {% else %}
+                        {% include "partials/capa_desenhada.html" with titulo=projeto.titulo tipo="Projeto sob medida" icone="fa-compass-drafting" %}
+                    {% endif %}
+                {% endwith %}
                 <span class="evento-ver-mais">Ver galeria <i class="fa-solid fa-arrow-right"></i></span>
             </div>
 
@@ -1172,7 +1165,7 @@
 
 {# AS FICHAS DOS PROJETOS #}
 {% for projeto in projetos %}{% with pid=projeto.id|stringformat:"s" o3d=projeto.brinquedo_projetado|objeto_3d_do_projeto %}
-{% include "partials/ficha_galeria.html" with janela="galeria-projeto-"|add:pid titulo=projeto.titulo texto=projeto.descricao fotos=projeto.brinquedo_projetado.imagens_brinquedo_projeto.all objeto3d=o3d tipo="projeto" selo="Projeto sob medida" selo_icone="fa-compass-drafting" convite="Quero um projeto assim" mensagem="Olá! Vi no site o projeto “"|add:projeto.titulo|add:"” e quero um parecido." todos_url="/projetos/#todos-projetos" todos_texto="Ver todos os projetos" %}
+{% include "partials/ficha_galeria.html" with janela="galeria-projeto-"|add:pid titulo=projeto.titulo texto=projeto.descricao fotos=projeto.brinquedo_projetado.fotos_no_site objeto3d=o3d tipo="projeto" selo="Projeto sob medida" selo_icone="fa-compass-drafting" convite="Quero um projeto assim" mensagem="Olá! Vi no site o projeto “"|add:projeto.titulo|add:"” e quero um parecido." todos_url="/projetos/#todos-projetos" todos_texto="Ver todos os projetos" %}
 {% endwith %}{% endfor %}
 
 <!-- Div invisível para espaçamento -->

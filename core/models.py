@@ -814,6 +814,14 @@ def galeria_publica(fotos, padrao_id=None, adesivo_id=None):
         def do_adesivo(foto):
             return getattr(foto, "variante_id", None) == adesivo_id
     do_adesivo_todas = [foto for foto in fotos if do_adesivo(foto) and getattr(foto, "imagem", None)]
+    # A FOTO QUE SÓ O CLOUDINARY TINHA (fora do ar, seção 133) sai da galeria enquanto não volta: o
+    # adesivo Preto do Boliche Virtual não vira o quadro "Foto em atualização" entre as fotos boas.
+    # Conta de texto (core.fotos.foto_disponivel): nenhuma consulta. Se NENHUMA sai, fica o que há.
+    from .fotos import foto_disponivel
+
+    no_ar = [foto for foto in do_adesivo_todas if foto_disponivel(foto.imagem)]
+    if no_ar:
+        do_adesivo_todas = no_ar
     fotos = [
         foto for foto in do_adesivo_todas
         if foto.tipo and getattr(foto, "papel_na_capa", "") not in ImagemBrinquedo.PAPEIS_FORA_DO_SITE
@@ -1229,15 +1237,24 @@ class JogoCadastrado(Prime):
 
     @property
     def capa_url(self):
+        """A capa, ou "" -- e "" também para a que só o Cloudinary tinha, fora do ar (seção 133).
+
+        Sem endereço, o launcher monta a capa de reserva dele (a cor do jogo, o
+        console e o nome: partials/cartao_jogo.html), nunca o quadro vazio.
+        """
+        from .fotos import foto_disponivel
+
         try:
-            return self.capa.url if self.capa else ""
+            return self.capa.url if self.capa and foto_disponivel(self.capa) else ""
         except Exception:
             return ""
 
     @property
     def poster_url(self):
+        from .fotos import foto_disponivel
+
         try:
-            if self.poster:
+            if self.poster and foto_disponivel(self.poster):
                 return self.poster.url
         except Exception:
             pass
@@ -1540,12 +1557,21 @@ class PecasReposicao(Prime):
     def imagem_principal(self):
         # Meta.ordering deixa a posição 1 na frente e .all() respeita o cache
         # de prefetch_related, sem criar uma consulta extra para cada peça.
+        # A primeira que sai de algum lugar (seção 133): a que só o Cloudinary
+        # tinha, fora do ar, não vira a foto do cartão se houver outra.
+        from .fotos import foto_disponivel
+
         imagens = list(self.imagem_peca_reposicao.all())
-        return imagens[0] if imagens else None
+        return next((img for img in imagens if foto_disponivel(img.imagem)), imagens[0] if imagens else None)
 
     @property
     def imagens_ordenadas(self):
-        return self.imagem_peca_reposicao.all()
+        """A galeria da peça: só as fotos que saem de algum lugar (todas, se nenhuma sai)."""
+        from .fotos import foto_disponivel
+
+        imagens = list(self.imagem_peca_reposicao.all())
+        no_ar = [img for img in imagens if foto_disponivel(img.imagem)]
+        return no_ar or imagens
 
     # 🚀 SAVE INTELIGENTE
     def save(self, *args, **kwargs):
@@ -1738,6 +1764,26 @@ class Combos(Prime):
         from .parcelas_texto import sem_juros_do_objeto
 
         return sem_juros_do_objeto(self)
+
+    @property
+    def tem_foto_propria(self):
+        from .fotos import foto_disponivel
+
+        return foto_disponivel(self.imagem_combo)
+
+    @property
+    def fotos_do_mosaico(self):
+        """Sem a foto do combo (a que só o Cloudinary tinha, seção 133): as capas dos brinquedos dele.
+
+        Até quatro, só as que saem de algum lugar, na ordem do nome. Usa os
+        brinquedos já trazidos (prefetch); sem eles, uma consulta.
+        """
+        from .fotos import foto_disponivel
+
+        if self.tem_foto_propria:
+            return []
+        brinquedos = sorted(self.brinquedos.all(), key=lambda b: (b.nome_brinquedo or "").lower())
+        return [b for b in brinquedos if foto_disponivel(b.imagem_brinquedo)][:4]
 
     def __str__(self):
         return self.descricao
@@ -1933,6 +1979,17 @@ class BrinquedosProjeto(Prime):
 
     def __str__(self):
         return self.nome_brinquedo_projeto
+
+    @property
+    def fotos_no_site(self):
+        """As fotos do projeto que saem de algum lugar (seção 133), na ordem de sempre.
+
+        A que só o Cloudinary tinha, fora do ar, sai da galeria (e da capa do
+        cartão) até voltar. Usa a galeria já trazida (prefetch): conta de texto.
+        """
+        from .fotos import foto_disponivel
+
+        return [img for img in self.imagens_brinquedo_projeto.all() if foto_disponivel(img.imagem)]
 
     class Meta:
         verbose_name = "Brinquedo Projetado"

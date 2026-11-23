@@ -716,3 +716,221 @@
     .ls-redes .ls-rede:hover .ls-rede-app,
     .ls-redes .ls-rede:focus-visible .ls-rede-app { transform: none; }
 }
+
+/* ======================================================================
+   AS RESERVAS DESENHADAS (LEIA-ME-V10, seção 133)
+
+   O Cloudinary desativou a conta e algumas fotos só existiam lá. Enquanto o
+   dono não as envia de novo (Administração -> Fotos que faltam), o site não
+   mostra o quadro "Foto em atualização" onde dá para fazer melhor:
+     * .ls-capa-desenhada   a arte do site com o nome e o tipo (o projeto, a
+                            peça, o estabelecimento): partials/capa_desenhada.html;
+     * .ls-mosaico          o combo sem a foto dele: as capas dos brinquedos que
+                            vêm nele, lado a lado (partials/combo_mosaico.html);
+     * .ls-cliente-selo     o cliente da faixa do rodapé sem o logo: o nome da
+                            casa (nunca o de uma pessoa: Cliente.nome_no_site).
+   As caixas de foto onde elas entram já são `position: relative`; os seletores
+   têm uma classe a mais para vencer o CSS de cada página, que vem depois.
+   ====================================================================== */
+.ls-capa-desenhada {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    padding: 9% 9% 10%;
+    border-radius: inherit;
+    color: #fff;
+    text-align: left;
+    background:
+        radial-gradient(70% 55% at 88% 6%, rgba(63, 208, 255, .42), transparent 70%),
+        radial-gradient(60% 50% at 4% 100%, rgba(180, 140, 255, .34), transparent 72%),
+        linear-gradient(155deg, #10307a 0%, #0a1d4f 46%, #050b1f 100%);
+    container-type: inline-size;
+}
+
+.ls-capa-desenhada::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, .09) 50%, transparent 60%),
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, .035) 0 2px, transparent 2px 13px);
+}
+
+.ls-capa-desenhada::after {
+    content: "";
+    position: absolute;
+    left: 9%;
+    right: 9%;
+    bottom: 7%;
+    height: 3px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--ls-ciano, #3fd0ff), var(--ls-roxo-neon, #b48cff) 60%, transparent);
+    box-shadow: 0 0 14px rgba(63, 208, 255, .55);
+    opacity: .9;
+}
+
+.ls-capa-desenhada .ls-capa-desenhada-marca {
+    position: absolute;
+    top: 8%;
+    right: -6%;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.ls-capa-desenhada .ls-capa-desenhada-marca i {
+    display: block;
+    font-size: 5.2rem;
+    font-size: 46cqi;
+    color: rgba(255, 255, 255, .15);
+    transform: rotate(-12deg);
+}
+
+.ls-capa-desenhada .ls-capa-desenhada-texto {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    padding-bottom: 6px;
+}
+
+.ls-capa-desenhada .ls-capa-desenhada-texto small {
+    color: var(--ls-ciano, #3fd0ff);
+    font: 800 .7rem/1.2 "Poppins", "Manrope", sans-serif;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.ls-capa-desenhada .ls-capa-desenhada-texto strong {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: #fff;
+    font: 800 1.2rem/1.12 "Poppins", "Manrope", sans-serif;
+    font-size: clamp(1rem, 8.6cqi, 1.9rem);
+    letter-spacing: -.01em;
+    text-wrap: balance;
+    text-shadow: 0 2px 16px rgba(0, 0, 0, .45);
+}
+
+.ls-capa-desenhada .ls-capa-desenhada-texto em {
+    color: rgba(234, 242, 255, .78);
+    font: 600 .84rem/1.35 "Manrope", "Poppins", sans-serif;
+    font-style: normal;
+}
+
+.ls-capa-desenhada--grande .ls-capa-desenhada-texto strong {
+    font-size: clamp(1.3rem, 6.4cqi, 2.6rem);
+}
+
+/* a ficha (a janela do projeto) sem nenhuma foto: a capa desenhada ocupa o visor */
+.ls-ficha-visor .ls-ficha-sem-foto {
+    position: relative;
+    min-height: 320px;
+    padding: 0;
+}
+
+/* a peça sem foto, na página dela: a capa no lugar da vitrine */
+.peca-imagem .ls-capa-desenhada {
+    border-radius: 22px;
+}
+
+/* ---------- o mosaico do combo ---------- */
+.ls-mosaico {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: grid;
+    gap: 3px;
+    overflow: hidden;
+    border-radius: inherit;
+    background: #050b1f;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr);
+}
+
+.ls-mosaico--1 {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.ls-mosaico--3 .ls-mosaico-celula:first-child {
+    grid-row: span 2;
+}
+
+.ls-mosaico .ls-mosaico-celula {
+    position: relative;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    background: #0a1d4f;
+}
+
+.ls-mosaico > .ls-mosaico-celula > img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    padding: 0;
+    object-fit: cover;
+    filter: none;
+    transform: none;
+    transition: transform .45s ease;
+}
+
+a:hover .ls-mosaico > .ls-mosaico-celula > img,
+article:hover .ls-mosaico > .ls-mosaico-celula > img {
+    transform: scale(1.04);
+}
+
+/* ---------- a faixa de clientes sem o logo ---------- */
+.ls-footer .ls-clientes-logos .ls-cliente-selo {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+}
+
+.ls-footer .ls-clientes-logos .ls-cliente-selo i {
+    color: var(--ls-ciano, #3fd0ff);
+    font-size: 1.15rem;
+}
+
+.ls-footer .ls-clientes-logos .ls-cliente-selo span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: #eaf2ff;
+    font: 700 .86rem/1.25 "Poppins", "Manrope", sans-serif;
+    overflow-wrap: anywhere;
+}
+
+/* menos de seis: centralizados, do mesmo tamanho dos da fileira cheia */
+.ls-footer .ls-clientes-logos--poucos {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.ls-footer .ls-clientes-logos--poucos .ls-cliente-logo {
+    flex: 0 1 calc((100% - 60px) / 6);
+    min-width: 150px;
+}
+
+@media (max-width: 520px) {
+    .ls-footer .ls-clientes-logos--poucos .ls-cliente-logo {
+        flex-basis: calc((100% - 10px) / 2);
+        min-width: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-mosaico > .ls-mosaico-celula > img { transition: none; }
+    a:hover .ls-mosaico > .ls-mosaico-celula > img,
+    article:hover .ls-mosaico > .ls-mosaico-celula > img { transform: none; }
+}

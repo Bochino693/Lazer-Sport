@@ -1,0 +1,36 @@
+{% comment %}
+  UM CARD DA TELA "FOTOS QUE FALTAM" (LEIA-ME-V10, seção 133): uma foto que ainda não voltou
+  (ou que voltou provisória), o que ela é, onde aparece no site e o "Enviar foto".
+  Quem liga é o interno/fotos-que-faltam.js; a cara é a do interno/restaurar-fotos.css.
+
+    {% include "partials/foto_que_falta_card.html" with card=card grupo=grupo oculto=False %}
+{% endcomment %}<article class="ls-fq-card{% if card.provisoria %} provisoria{% endif %}" data-fq-card
+         data-nome="{{ card.nome }}" data-titulo="{{ card.titulo }}" data-detalhe="{{ card.detalhe }}"
+         data-tipo="{{ card.tipo|default:grupo.chave }}" data-tipo-titulo="{{ grupo.titulo }}" data-icone="{{ grupo.icone }}"
+         data-aceita="{{ card.aceita }}"{% if oculto %} hidden data-fq-oculto{% endif %}>
+  <div class="ls-fq-card-foto" data-fq-foto>
+    {% if card.url %}
+      <img src="{{ card.url }}" alt="Foto provisória de {{ card.titulo }}" loading="lazy" decoding="async">
+    {% else %}
+      <span class="ls-fq-card-vazio" aria-hidden="true"><i class="bi {{ grupo.icone }}"></i><small>Foto que falta</small></span>
+    {% endif %}
+    <span class="ls-fq-card-estado" data-fq-estado>{% if card.provisoria %}<i class="bi bi-life-preserver" aria-hidden="true"></i> Provisória{% else %}<i class="bi bi-hourglass-split" aria-hidden="true"></i> Falta{% endif %}</span>
+  </div>
+  <div class="ls-fq-card-corpo">
+    <strong class="ls-fq-card-titulo">{{ card.titulo }}</strong>
+    <span class="ls-fq-card-detalhe">{{ card.detalhe }}</span>
+    {% if card.onde %}
+    <ul class="ls-fq-onde" aria-label="Onde aparece">
+      {% for o in card.onde %}<li><i class="bi bi-geo-alt" aria-hidden="true"></i>{% if o.url %}<a href="{{ o.url }}" target="_blank" rel="noopener">{{ o.texto }}</a>{% else %}<span>{{ o.texto }}</span>{% endif %}</li>{% endfor %}
+      {% if card.outros_usos %}<li><i class="bi bi-intersect" aria-hidden="true"></i><span>e mais {{ card.outros_usos }} cadastro{{ card.outros_usos|pluralize }} com a mesma foto</span></li>{% endif %}
+    </ul>
+    {% endif %}
+    <code class="ls-fq-card-nome" title="O nome que a foto tinha no Cloudinary">{{ card.antigo }}</code>
+  </div>
+  <div class="ls-fq-card-acoes">
+    <button type="button" class="ls-rf-botao ls-rf-botao--principal ls-fq-enviar" data-fq-enviar aria-label="{% if card.provisoria %}Enviar a original{% else %}Enviar foto{% endif %}: {{ card.titulo }}">
+      <i class="bi bi-camera" aria-hidden="true"></i> <span data-fq-rotulo>{% if card.provisoria %}Enviar a original{% else %}Enviar foto{% endif %}</span>
+    </button>
+    <input type="file" accept="{{ card.aceita }}" hidden data-fq-arquivo tabindex="-1">
+  </div>
+</article>

@@ -1,7 +1,15 @@
-"""RESTAURAR FOTOS (/restaurar-fotos/): o dono devolve as fotos ao site (LEIA-ME-V10, seção 130).
+"""FOTOS QUE FALTAM (/restaurar-fotos/): o dono devolve as fotos ao site (LEIA-ME-V10, seções 130 e 133).
 
-Com o Cloudinary desativado, as fotos que só existiam lá sumiram. Esta tela
-(só do superadministrador, como o resto da Administração) faz três coisas:
+Com o Cloudinary desativado, as fotos que só existiam lá sumiram -- e ele
+pede pagamento para devolver a exportação. Desde a seção 133 a tela começa
+pelo que importa: UM CARD POR FOTO QUE FALTA (sistema_interno/fotos_que_faltam.py),
+com o que ela é, onde aparece e o botão "Enviar foto" (do celular ou do
+computador); várias fotos soltas de uma vez casam pelo nome, e o que não
+casa o dono põe no lugar tocando no card. Cada foto enviada vai para o
+banco (core.espelho_midia.gravar_conteudo, exata) e troca o nome em todo
+campo que a usava.
+
+Esta tela (só do superadministrador, como o resto da Administração) também:
 
   * mostra o que ainda não está no banco, por tipo de cadastro (os
     produtos, as peças, os clientes...), com o nome de cada arquivo;
@@ -22,6 +30,7 @@ para o disco: cada entrada é lida, conferida e gravada no banco.
 
 from __future__ import annotations
 
+import io
 import json
 import logging
 import re
@@ -36,8 +45,10 @@ from django.http import JsonResponse
 from django.shortcuts import render
 
 from core import espelho_midia, restaurar_midia
-from core.arquivos_no_banco import ArmazenamentoIndisponivel
+from core.arquivos_no_banco import PREFIXO, ArmazenamentoIndisponivel, url_publica
+from core.fotos import reduzir_imagem
 
+from . import fotos_que_faltam
 from .views import SuperusuarioInternoRequiredMixin
 
 log = logging.getLogger("lazer.midia")
@@ -131,21 +142,42 @@ def _faltando_por_grupo(linhas):
     return grupos
 
 
-def painel():
-    """Os números da tela: no banco, faltando (por grupo), e o que a linha de fundo fez."""
+def painel(pendentes=None):
+    """Os números da tela: no banco, faltando (por grupo), e o que a linha de fundo fez.
+
+    `pendentes` (o {nome: [Referencia]} de fotos_que_faltam.pendentes) evita ler
+    tudo de novo quando a tela já leu. As duas contagens do banco vão numa
+    consulta só.
+    """
+    from django.db.models import Count, Q
+
     from core.models import ArquivoNoBanco
 
-    faltando = restaurar_midia.relatorio()
-    no_banco = ArquivoNoBanco.objects.filter(publico=True).count()
-    reserva = ArquivoNoBanco.objects.filter(exata=False).count()
+    pendentes = fotos_que_faltam.pendentes() if pendentes is None else pendentes
+    faltando = sorted(
+        ({"modelo": r.modelo._meta.label, "pk": pk, "campo": r.campo, "nome": nome}
+         for nome, grupo in pendentes.items() for r in grupo for pk in r.pks),
+        key=lambda l: (l["modelo"], l["campo"], str(l["pk"])),
+    )
+    numeros = ArquivoNoBanco.objects.aggregate(
+        no_banco=Count("id", filter=Q(publico=True)), reserva=Count("id", filter=Q(exata=False)),
+    )
+    publicos = [nome for nome, grupo in pendentes.items() if fotos_que_faltam.e_publico(grupo)]
     return {
         "faltando_total": len(faltando),
         "faltando_nomes": len({l["nome"] for l in faltando}),
+        "faltando_site": len(publicos),
+        "pendentes": sorted(publicos),
         "grupos": _faltando_por_grupo(faltando),
-        "no_banco": no_banco,
-        "reserva": reserva,
+        "no_banco": numeros["no_banco"],
+        "reserva": numeros["reserva"],
         "espelho": espelho_midia.estado(),
     }
+
+
+def _url_da_foto(nome, largura=480):
+    """O endereço da foto no banco, no tamanho do card (o mesmo que o site pede)."""
+    return reduzir_imagem(url_publica(nome), largura)
 
 
 def _resultado_json(resultado: restaurar_midia.Resultado, limite=200):
@@ -155,7 +187,8 @@ def _resultado_json(resultado: restaurar_midia.Resultado, limite=200):
     return {
         "restaurados": [
             {"nome": i["nome"], "de": i.get("de", ""), "regra": i.get("regra", ""), "exata": i.get("exata", True),
-             "onde": onde(i)} for i in resultado.restaurados[:limite]
+             "onde": onde(i), "url": _url_da_foto(i["para"]) if i.get("para") else ""}
+            for i in resultado.restaurados[:limite]
         ],
         "nao_referenciados": resultado.nao_referenciados[:limite],
         "recusados": resultado.recusados[:limite],
@@ -168,8 +201,10 @@ class RestaurarFotosView(SuperusuarioInternoRequiredMixin):
     def get(self, request):
         if request.GET.get("formato") == "json":
             return JsonResponse({"status": "sucesso", **painel()})
+        pendentes = fotos_que_faltam.pendentes()
         return render(request, "restaurar_fotos_inner.html", {
-            "dados": painel(),
+            "dados": painel(pendentes),
+            "faltam": fotos_que_faltam.montar(pendentes),
             "pedaco": PEDACO,
             "limite_zip": restaurar_midia.LIMITE_DO_ZIP,
             "limite_arquivo_mb": int(espelho_midia._limite() / (1024 * 1024)),
@@ -178,6 +213,10 @@ class RestaurarFotosView(SuperusuarioInternoRequiredMixin):
     def post(self, request):
         acao = request.POST.get("acao", "")
         try:
+            if acao == "enviar":
+                return self._enviar(request)
+            if acao == "casar":
+                return self._casar(request)
             if acao == "comecar":
                 return self._comecar(request)
             if acao == "pedaco":
@@ -206,6 +245,62 @@ class RestaurarFotosView(SuperusuarioInternoRequiredMixin):
         if campo:
             corpo["campo"] = campo
         return JsonResponse(corpo, status=status)
+
+    # ------------------------------------------------------------------
+    # A FOTO DE UM CARD (seção 133)
+    # ------------------------------------------------------------------
+    def _enviar(self, request):
+        """A foto que o dono escolheu para UM card: vai para o banco e troca o nome em todo campo que o usava."""
+        from PIL import Image, UnidentifiedImageError
+
+        nome = str(request.POST.get("nome") or "").strip()
+        arquivo = request.FILES.get("arquivo")
+        if not nome:
+            return self._erro("Escolha o card da foto que vai receber este arquivo.", "Qual foto?")
+        if arquivo is None or not arquivo.size:
+            return self._erro("Escolha a foto no celular ou no computador.", "Nenhuma foto escolhida", campo="arquivo")
+        limite = espelho_midia._limite()
+        if arquivo.size > limite:
+            return self._erro(f"A foto passa de {int(limite / (1024 * 1024))} MB. Envie uma versão menor.",
+                              "Foto grande demais", campo="arquivo")
+        grupo = fotos_que_faltam.usos_de([nome]).get(nome)
+        if not grupo or not fotos_que_faltam.e_publico(grupo):
+            # já voltou (outro envio, a exportação, o espelho) ou ninguém usa mais
+            return JsonResponse({"status": "ja", "nome": nome, "titulo": "Esta foto já voltou",
+                                 "msg": "Ela não está mais faltando: atualize a tela para ver como ficou."})
+        dados = arquivo.read(limite + 1)
+        serve, tipo = restaurar_midia._aceita(dados, grupo)
+        if serve and tipo.startswith("image/"):
+            try:
+                with Image.open(io.BytesIO(dados)) as foto:
+                    foto.verify()
+            except (UnidentifiedImageError, OSError, ValueError, SyntaxError):
+                serve = False
+        if not serve:
+            esperado = "um arquivo 3D (.glb)" if "glb" in fotos_que_faltam.aceita(grupo) else "uma foto (JPG, PNG ou WebP)"
+            return self._erro(f"O arquivo “{arquivo.name}” não é {esperado}.", "Este arquivo não serve", campo="arquivo")
+        antigo = nome[len(PREFIXO):] if nome.startswith(PREFIXO) else nome
+        para, houve = espelho_midia.gravar_conteudo(antigo, grupo, dados, origem="envio", exata=True)
+        espelho_midia.limpar_caches()
+        log.info("fotos que faltam: %s voltou pelo envio do dono (%s)", antigo, houve)
+        faltam = len(fotos_que_faltam.pendentes(somente_publicos=True))
+        url = _url_da_foto(para)
+        if houve == "trocado":
+            # a original no lugar da provisória fica no MESMO endereço: o card do painel pede a nova
+            # (a entrega ignora o "v"; no site, a provisória sai com cache de um dia e o espelho/disco já trocou)
+            url += f"&v={int(time.time())}"
+        return JsonResponse({
+            "status": "sucesso", "nome": nome, "para": para, "houve": houve,
+            "url": url, "faltam": faltam,
+            "msg": "A foto voltou e já aparece no site.",
+        })
+
+    def _casar(self, request):
+        """Os nomes dos arquivos soltos (sem os arquivos): qual card cada um restaura, ou os candidatos."""
+        arquivos = [str(a)[-200:] for a in request.POST.getlist("arquivos") if str(a).strip()][:200]
+        pendentes = fotos_que_faltam.pendentes(somente_publicos=True)
+        cards = [{"nome": nome, "chaves": fotos_que_faltam.chaves_do_nome(nome)} for nome in pendentes]
+        return JsonResponse({"status": "sucesso", "resultado": fotos_que_faltam.casar(arquivos, cards)})
 
     def _comecar(self, request):
         _limpar_esquecidos()

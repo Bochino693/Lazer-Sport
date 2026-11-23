@@ -9,6 +9,7 @@
 //   node ferramentas/categorias/gerar.cjs capa:strike-kids (só esta capa)
 //   node ferramentas/categorias/gerar.cjs produtos        (as capas do catálogo: "produto:<chave>", seção 64)
 //   node ferramentas/categorias/gerar.cjs vistas          (as fotos da galeria dos nossos 3D: "vista:<chave>:<nome>")
+//   node ferramentas/categorias/gerar.cjs reservas        (as do Boliche Virtual que só o Cloudinary tinha, seção 133)
 //   python ferramentas/categorias/compor.py               (os .webp em core/static/site/categorias/
 //                                                          e as capas em core/static/site/arena/modelos/<chave>/capa.webp)
 //
@@ -65,13 +66,14 @@ const servidor = http.createServer((req, res) => {
   const capas = await page.evaluate(() => window.CAPAS);
   const produtos = await page.evaluate(() => window.PRODUTOS);
   const vistas = await page.evaluate(() => window.VISTAS);
+  const reservas = await page.evaluate(() => window.RESERVAS_DO_CATALOGO || []);
   const todas = await page.evaluate(() => window.TODAS);
   if (glbs.length) {
     const usam = await page.evaluate((nomes) => window.cenasComGlb(...nomes), glbs);
     console.log(`as fotos com ${glbs.join(", ")}: ${usam.join(", ") || "nenhuma"}`);
     pedidas.push(...usam);
   }
-  const chaves = pedidas.length || glbs.length ? pedidas.flatMap((p) => (p === "capas" ? capas : p === "produtos" ? produtos : p === "vistas" ? vistas : [p])) : await page.evaluate(() => window.CENAS);
+  const chaves = pedidas.length || glbs.length ? pedidas.flatMap((p) => (p === "capas" ? capas : p === "produtos" ? produtos : p === "vistas" ? vistas : p === "reservas" ? reservas : [p])) : await page.evaluate(() => window.CENAS);
   // "chave@giro,altura,lente" experimenta outro ângulo (e grava com esse nome)
   const lista = {};
   for (const pedido of chaves) {

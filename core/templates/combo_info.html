@@ -30,7 +30,7 @@
                 {{ combo.porcentagem|floatformat:0 }}% de economia
             </span>
 
-            {% if combo.imagem_combo %}
+            {% if combo.imagem_combo|tem_foto %}
                 <img class="combo-gallery-bg"
                      src="{{ combo.imagem_combo|foto:400 }}" alt="" aria-hidden="true">
                 {# a foto do combo é a maior coisa da tela: o navegador a pede antes das outras #}
@@ -40,12 +40,8 @@
                      fetchpriority="high"
                      decoding="async">
             {% else %}
-                <img class="combo-gallery-bg"
-                     src="{% static 'images/sem-imagem.svg' %}" alt="" aria-hidden="true">
-                <img class="combo-gallery-product"
-                     src="{% static 'images/sem-imagem.svg' %}"
-                     alt="Imagem ilustrativa do combo"
-                     decoding="async">
+                {# sem a foto do combo: as capas dos brinquedos dele, grandes (seção 133) #}
+                {% include "partials/combo_mosaico.html" with brinquedos=combo.fotos_do_mosaico titulo=combo.descricao largura=960 %}
             {% endif %}
         </div>
 

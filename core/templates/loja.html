@@ -135,8 +135,13 @@
                                          alt="{{ item.titulo }}"
                                          loading="lazy"
                                          decoding="async">
+                                {% elif item.tipo == 'combo' %}
+                                    {# sem a foto do combo: as capas dos brinquedos dele (seção 133) #}
+                                    {% include "partials/combo_mosaico.html" with urls=item.mosaico titulo=item.titulo largura=480 %}
+                                {% elif item.tipo == 'peca' %}
+                                    {% include "partials/capa_desenhada.html" with titulo=item.titulo tipo="Original de fábrica" icone="fa-gears" %}
                                 {% else %}
-                                    <i class="fa-solid fa-image sem-imagem" aria-hidden="true"></i>
+                                    {% include "partials/capa_desenhada.html" with titulo=item.titulo tipo=item.tipo_label icone="fa-gamepad" %}
                                 {% endif %}
                                 {% if item.tipo == 'brinquedo' %}{% fotos_do_card item.url %}{% endif %}
                             </div>

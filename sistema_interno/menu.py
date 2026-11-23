@@ -136,7 +136,7 @@ BLOCOS = {
     ),
     # as fotos guardadas no banco: o que ainda falta e a exportação do Cloudinary (seção 130)
     "Fotos e arquivos": (
-        Item("Restaurar fotos", "restaurar_fotos", "bi-images", "usuarios"),
+        Item("Fotos que faltam", "restaurar_fotos", "bi-images", "usuarios"),
     ),
     # DE CADA UM (toda a equipe)
     "Meu dia": (

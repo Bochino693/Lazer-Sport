@@ -571,7 +571,8 @@ class Orcamento3DTests(TestCase):
 
         self._item("Tobogã inflável", brinquedo=self._brinquedo("Tobogã inflável"))
         sem = OrcamentosInnerView.mensagem_da_proposta(self.orcamento, "https://exemplo/link")
-        self.assertNotIn("3D", sem)
+        # ("em 3D", e não só "3D": o código sorteado do orçamento -- "LS-UC763D" -- pode ter as duas letras)
+        self.assertNotIn("em 3D", sem)
         self._item("Brinquedão Modelo 3")
         com = OrcamentosInnerView.mensagem_da_proposta(self.orcamento, "https://exemplo/link")
         self.assertIn("Dá para ver *em 3D* o item da proposta", com)

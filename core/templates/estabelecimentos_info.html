@@ -152,13 +152,13 @@
     <article class="est-card">
 
         <div class="est-media">
-            {% if est.imagem_estabelecimento %}
+            {% if est.imagem_estabelecimento|tem_foto %}
                 <img src="{{ est.imagem_estabelecimento|foto:400 }}" class="est-media-bg" alt="" aria-hidden="true">
                 <img src="{{ est.imagem_estabelecimento|foto:900 }}" class="est-media-fg"
                      alt="{{ est.nome_estabelecimento }}" loading="lazy">
             {% else %}
-                <img src="{% static 'images/sem-imagem.svg' %}" class="est-media-fg"
-                     alt="{{ est.nome_estabelecimento }}" loading="lazy">
+                {# sem a foto do lugar (seção 133): a capa desenhada, com o nome -- nunca o quadro vazio #}
+                {% include "partials/capa_desenhada.html" with titulo=est.nome_estabelecimento tipo="Onde já tem Lazer &amp; Sport" icone="fa-building" %}
             {% endif %}
         </div>
 

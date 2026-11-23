@@ -81,7 +81,7 @@
                             <span class="peca-contador" id="peca-contador">1 / {{ imagens_peca|length }}</span>
                         {% endif %}
                     {% else %}
-                        <div class="peca-sem-imagem"><i class="fas fa-image" aria-hidden="true"></i>Imagem em atualização</div>
+                        {% include "partials/capa_desenhada.html" with titulo=peca.nome tipo="Peça de reposição" icone="fa-gears" classe="ls-capa-desenhada--grande" %}
                     {% endif %}
                 </div>
 

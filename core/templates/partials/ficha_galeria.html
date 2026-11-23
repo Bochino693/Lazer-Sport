@@ -53,9 +53,9 @@
             </div>
             {% endif %}
             {% else %}
+            {# sem foto que saia de algum lugar (seção 133): a capa desenhada, com o nome e o tipo #}
             <div class="ls-ficha-sem-foto">
-                <i class="fa-solid fa-images" aria-hidden="true"></i>
-                <span>As fotos deste {{ tipo|default:"projeto" }} chegam em breve.</span>
+                {% with tipo_da_ficha=tipo|default:"projeto" %}{% include "partials/capa_desenhada.html" with titulo=titulo tipo=selo icone=selo_icone|default:"fa-compass-drafting" classe="ls-capa-desenhada--grande" nota="As fotos deste "|add:tipo_da_ficha|add:" chegam em breve." %}{% endwith %}
             </div>
             {% endif %}
         </div>

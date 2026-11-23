@@ -9876,7 +9876,7 @@ Dependência nova: rjsmin (requirements.txt).
    desligada fora do Render; uma linha por processo e outra depois do fork;
    a visita liga a linha; o middleware está ligado).
        DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test core sistema_interno contas rh --parallel 1
-132) O SITE RÁPIDO E FIRME SEM O CLOUDINARY: FOTOS NA BORDA DO CLOUDFLARE, NENHUM PEDIDO PERDIDO
+132) O SITE RÁPIDO E FIRME SEM O CLOUDINARY: FOTOS SEM FILA, DO DISCO, NENHUM PEDIDO PERDIDO
    O PEDIDO DO DONO (23/11/2026): "eu queria baixar em zip mas o sistema me
    brecha e me joga para pagamento, revise os pontos que eu falei e faça o
    site ficar redondo [...] fora que o carregamento ficou ruim do site,
@@ -9951,3 +9951,222 @@ Dependência nova: rjsmin (requirements.txt).
    core/test_traffic_shield.py
    (/midia/ nunca recebe 503 com as vagas tomadas).
        DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test core sistema_interno contas rh --parallel 1
+133) AS FOTOS QUE SÓ O CLOUDINARY TINHA: UM CARD POR FOTO NO PAINEL E O SITE REDONDO ATÉ ELAS VOLTAREM
+   O PEDIDO DO DONO (23/11/2026), com a conta do Cloudinary desativada
+   (seções 128, 130, 131 e a base da 132): "eu queria baixar em zip mas o
+   sistema me brecha e me joga para pagamento" / "faça o site ficar redondo.
+   faltam só alguns brinquedos, buffets de clientes que tem logo, entre
+   outros".
+   A CAUSA. Depois da restauração das cópias (seção 130) restavam 77 fotos
+   públicas que só existiam no Cloudinary (a varredura do site no ar): 3
+   combos, 6 estabelecimentos, 3 do Boliche Virtual (a capa e os adesivos
+   Preto e Rosa), 28 capas de jogos, 6 logos de clientes, 10 de peças e 21
+   de projetos. O caminho da exportação (o ZIP da Media Library) está
+   fechado: o Cloudinary cobra para devolver. A base da 132 já deixou o site
+   sem pedir nada a ele (o nome antigo vira o quadro "Foto em atualização"
+   servido daqui, e o filtro `|tem_foto` diz se a foto sai de algum lugar).
+   O que faltava: o dono conseguir devolver cada foto sem o ZIP, e o site
+   não mostrar o quadro onde dá para fazer melhor.
+
+   1. A TELA "FOTOS QUE FALTAM" (o mesmo /restaurar-fotos/, Administração ->
+      Fotos que faltam; só o superadministrador, como antes).
+      * No topo, o recado claro: o Cloudinary pede pagamento, não precisa; a
+        foto enviada por aqui volta para o banco, aparece no site na hora e
+        nunca mais depende dele. Os passos (1, 2, 3) e "Enviar várias fotos".
+      * UM CARD POR FOTO que falta (não por cadastro): o que ela é (o
+        brinquedo e qual foto -- "Lado direito · adesivo Preto" --, o cliente
+        pelo nome da casa, o projeto e o arquivo, o combo, a peça e se é a
+        foto sem fundo ou a original, o jogo, o estabelecimento), onde ela
+        aparece (com o link do site), "e mais N cadastros com a mesma foto" e
+        o nome que ela tinha no Cloudinary. Por tipo, o que o site mostra
+        primeiro (produtos, logos, projetos, combos, peças, jogos,
+        estabelecimentos, categorias, promoções, eventos, imagens do site) e
+        depois o que é só do painel. Até 4 por fileira; 12 de cada vez
+        ("Mostrar mais 12 fotos de N").
+      * "ENVIAR FOTO" em cada card: escolhe no celular (a câmera ou a
+        galeria) ou no computador e vai por AJAX. No servidor: confere que é
+        foto de verdade (Pillow) e que o nome ainda falta, grava com
+        `espelho_midia.gravar_conteudo(nome, grupo, dados, origem="envio",
+        exata=True)` -- guarda no banco e troca o nome em TODO campo que o
+        usava (a capa do produto e a foto da galeria juntas) -- e chama
+        `espelho_midia.limpar_caches()` (os outros processos ficam sabendo
+        pela seção 131). O card vira "Pronto", com a foto nova, o número de
+        cima desce e sai o toast "Foto de volta".
+      * O ERRO É JANELA DE APP (LSAviso): o arquivo que não é foto ("Este
+        arquivo não serve"), grande demais, sem conexão -- o card fica aceso;
+        nada muda no banco. Nada de alert()/confirm().
+      * VÁRIAS DE UMA VEZ: o botão ou as fotos soltas em qualquer lugar da
+        tela (aparece "Solte as fotos"). Primeiro só os NOMES vão ao servidor
+        ("casar", sistema_interno/fotos_que_faltam.casar): como o Mapa da
+        exportação, pelo public id (a pasta e o nome, ou o nome com o sufixo
+        do Cloudinary) e também pelo nome que o arquivo tinha ANTES de subir
+        -- o Cloudinary acrescenta "_ab12cd" e o Django troca espaço por "_":
+        "WhatsApp Image 2026-07-24 at 14.53.17.jpeg" é o combo, "Boliche
+        Virtual Preto.jpg" é o adesivo Preto. O que casa vai sozinho para o
+        card. O resto (e o nome que serve a dois cards, como "001.jpg" de
+        três projetos) abre a folha "ESCOLHA ONDE VAI CADA FOTO": a foto, os
+        sugeridos pelo nome em cima, a busca e os cards que ainda faltam para
+        TOCAR (sem <select>); "Pular esta foto"; no fim, o toast do que ficou
+        sem lugar. A folha sobe de baixo no celular e fica no meio no
+        computador, acima da barra de atalhos. O ZIP solto na tela segue o
+        envio em pedaços de antes.
+      * "COM FOTO PROVISÓRIA": o que voltou como cópia que não é exata (as
+        regras abaixo) aparece com a foto de agora e "Enviar a original" --
+        ela entra no lugar (exata=True, "trocado"); o card do painel pede a
+        nova (o endereço é o mesmo; ver o limite abaixo).
+      * O PRIVADO (RH, notas, O.S.) fica SÓ NA CONTAGEM ("Documentos
+        privados"): não se envia documento de colaborador por uma tela de
+        fotos; o espelho os copia se a conta voltar.
+      * A exportação (ZIP) e "Restaurar das cópias do repositório" foram para
+        "Outras formas", embaixo; quando trazem fotos, os cards viram Pronto.
+      * UMA CONSULTA EM VEZ DE ~25: a tela e o envio leem quem usa cada nome
+        com um UNION ALL dos campos de arquivo (fotos_que_faltam.pendentes e
+        usos_de: a mesma resposta de espelho_midia.referencias, há teste), e
+        as duas contagens do banco vão num aggregate. Banco que recusar a
+        consulta única cai no caminho do espelho.
+      CSS próprio no fim de interno/restaurar-fotos.css (só variáveis do
+      tema; cards no painel tingido, nunca branco); o JS em
+      interno/fotos-que-faltam.js.
+
+   2. AS FOTOS QUE VOLTAM SOZINHAS (core/restaurar_midia.py, junto com as
+      cópias do repositório: a cada publicação no Render e no comando
+      `restaurar_midia`). Todas exata=False -- a original, quando o dono
+      enviar ou a conta voltar, toma o lugar:
+      * O RECORTE AUTOMÁTICO DA ORIGINAL: a foto de peça
+        "<base>-sem-fundo_<sufixo>" é o recorte que o site fez
+        (core/recorte_peca.py) da original "<base>" -- e as cinco originais
+        estão em site/reserva/ desde a seção 130. A regra refaz o recorte com
+        a mesma rotina (Achado.transformar = "recorte"), também quando a base
+        foi cortada em 48 letras (o nome dos bonecos de pebolim). Só nos
+        campos de peça.
+      * AS SUBSTITUTAS DECLARADAS (SUBSTITUTAS, pelo nome exato do Cloudinary
+        e só no campo dela):
+          - o Boliche Virtual: a única foto nossa dele no repositório é o
+            recorte do adesivo ROSA (ferramentas/categorias/maquinas-alta/
+            boliche-virtual.webp, tirado da foto Rosa pelo recortar.py). O
+            gerar.cjs ("reservas", bloco RESERVAS_DO_CATALOGO do cenas.js) o
+            põe no showroom duas vezes, em cantos diferentes: a CAPA EM CENA
+            (capas_catalogo/boliche-virtual.webp, na placa do logo) e a foto
+            do adesivo ROSA (capas_catalogo/boliche-virtual-rosa.webp, na
+            parede de fliperama). A foto de 3/4 de uma máquina comprida tem a
+            base em diagonal: o "pisar" do cenas.js leva a base de verdade ao
+            chão (a sombra de contato segue a linha da base, o plano deixa de
+            projetar a sombra errada e o reflexo sai) -- sem isso o pino
+            flutuava. O adesivo PRETO não tem foto nossa: sai da galeria até
+            o dono enviar (abaixo);
+          - os seis "estabelecimentos" do site são TIPOS de lugar: cada um
+            ganha a foto de ambiente nossa que mostra aquele lugar
+            (core/static/site/categorias/): Academias -> esportivos (as
+            máquinas esportivas na quadra), Buffets -> brinquedao (o
+            brinquedão no salão de festas), Condomínios -> jogos-de-mesa (o
+            salão de jogos), Parques -> mecanicos (o carrossel e a roda na
+            praça), Quiosques -> simuladores (no corredor do shopping),
+            Shoppings -> famosos (no palco do shopping).
+
+   3. O SITE REDONDO ENQUANTO A FOTO NÃO VOLTA (sempre com `|tem_foto` ou
+      core.fotos.foto_disponivel, conta de texto, sem consulta; nunca
+      src=""):
+      * A FAIXA DE CLIENTES (base.html, core/context_processors.py,
+        escolher_clientes_da_faixa): o logo que não sai de lugar nenhum vira
+        um SELO com o nome -- só o nome de casa (Cliente.nome_no_site: o
+        estabelecimento, ou o cadastro que é de empresa, como o mapa usa).
+        Nome de pessoa nunca: sem nome de casa, o cliente fica fora da faixa.
+        A faixa lê até 18 candidatos (a mesma consulta) para chegar a seis;
+        com menos de seis, eles ficam no meio; sem ninguém, a faixa some.
+      * PROJETOS (home e /projetos/, e a ficha): BrinquedosProjeto.fotos_no_site
+        tira da galeria a foto que falta; sem nenhuma, a CAPA DESENHADA
+        (partials/capa_desenhada.html: a arte do site com o título e "Projeto
+        sob medida"; na ficha, com "As fotos deste projeto chegam em breve").
+      * COMBOS (home, /loja/ e a página do combo): sem a foto, o MOSAICO das
+        capas dos brinquedos do combo (partials/combo_mosaico.html,
+        Combos.fotos_do_mosaico: até quatro, só as que saem). Na loja, só os
+        combos sem foto buscam os brinquedos, numa consulta para todos.
+      * PEÇAS: imagem_principal é a primeira que sai; a galeria da página só
+        as que saem; sem nenhuma, o cartão desenhado com o ícone e o nome
+        (nada de foto falsa).
+      * JOGOS: JogoCadastrado.capa_url/poster_url voltam "" para a capa que só
+        o Cloudinary tinha -- o launcher usa a capa de reserva que já tinha
+        (a cor do jogo, o ícone e a sigla do console, o nome). Nenhuma capa
+        baixada da internet.
+      * ESTABELECIMENTOS: sem a foto, a capa desenhada com o nome.
+      * A GALERIA DO PRODUTO (core.models.galeria_publica): a foto que falta
+        sai quando há outra (o Preto do Boliche); sem nenhuma, fica como
+        estava. Vale também para os cards que giram as fotos e o contrato.
+
+   AS 77 FOTOS, UMA A UMA:
+      * VOLTAM COM FOTO NOSSA, SOZINHAS NA PRÓXIMA PUBLICAÇÃO (13): as 5 fotos
+        sem fundo das peças (o recorte das originais reais), a capa e o
+        adesivo Rosa do Boliche Virtual (a foto real do Rosa, no showroom) e
+        as 6 dos tipos de estabelecimento (as fotos de ambiente).
+      * JÁ ESTAVAM NO BANCO (5): "pecas_reposicao/bonecos",
+        "cabo_pc_2_d594iw", "caixa_portatil_melhorada_3_a8juv6",
+        "controle_xbox_gerxo6" e "imagem_melhorada_1_sgokbi" da lista eram o
+        endereço do JSON-LD cortado no "-" (o hífen escapado): as
+        originais já tinham voltado da site/reserva na seção 130.
+      * DEPENDEM DO DONO (59), pela tela "Fotos que faltam", e até lá com a
+        reserva do item 3: o adesivo Preto do Boliche (1), os combos (3), os
+        logos dos clientes (6), os projetos (21) e as capas dos jogos (28 --
+        são as caixas dos jogos de console, arte de outras empresas: não se
+        baixam; o dono envia a dele, se quiser).
+
+   LIMITE HONESTO. A original que entra no lugar de uma provisória fica no
+   MESMO endereço (banco/<nome de antes>); a entrega da provisória sai com
+   cache de um dia (seção 130), então quem já a viu pode vê-la até um dia.
+   O disco da instância é limpo na troca. Para tirar isso de vez, o endereço
+   teria de carregar a versão (core/arquivos_no_banco.py, que não mudou
+   aqui).
+
+   ARQUIVOS: sistema_interno/fotos_que_faltam.py (novo), sistema_interno/
+   views_restaurar_fotos.py (enviar, casar, painel numa consulta),
+   sistema_interno/templates/restaurar_fotos_inner.html e partials/
+   foto_que_falta_card.html (novo), sistema_interno/static/interno/
+   fotos-que-faltam.js (novo), restaurar-fotos.js (o ZIP solto, os cards
+   que voltam), restaurar-fotos.css (seção nova no fim), sistema_interno/
+   menu.py ("Fotos que faltam"); core/restaurar_midia.py (SUBSTITUTAS, o
+   recorte automático, Achado.conteudo); core/models.py (galeria_publica,
+   PecasReposicao.imagem_principal/imagens_ordenadas, Combos.tem_foto_propria/
+   fotos_do_mosaico, BrinquedosProjeto.fotos_no_site, JogoCadastrado.capa_url/
+   poster_url); core/context_processors.py; core/views.py (a loja e a página
+   da peça); core/templates/base.html, home.html, projetos.html, loja.html,
+   combo_info.html, reposicao_info.html, estabelecimentos_info.html,
+   partials/ficha_galeria.html, partials/peca_card.html, partials/
+   capa_desenhada.html e partials/combo_mosaico.html (novos); core/static/
+   site/ls-base-fim.css (seção nova no fim); core/static/site/
+   capas_catalogo/boliche-virtual.webp e boliche-virtual-rosa.webp (novas)
+   e fotos-reserva.json; ferramentas/categorias/cenas.js (RESERVAS_DO_CATALOGO
+   e a pisada), gerar.cjs ("reservas"), areas-dos-produtos.json e
+   maquinas-dos-produtos.json.
+   COMANDOS:
+       node ferramentas/categorias/gerar.cjs reservas --compor   (as duas fotos do Boliche)
+       python manage.py fotos_reserva
+       python manage.py restaurar_midia [--simular]              (as regras novas entram aqui)
+   TESTES: core/tests_fotos_que_faltam.py (o Boliche: a capa em cena e o
+   Rosa, o Preto de fora, só no campo de produto; os seis estabelecimentos,
+   o nome de fora da lista não; o recorte refeito da original, transparente,
+   também a base de 48 letras, só na foto de peça; as substitutas existem e
+   são fotos opacas; a galeria sem a foto que falta; a peça pela primeira que
+   sai e o cartão desenhado; o jogo sem capa; o projeto sem foto com a capa
+   desenhada; o mosaico do combo na loja e na página; o estabelecimento; a
+   faixa com o selo da casa, sem nome de pessoa, e a faixa que some) e
+   sistema_interno/tests_fotos_que_faltam.py (só o superadministrador; um
+   card por foto, o que é e onde aparece, na ordem do site; o envio grava
+   exata e troca em todo campo, também o logo; o arquivo que não é foto em
+   janela sem mexer em nada; a foto que já voltou; a original no lugar da
+   provisória; o casar pelo nome; a consulta única igual ao espelho, numa
+   ida; o privado só na contagem; sem alert/confirm, sem cor em hex, 4 por
+   fileira e 12 por vez). O teste da ficha continua achando "As fotos deste
+   projeto chegam em breve" (agora dentro da capa desenhada). Ajustado:
+   core/tests_orcamento.py (o teste da mensagem sem 3D procurava "3D" e o
+   código sorteado do orçamento, "LS-UC763D", às vezes tem as duas letras:
+   agora procura "em 3D").
+       DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test core sistema_interno contas rh --parallel 1
+   CONFERIDO NO CHROMIUM (servidor local, MidiaNoBanco padrão,
+   MIDIA_CLOUDINARY_FORA=1, dados sintéticos com os nomes de arquivo do ar),
+   PC 1366 e celular 390, em /, /brinquedos/, o Boliche Virtual, /loja/, o
+   combo, /pecas-reposicao/, a peça, /projetos/, /estabelecimentos/ e
+   /jogos/: antes da restauração, 0 foto quebrada, 0 pedido ao Cloudinary, 0
+   erro de JS e o quadro "Foto em atualização" só no Boliche (sem
+   alternativa até a regra rodar); depois, 0 quadro em todas. A tela do
+   painel: o envio por card, a janela do arquivo que não serve, o Preto
+   casado pelo nome, a folha com a busca, a original da provisória, os temas
+   lua, sol e eclipse, 0 <select>, 0 rolagem lateral, 0 diálogo nativo.
