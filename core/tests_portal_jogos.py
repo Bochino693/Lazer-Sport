@@ -141,6 +141,8 @@ class VitrineTests(BasePortal):
         self.assertContains(resposta, 'id="portal-biblioteca"')
         self.assertContains(resposta, "data-bj-ficha")
         self.assertContains(resposta, "portal-jogos.js")
+        # o launcher anda pelo controle (Xbox e cia.) e sabe quando ele entra e sai
+        self.assertContains(resposta, "controle-jogos.js")
 
     def test_visitante_ve_o_convite_e_quem_entrou_ve_o_proprio_nome(self):
         resposta = self.portal()

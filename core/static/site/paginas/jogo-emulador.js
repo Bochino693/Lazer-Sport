@@ -1026,10 +1026,6 @@
         : "Aperte A no controle ou toque em Jogar.";
     }
   });
-  window.addEventListener("gamepadconnected", function () {
-    var emu = window.EJS_emulator;
-    if (celular && jogando && emu && emu.virtualGamepad) emu.virtualGamepad.style.display = "none";
-  });
   /* O ANALÓGICO ESQUERDO TAMBÉM ANDA COMO A CRUZ. Muito jogo só lê a cruz (o Crash do
      PlayStation, os de Super Nintendo, Mega Drive, GBA...): com o controle de Xbox, as
      setas andavam e o analógico não fazia nada -- ele ia só para o "analógico do console",
@@ -1118,7 +1114,7 @@
     }
   }
   setTimeout(analogicoNaCruz, 500);
-  window.addEventListener("gamepaddisconnected", function () {
+  function soltarSetasDoAnalogico() {
     // o controle saiu com o analógico inclinado: nenhuma seta fica presa
     var emu = window.EJS_emulator;
     Object.keys(setasDoAnalogico).forEach(function (chave) {
@@ -1127,12 +1123,43 @@
       var partes = chave.split(":");
       try { if (emu && emu.gameManager) emu.gameManager.simulateInput(Number(partes[0]), Number(partes[1]), 0); } catch (e) { /* já saiu */ }
     });
-  });
-  window.addEventListener("gamepaddisconnected", function () {
-    avisar("Controle desconectado." + (celular ? " O controle da tela voltou." : ""), 3000);
+  }
+  /* ESPETOU / TIROU, DE VERDADE. O aviso do navegador de que o controle saiu nem sempre
+     chega (cabo puxado, Bluetooth que cai, o jogo dentro do launcher): quem tirava o
+     controle no celular ficava sem o controle da tela, e a aba de Comandos continuava a do
+     controle. O estado agora é conferido a cada segundo, além dos avisos: saiu o último
+     controle, tudo volta ao normal -- o controle da tela reaparece, os Comandos voltam para
+     o teclado (ou o celular), a dica do Jogar volta, nenhuma seta fica presa. */
+  var haviaControle = controleLigado();
+  function dicaDoPronto() {
+    if (jogando || pronto.hidden) return;
+    dicaPronto.textContent = controleLigado()
+      ? (progressoSalvo && botaoContinuar ? "No controle: A continua de onde parou, Y começa do início." : "Aperte A no controle ou toque em Jogar.")
+      : celular ? (podeTelaCheia ? "Abre em tela cheia, " + (emPe ? "em pé." : "deitado.") : "Deite o celular para ver maior.")
+        : "Ou aperte Enter. Um controle de Xbox ligado no computador também vale.";
+  }
+  function acertarControle() {
+    var tem = controleLigado();
     var emu = window.EJS_emulator;
-    if (celular && jogando && emu && emu.virtualGamepad && !controleLigado()) emu.virtualGamepad.style.display = "";
-  });
+    if (celular && jogando && emu && emu.virtualGamepad) {
+      var some = tem ? "none" : "";
+      if (emu.virtualGamepad.style.display !== some) emu.virtualGamepad.style.display = some;
+    }
+    if (tem === haviaControle) return;
+    haviaControle = tem;
+    dicaDoPronto();
+    if (tem) {
+      if (painel && !painel.hidden) escolherAba("controle");
+      return;
+    }
+    soltarSetasDoAnalogico();
+    atalhoDesde = 0; atalhoFeito = false; bAntes = false; yAntes = false;
+    if (painel && !painel.hidden) escolherAba(celular ? "celular" : "teclado");
+    avisar("Controle desconectado." + (celular ? " O controle da tela voltou." : " Teclado e mouse valem como antes."), 3500);
+  }
+  window.addEventListener("gamepadconnected", function () { acertarControle(); });
+  window.addEventListener("gamepaddisconnected", function () { setTimeout(acertarControle, 0); });
+  setInterval(acertarControle, 1000);
 
   /* ---------------------------------------------------------------- o controle do seu jeito (HUD)
      Como nos jogos de celular: arrastar cada botão, aumentar um só ou todos, e a
@@ -1858,10 +1885,7 @@
     pronto.hidden = false;
     // a apresentação já se monta escondida agora (o processador está folgado): o toque só dá o play
     if (window.LSIntroJogos && window.LSIntroJogos.preparar) window.LSIntroJogos.preparar(abertura, opcoesDaApresentacao());
-    dicaPronto.textContent = controleLigado()
-      ? (progressoSalvo && botaoContinuar ? "No controle: A continua de onde parou, Y começa do início." : "Aperte A no controle ou toque em Jogar.")
-      : celular ? (podeTelaCheia ? "Abre em tela cheia, " + (emPe ? "em pé." : "deitado.") : "Deite o celular para ver maior.")
-        : "Ou aperte Enter. Um controle de Xbox ligado no computador também vale.";
+    dicaDoPronto();
     (progressoSalvo && botaoContinuar ? botaoContinuar : botaoJogar).focus({ preventScroll: true });
     requestAnimationFrame(olharControle);
   }, function (erro) {

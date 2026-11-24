@@ -235,6 +235,8 @@
     haverá troca de página nenhuma para acompanhar. Invertidos, a barra
     decide antes de saber, e volta a piscar a cada clique.
   {% endcomment %}
+  {# SEM "Salvar endereço na Conta do Google": os dados daqui são da empresa e dos clientes (ls-sem-autofill.js). #}
+  <script src="{% estatico 'interno/ls-sem-autofill.js' %}"></script>
   {# Troca telas e filtros sem uma segunda requisição; cache só durante a aba. #}
   <script src="{% estatico 'interno/ls-soft-navigation.js' %}" defer></script>
   <script src="{% estatico 'interno/ls-sincronia.js' %}" defer></script>

@@ -792,7 +792,16 @@ class Console {
         this.teclaVirtual(codigo, false);
       });
     };
-    window.addEventListener("gamepadconnected", () => this.raiz.classList.add("tem-controle"));
+    // espetou / tirou: a marca acompanha o estado de verdade (o aviso de "saiu" nem sempre chega)
+    const marcar = () => {
+      let tem = false;
+      try { tem = Array.prototype.some.call(navigator.getGamepads() || [], (p) => p && p.connected); } catch (erro) { tem = false; }
+      this.raiz.classList.toggle("tem-controle", tem);
+      if (!tem) comecarAntes = false;
+    };
+    window.addEventListener("gamepadconnected", marcar);
+    window.addEventListener("gamepaddisconnected", () => window.setTimeout(marcar, 0));
+    window.setInterval(marcar, 1000);
     passo();
   }
 

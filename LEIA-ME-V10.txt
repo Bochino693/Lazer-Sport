@@ -10170,3 +10170,74 @@ Dependência nova: rjsmin (requirements.txt).
    painel: o envio por card, a janela do arquivo que não serve, o Preto
    casado pelo nome, a folha com a busca, a original da provisória, os temas
    lua, sol e eclipse, 0 <select>, 0 rolagem lateral, 0 diálogo nativo.
+
+134) O LAUNCHER DE JOGOS PELO CONTROLE (XBOX E CIA.) E O "ESPETOU / TIROU"
+   O PEDIDO: "na área de jogos não pega mais pelo controle de Xbox; tem que
+   reconhecer quando espeta ou remove certinho, para o launcher voltar a ser
+   normal".
+   O QUE ACONTECIA. Os JOGOS entendiam o controle (o reprodutor dos consoles e
+   o console dos jogos da casa), mas a BIBLIOTECA (/jogos/, o launcher) não
+   lia o controle em lugar nenhum: com ele na mão não dava para escolher um
+   jogo, abrir a ficha nem voltar -- conferido no Chromium com um controle
+   simulado: cruz, analógico e A não mexiam em nada. E a saída do controle
+   dependia só do aviso do navegador ("gamepaddisconnected"), que nem sempre
+   chega (cabo puxado, Bluetooth que cai): o que tinha mudado por causa do
+   controle ficava mudado.
+   O LAUNCHER (core/static/site/paginas/controle-jogos.js, novo):
+   - cruz / analógico esquerdo andam pelos jogos e botões (segurar repete),
+     com o foco amarelo e a rolagem acompanhando; analógico direito rola;
+     A abre / aperta; B volta (fecha a ficha, sai da busca, sobe ao topo);
+     Y vai para a busca; LB / RB trocam de estante;
+   - COM UM JOGO ABERTO o controle é do jogo (o launcher não anda atrás);
+     SEGURAR View + B por 1 s volta à biblioteca (o jogo guarda o ponto);
+   - ESPETOU: body.tem-controle, aviso "Controle conectado: <nome>" e a
+     barra de dicas embaixo (A Abrir, B Voltar, Y Buscar, LB RB Estante). O
+     botão que "acordou" o controle não vale como comando;
+   - TIROU: o estado é conferido a cada meio segundo, além dos avisos do
+     navegador. Sem controle: saem as classes, a barra de dicas e o foco
+     amarelo, nada fica preso, aviso "Controle desconectado. O launcher
+     voltou ao normal.";
+   - mexeu o mouse ou tocou na tela: o foco amarelo sai da frente
+     (body.usando-controle); o próximo botão do controle traz de volta.
+   NOS JOGOS, o mesmo cuidado com o "tirou":
+   - reprodutor dos consoles (jogo-emulador.js): conferência a cada segundo;
+     saiu o último controle, o controle da tela volta no celular, os
+     Comandos voltam para o teclado / celular, a dica do Jogar volta e
+     nenhuma seta do analógico fica presa;
+   - jogos da casa (arena/console.js): a marca tem-controle acompanha o
+     estado de verdade (antes só entrava, nunca saía).
+   Teste: core/tests_portal_jogos.py (a biblioteca carrega o controle-jogos.js).
+   CONFERIDO NO CHROMIUM (servidor local, controle simulado): navegar, abrir
+   a ficha, fechar, estantes, busca, abrir o Strike Kids pelo A e começar a
+   partida com o A dentro do launcher, View + B de volta à biblioteca, tirar
+   o controle com e sem o aviso do navegador. NÃO conferido com um controle
+   de verdade nem no celular.
+
+135) ÁREA INTERNA SEM O "SALVAR ENDEREÇO NA CONTA DO GOOGLE"
+   O PEDIDO: "quando abro algo que tenha endereços, ou salvo um objeto,
+   aparece uma notificação para associar ao Google; nunca deve aparecer --
+   esses dados são da empresa e dos clientes".
+   O QUE É. Não é o site: é o preenchimento automático do Chrome (e do Edge),
+   que reconhece nome, rua, CEP, cidade, telefone e e-mail num formulário e
+   oferece guardar no perfil do navegador -- que pode estar ligado à conta
+   Google pessoal do colaborador. O autocomplete="off" que as telas já tinham
+   NÃO vale para endereço (o Chrome ignora de propósito).
+   A CORREÇÃO (sistema_interno/static/interno/ls-sem-autofill.js, carregado no
+   base_inner.html -- painel, gestão /adm e RH -- e no rh/folha_base.html):
+   - campo de contato / endereço / documento / cartão: autocomplete=
+     "ls-interno" (um valor que o navegador não conhece: ele deixa de tratar
+     o campo como endereço, não oferece preencher e não oferece salvar);
+   - os outros campos de texto: autocomplete="off"; o <form>: "off";
+   - vale também para o que entra depois na página (janelas, linhas novas,
+     navegação sem recarregar) e para o campo que um script mudar;
+   - ficam como estão: senha e login (current-password, new-password,
+     username, one-time-code) e o campo com data-ls-autofill="livre".
+   Conferido no Chromium, logado, em /clientes/ (30 campos pessoais marcados,
+   5 formulários) e /estoque/ (23). O pop-up em si é do navegador e não dá
+   para fotografar no teste automático.
+   GARANTIA TOTAL, POR COMPUTADOR (o site só consegue PEDIR ao navegador):
+   ferramentas/navegador/sem-salvar-no-google.reg desliga, por política,
+   "Salvar e preencher endereços" e "formas de pagamento" no Chrome e no Edge
+   daquele computador (dois cliques como administrador; conferir em
+   chrome://policy). Ou, em cada Chrome: Configurações > Preenchimento
+   automático e senhas > Endereços e mais > desligar.

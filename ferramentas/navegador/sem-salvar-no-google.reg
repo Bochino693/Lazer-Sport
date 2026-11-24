@@ -1,0 +1,18 @@
+Windows Registry Editor Version 5.00
+
+; LAZER & SPORT - computadores da empresa
+; Desliga, no Chrome e no Edge, "Salvar e preencher ENDERECOS" e "Salvar e
+; preencher FORMAS DE PAGAMENTO" (o pop-up "Salvar endereco?" / "Salvar na
+; Conta do Google"). Vale para todos os sites e todos os usuarios do
+; computador; as senhas salvas NAO mudam.
+; Como aplicar: dois cliques neste arquivo (como administrador) e reabra o
+; navegador. Conferir: chrome://policy  (ou edge://policy).
+; Como desfazer: apague as duas chaves abaixo no Editor do Registro.
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Google\Chrome]
+"AutofillAddressEnabled"=dword:00000000
+"AutofillCreditCardEnabled"=dword:00000000
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Policies\Microsoft\Edge]
+"AutofillAddressEnabled"=dword:00000000
+"AutofillCreditCardEnabled"=dword:00000000
