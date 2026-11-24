@@ -127,3 +127,50 @@ class VersaoDoEstaticoTests(SimpleTestCase):
         from sistema_interno.templatetags.interno_extras import estatico
 
         self.assertNotIn("?v=", estatico("interno/nao-existe-mesmo.css"))
+
+
+class SemSalvarEnderecoNoGoogleTests(SimpleTestCase):
+    """A área interna não oferece "Salvar endereço?" na conta Google de quem usa.
+
+    O dono viu, em interno./clientes/, o Chrome oferecer guardar o endereço de
+    um cliente na conta Google do computador. Medido no Chromium (LEIA-ME-V10,
+    seção 135): `autocomplete="off"` e um autocomplete inventado NÃO impedem;
+    `role="presentation"` impede a importação e o histórico do campo.
+    """
+
+    ARQUIVO = RAIZ / "sistema_interno" / "static" / "interno" / "ls-sem-autofill.js"
+
+    def test_toda_tela_interna_carrega_o_arquivo(self):
+        for caminho in (
+            RAIZ / "sistema_interno" / "templates" / "base_inner.html",
+            RAIZ / "rh" / "templates" / "rh" / "folha_base.html",
+            RAIZ / "templates" / "admin" / "base_site.html",
+        ):
+            with self.subTest(tela=caminho.name):
+                texto = caminho.read_text(encoding="utf-8")
+                self.assertIn("interno/ls-sem-autofill.js", texto)
+                # sem `defer`: os campos são marcados antes de a pessoa digitar
+                linha = next(l for l in texto.splitlines() if "ls-sem-autofill.js" in l and "<script" in l)
+                self.assertNotIn("defer", linha)
+
+    def test_o_arquivo_usa_o_que_foi_medido_e_nao_o_que_nao_funciona(self):
+        codigo = self.ARQUIVO.read_text(encoding="utf-8")
+        # a trava que funciona: o campo fora do preenchimento automático
+        self.assertIn('setAttribute("role", "presentation")', codigo)
+        # a segunda trava, um tipo que o navegador conhece e não é dado pessoal
+        self.assertIn('"transaction-amount"', codigo)
+        # o caso que deu errado: um valor inventado importa o endereço E guarda o histórico
+        self.assertNotIn('setAttribute("autocomplete", "ls-interno")', codigo)
+        self.assertNotIn('NAO_CONHECIDO', codigo)
+        # senha e login continuam com o navegador
+        for livre in ("current-password", "new-password", "username", "one-time-code"):
+            self.assertIn(livre, codigo)
+
+    def test_o_site_publico_nao_carrega_o_arquivo(self):
+        """No cadastro, no carrinho e no checkout o cliente salva o PRÓPRIO endereço."""
+        publicos = RAIZ / "core" / "templates"
+        for caminho in publicos.rglob("*.html"):
+            if "gestao" in caminho.parts:
+                continue  # a gestão (/adm) é área interna e herda o base_inner.html
+            with self.subTest(tela=str(caminho.relative_to(publicos))):
+                self.assertNotIn("ls-sem-autofill", caminho.read_text(encoding="utf-8"))

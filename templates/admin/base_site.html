@@ -1,0 +1,23 @@
+{% extends "admin/base.html" %}
+{% load i18n interno_extras %}
+{% comment %}
+  O /system/ (admin do Django) também é da casa: os cadastros têm nome,
+  endereço e telefone de cliente. Mesmo texto do base_site.html do Django,
+  mais o ls-sem-autofill.js, para o navegador não oferecer "Salvar endereço?"
+  na conta Google de quem está no computador (LEIA-ME-V10, seção 135).
+{% endcomment %}
+
+{% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block extrahead %}{{ block.super }}
+<script src="{% estatico 'interno/ls-sem-autofill.js' %}"></script>
+{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}

@@ -10213,31 +10213,59 @@ Dependência nova: rjsmin (requirements.txt).
    o controle com e sem o aviso do navegador. NÃO conferido com um controle
    de verdade nem no celular.
 
-135) ÁREA INTERNA SEM O "SALVAR ENDEREÇO NA CONTA DO GOOGLE"
+135) ÁREA INTERNA SEM O "SALVAR ENDEREÇO?" DO GOOGLE (MEDIDO NO CHROMIUM)
    O PEDIDO: "quando abro algo que tenha endereços, ou salvo um objeto,
    aparece uma notificação para associar ao Google; nunca deve aparecer --
-   esses dados são da empresa e dos clientes".
-   O QUE É. Não é o site: é o preenchimento automático do Chrome (e do Edge),
-   que reconhece nome, rua, CEP, cidade, telefone e e-mail num formulário e
-   oferece guardar no perfil do navegador -- que pode estar ligado à conta
-   Google pessoal do colaborador. O autocomplete="off" que as telas já tinham
-   NÃO vale para endereço (o Chrome ignora de propósito).
-   A CORREÇÃO (sistema_interno/static/interno/ls-sem-autofill.js, carregado no
-   base_inner.html -- painel, gestão /adm e RH -- e no rh/folha_base.html):
-   - campo de contato / endereço / documento / cartão: autocomplete=
-     "ls-interno" (um valor que o navegador não conhece: ele deixa de tratar
-     o campo como endereço, não oferece preencher e não oferece salvar);
-   - os outros campos de texto: autocomplete="off"; o <form>: "off";
-   - vale também para o que entra depois na página (janelas, linhas novas,
-     navegação sem recarregar) e para o campo que um script mudar;
+   esses dados são da empresa e dos clientes. Corte isso de todo o sistema,
+   a não ser para o cliente que vai salvar o próprio endereço". O print do
+   dono: em interno./clientes/, "Salvar endereço? Celebre buffet infantil e
+   eventos, Avenida América, 1910 ... Esse será salvo na sua conta
+   ...@gmail.com".
+   O QUE É. Não é o site: é o preenchimento automático do Chrome (e do Edge).
+   Ao enviar um formulário, o navegador reconhece os campos (empresa, rua,
+   número, bairro, cidade, estado, CEP, telefone, e-mail), monta um
+   "endereço" com os dados do CLIENTE e oferece guardar na conta Google de
+   quem está no computador. O autocomplete="off" que as telas já tinham NÃO
+   vale para isso (o Chrome ignora de propósito).
+   A MEDIÇÃO (Chromium de verdade, com chrome://autofill-internals aberto e o
+   arquivo "Web Data" do perfil lido depois; formulário de cliente igual ao
+   nosso, país BR):
+     autocomplete="off" ................ 1 endereço importado (o pop-up)
+     autocomplete inventado ("ls-...") . 1 importado E o histórico guardado
+                                         (foi a 1a tentativa: NÃO resolve)
+     autocomplete="transaction-amount" . 0 importado; histórico guardado
+     role="presentation" ............... 0 importado e 0 histórico
+   Na tela real (interno./clientes/, servidor local, "Novo cliente" salvo
+   pelo fetch do painel): SEM o script, 1 endereço importado e o histórico de
+   bairro, cep, cidade, email, endereco, estado, nome_cliente, numero, pais e
+   telefone no perfil; COM o script, 0 importado e nenhum histórico de
+   cliente -- e o cliente foi salvo do mesmo jeito.
+   A CORREÇÃO (sistema_interno/static/interno/ls-sem-autofill.js):
+   - TODO campo de texto, caixa de texto e lista da área interna recebe
+     role="presentation" (se não tiver um papel próprio): o navegador deixa
+     o campo fora do preenchimento automático (tipo UNKNOWN_TYPE) -- não
+     oferece preencher, não importa endereço, não guarda histórico. Leitor
+     de tela não muda: o ARIA manda ignorar esse papel em campo com foco;
+   - segunda trava no autocomplete: "transaction-amount" no Chrome/Edge (um
+     tipo que ele conhece e não é dado pessoal), "off" nos outros;
+   - <form> com autocomplete="off"; vale para o que entra depois na página
+     (janelas, linhas novas, navegação sem recarregar), para o campo que um
+     script mudar, e é conferido de novo na hora do envio;
    - ficam como estão: senha e login (current-password, new-password,
-     username, one-time-code) e o campo com data-ls-autofill="livre".
-   Conferido no Chromium, logado, em /clientes/ (30 campos pessoais marcados,
-   5 formulários) e /estoque/ (23). O pop-up em si é do navegador e não dá
-   para fotografar no teste automático.
-   GARANTIA TOTAL, POR COMPUTADOR (o site só consegue PEDIR ao navegador):
-   ferramentas/navegador/sem-salvar-no-google.reg desliga, por política,
-   "Salvar e preencher endereços" e "formas de pagamento" no Chrome e no Edge
-   daquele computador (dois cliques como administrador; conferir em
-   chrome://policy). Ou, em cada Chrome: Configurações > Preenchimento
-   automático e senhas > Endereços e mais > desligar.
+     username, one-time-code, webauthn) e o campo com
+     data-ls-autofill="livre".
+   ONDE: base_inner.html (painel, gestão /adm e RH), rh/folha_base.html e o
+   /system/ do Django (templates/admin/base_site.html, novo). O SITE PÚBLICO
+   NÃO carrega o arquivo: no cadastro, no carrinho e no checkout o cliente
+   salva o PRÓPRIO endereço e o navegador dele ajuda como sempre.
+   Testes: sistema_interno/tests_estaticos.py (o base carrega o arquivo; o
+   arquivo usa o papel e as duas travas; o site público não o carrega).
+   O QUE O SITE NÃO ALCANÇA: é um pedido ao navegador, medido na versão de
+   hoje do Chromium; se o Google mudar a regra, pode voltar. A proibição
+   firme, por computador, é a política do navegador:
+   ferramentas/navegador/sem-salvar-no-google.reg desliga "Salvar e preencher
+   endereços" e "formas de pagamento" no Chrome e no Edge daquele computador
+   (dois cliques como administrador; conferir em chrome://policy). Vale para
+   todos os sites naquele PC. E os endereços que já foram salvos antes
+   continuam na conta Google de quem salvou: apagar em
+   chrome://settings/addresses.

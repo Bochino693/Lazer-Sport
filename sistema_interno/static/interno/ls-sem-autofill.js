@@ -1,61 +1,51 @@
 /* ======================================================================
-   SEM "SALVAR NA CONTA DO GOOGLE" NA ÁREA INTERNA
+   SEM "SALVAR ENDEREÇO?" (CONTA DO GOOGLE) NA ÁREA INTERNA
 
-   O QUE APARECIA. Ao abrir uma tela com endereço, telefone ou e-mail de
-   cliente, ou ao salvar um cadastro, o Chrome (e o Edge) mostrava a
-   janelinha dele: "Salvar endereço?" / "Salvar na Conta do Google", além de
-   oferecer os dados pessoais de quem está no computador para preencher o
-   campo. Não é o site que mostra: é o PREENCHIMENTO AUTOMÁTICO do navegador,
-   que reconhece os campos (nome, rua, CEP, cidade, telefone, e-mail,
-   empresa, cartão) e quer guardá-los no perfil -- que pode estar ligado à
-   conta Google pessoal do colaborador. Um clique em "Salvar" levava o dado
-   de um cliente para fora da empresa.
+   O QUE APARECIA. Ao salvar um cliente, um orçamento, uma O.S. -- qualquer
+   tela com nome, rua, CEP, cidade, telefone ou e-mail --, o Chrome (e o Edge)
+   abria a janelinha dele: "Salvar endereço? ... Esse será salvo na sua conta
+   <fulano>@gmail.com". Não é o site que mostra: é o PREENCHIMENTO AUTOMÁTICO
+   do navegador, que lê o formulário enviado, monta um "endereço" com os
+   dados do CLIENTE e oferece guardar na conta Google de quem está no
+   computador. Um clique em "Salvar" levava dado de cliente para fora da
+   empresa. Ele também guardava, calado, o que foi digitado em cada campo
+   (o "histórico do campo") para sugerir depois.
 
-   O QUE ESTE ARQUIVO FAZ, em toda tela que usa o base_inner.html (painel
-   interno, gestão /adm e RH), inclusive no que entra na página depois
-   (janelas, linhas novas, navegação sem recarregar):
-   - todo campo de CONTATO / ENDEREÇO / DOCUMENTO / CARTÃO recebe
-     autocomplete="ls-interno". O Chrome IGNORA autocomplete="off" nesses
-     campos (decisão dele, desde 2014), mas respeita um valor que ele não
-     conhece: o campo deixa de ser "endereço" para o navegador -- ele não
-     oferece preencher e NÃO OFERECE SALVAR;
-   - os outros campos de texto ficam com autocomplete="off" (o navegador
-     não guarda nem sugere o que foi digitado antes naquele campo);
-   - o formulário inteiro fica com autocomplete="off".
+   O QUE FUNCIONA DE VERDADE (medido no Chromium, em chrome://autofill-
+   internals e no arquivo do perfil, com um formulário de cliente igual ao
+   nosso -- ver LEIA-ME-V10, seção 135):
+     autocomplete="off" ................ importa o endereço (o Chrome ignora)
+     autocomplete com valor inventado .. importa o endereço E guarda o histórico
+     autocomplete="transaction-amount" . NÃO importa; guarda o histórico
+     role="presentation" ............... NÃO importa e NÃO guarda o histórico
+   Com role="presentation" o navegador deixa o campo de fora do preenchimento
+   automático inteiro (tipo UNKNOWN_TYPE). Para quem usa leitor de tela nada
+   muda: a regra do ARIA manda ignorar esse papel em campo que recebe foco.
+
+   O QUE ESTE ARQUIVO FAZ, em toda tela da área interna (base_inner.html:
+   painel, gestão /adm e RH; rh/folha_base.html; e o /system/ do Django),
+   inclusive no que entra na página depois (janelas, linhas novas, navegação
+   sem recarregar) e no campo que um script mudar:
+   - TODO campo de texto, caixa de texto e lista recebe role="presentation"
+     (se já não tiver um papel próprio) e a segunda trava no autocomplete:
+     "transaction-amount" nos navegadores do tipo Chrome/Edge, "off" nos
+     outros (Firefox e Safari respeitam o "off");
+   - todo <form> fica com autocomplete="off".
    Ficam como estão: os campos de senha e de login (current-password,
-   new-password, username, one-time-code) e o campo marcado com
-   data-ls-autofill="livre" (para um caso em que o preenchimento seja útil).
+   new-password, username, one-time-code, webauthn) e o campo marcado com
+   data-ls-autofill="livre".
 
-   GARANTIA TOTAL, POR COMPUTADOR: isto é um pedido ao navegador. Para
-   proibir de vez nos computadores da empresa, desligue em cada Chrome
-   (Configurações > Preenchimento automático e senhas > Endereços e mais >
-   "Salvar e preencher endereços") ou aplique a política
-   ferramentas/navegador/sem-salvar-no-google.reg (LEIA-ME-V10, seção 134).
+   O SITE PÚBLICO NÃO CARREGA ESTE ARQUIVO: lá o cliente preenche e salva o
+   PRÓPRIO endereço (cadastro, carrinho, checkout), e o navegador dele pode
+   ajudar como sempre.
    ====================================================================== */
 (function () {
   "use strict";
-  var NAO_CONHECIDO = "ls-interno";
+  var agente = navigator.userAgent || "";
+  var tipoChrome = /Chrome|Chromium|CriOS|Edg|OPR|SamsungBrowser/.test(agente);
+  var TRAVA = tipoChrome ? "transaction-amount" : "off";
   var LIVRES = /^(current-password|new-password|username|one-time-code|webauthn)$/;
-  // valores de autocomplete que o navegador entende como dado pessoal
-  var TIPOS_PESSOAIS = /(^|\s)(name|given-name|additional-name|family-name|nickname|honorific-prefix|honorific-suffix|organization|organization-title|street-address|address-line[123]|address-level[1234]|country|country-name|postal-code|tel|tel-[a-z-]+|email|bday|bday-[a-z]+|sex|url|photo|impp|cc-[a-z-]+|transaction-[a-z]+)$/;
-  // palavras que o navegador usa para "adivinhar" o campo (pelo nome, rótulo e exemplo)
-  var CONTATO = new RegExp([
-    "endere", "logradouro", "\\brua\\b", "avenida", "bairro", "complemento", "\\bcep\\b", "cidade", "munic", "estado", "\\buf\\b",
-    "pa[ií]s", "address", "street", "city", "\\bzip", "postal", "nome", "name", "sobrenome", "e-?mail", "telefone", "\\bfone",
-    "celular", "whats", "phone", "\\btel\\b", "empresa", "raz[aã]o", "fantasia", "company", "organiza", "contato", "destinat",
-    "respons[aá]vel", "cliente", "cpf", "cnpj", "\\brg\\b", "cart[aã]o", "\\bcard", "validade", "cvv", "cvc", "titular",
-    "nascimento", "birth", "n[uú]mero", "\\bnum\\b", "refer[eê]ncia",
-  ].join("|"), "i");
   var NAO_SAO_TEXTO = /^(hidden|submit|button|reset|image|checkbox|radio|file|range|color|password)$/;
-
-  function rotulo(campo) {
-    var partes = [campo.name, campo.id, campo.getAttribute("placeholder"), campo.getAttribute("aria-label"), campo.getAttribute("title")];
-    try {
-      if (campo.labels) for (var i = 0; i < campo.labels.length; i++) partes.push(campo.labels[i].textContent);
-    } catch (e) { /* campo sem rótulo */ }
-    // "rua_entrega", "telefone-2", "nomeCliente": separa as palavras como o navegador faz
-    return partes.filter(Boolean).join(" ").replace(/[_\-.\[\]]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").slice(0, 300);
-  }
 
   function tratar(campo) {
     var marca = campo.tagName;
@@ -63,10 +53,11 @@
     if (marca === "INPUT" && NAO_SAO_TEXTO.test((campo.getAttribute("type") || "text").toLowerCase())) return;
     if (campo.getAttribute("data-ls-autofill") === "livre") return;
     var atual = (campo.getAttribute("autocomplete") || "").trim().toLowerCase();
-    if (LIVRES.test(atual) || atual === NAO_CONHECIDO) return;
-    var pessoal = TIPOS_PESSOAIS.test(atual) || CONTATO.test(rotulo(campo));
-    var certo = pessoal ? NAO_CONHECIDO : "off";
-    if (atual !== certo) campo.setAttribute("autocomplete", certo);
+    if (LIVRES.test(atual)) return;
+    // 1a trava: fora do preenchimento automático (não importa endereço, não guarda histórico)
+    if (!campo.hasAttribute("role")) campo.setAttribute("role", "presentation");
+    // 2a trava: um tipo que o navegador conhece e que não é dado pessoal
+    if (atual !== TRAVA) campo.setAttribute("autocomplete", TRAVA);
   }
 
   function varrer(raiz) {
@@ -103,14 +94,14 @@
       if (fila.length && !agendado) { agendado = true; (window.queueMicrotask || setTimeout)(esvaziar); }
     }).observe(document.documentElement, {
       childList: true, subtree: true,
-      // um script que troca o nome, o exemplo ou o próprio autocomplete do campo: confere de novo
-      attributes: true, attributeFilter: ["autocomplete", "name", "placeholder", "type"],
+      // um script que troca o autocomplete, o papel ou o tipo do campo: confere de novo
+      attributes: true, attributeFilter: ["autocomplete", "role", "type"],
     });
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", comecar);
   else comecar();
-  // os campos que já estão na página antes do DOMContentLoaded (o navegador olha cedo)
-  varrer(document.documentElement);
+  // antes de enviar, uma última conferência (o navegador lê o formulário nesta hora)
+  document.addEventListener("submit", function (e) { varrer(e.target); }, true);
 
-  window.LSSemAutofill = { varrer: varrer };
+  window.LSSemAutofill = { varrer: varrer, trava: TRAVA };
 })();
