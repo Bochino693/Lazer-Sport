@@ -90,6 +90,8 @@ BLOCOS = {
              selo="count_orcamentos", selo_zero=True, selo_titulo="Em aberto"),
         Item("Projetos 3D do site", "pedidos_projeto_3d", "bi-badge-3d-fill", "clientes",
              ativo=("pedido_projeto_3d",)),
+        # as assinaturas dos clientes num lugar só, por orçamento e por O.S. (seção 137)
+        Item("Assinaturas", "assinaturas_inner", "bi-pen-fill", "assinaturas_orcamentos"),
         Item("Clientes no mapa", "clientes_admin", "bi-geo-alt-fill", "gestao"),
         Item("Dados do contrato", "dados_contrato_inner", "bi-file-earmark-ruled-fill", "dados_contrato"),
     ),
@@ -103,6 +105,8 @@ BLOCOS = {
         Item("Ordens de Serviço", "ordens_servico_inner", "bi-clipboard2-check-fill", "ordens_servico",
              ativo=("ordem_servico_previa_inner",), selo="count_ordens_servico", selo_zero=True,
              selo_titulo="Em aberto"),
+        # a mesma tela, para quem não tem o bloco Comercial (Produção e Financeiro)
+        Item("Assinaturas", "assinaturas_inner", "bi-pen-fill", "assinaturas_menu_operacao"),
         Item("Manutenções", "manutencao_inner", "bi-wrench-adjustable-circle-fill", "manutencoes",
              selo="count_manutencao", selo_zero=True, selo_titulo="Manutenções abertas"),
         Item("Etiquetas de transporte", "etiquetas_inner", "bi-upc-scan", "etiquetas", rotulo="Etiquetas"),

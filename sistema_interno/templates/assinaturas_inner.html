@@ -1,0 +1,136 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+{% block title %}Assinaturas | Lazer &amp; Sport{% endblock %}
+{% block top_title %}Assinaturas{% endblock %}
+{% block body_class %}ls-commercial-body{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="assinaturas" href="{% estatico 'interno/assinaturas.css' %}">
+{% endblock %}
+
+{% block content %}
+{% comment %}
+  AS ASSINATURAS NUM LUGAR SÓ (views_assinaturas.py; LEIA-ME-V10, seção 137).
+  Um card por documento que o cliente assina no celular, organizado pelo
+  objeto (o orçamento ou a ordem de serviço): o PDF a um toque, o QR de
+  quem ainda não assinou e o caminho de volta para o objeto. A tela só lê;
+  cada botão leva à tela do objeto, que confere a permissão de novo.
+{% endcomment %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Documentos · assinados no celular</span>
+    <h1>Assinaturas</h1>
+    <p>{% if so_os %}As ordens de serviço que o cliente assina no celular, num lugar só.{% elif so_orcamentos %}Os contratos e termos dos {% if carteira_propria %}seus orçamentos{% else %}orçamentos{% endif %} que o cliente assina no celular, num lugar só.{% else %}Os contratos dos orçamentos e as ordens de serviço que o cliente assina no celular, num lugar só.{% endif %} Imprima ou baixe o PDF assinado com um toque, ou abra o QR de quem ainda não assinou.</p>
+  </div>
+</section>
+
+<section class="ls-as-filtros" aria-label="Filtros das assinaturas">
+  <form method="get" class="ls-as-busca" role="search" action="{% url 'assinaturas_inner' %}">
+    {% if situacao != "todas" %}<input type="hidden" name="situacao" value="{{ situacao }}">{% endif %}
+    {% if objeto != "todos" %}<input type="hidden" name="objeto" value="{{ objeto }}">{% endif %}
+    <i class="bi bi-search" aria-hidden="true"></i>
+    <input type="search" name="q" value="{{ busca }}" autocomplete="off" maxlength="80" enterkeyhint="search"
+           placeholder="Cliente, quem assinou ou o número…" aria-label="Buscar assinatura por cliente, por quem assinou ou pelo número do orçamento ou da O.S.">
+    {% if busca %}<a class="ls-as-busca-limpar" href="{{ url_limpar }}" aria-label="Limpar a busca"><i class="bi bi-x-lg" aria-hidden="true"></i></a>{% endif %}
+    <button type="submit" class="ls-as-busca-ir"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>Buscar</span></button>
+  </form>
+
+  <nav class="ls-as-chips" aria-label="Situação">
+    {% for chip in chips_situacao %}
+      <a class="ls-as-chip{% if chip.ativo %} ativo{% endif %}" href="{{ chip.url }}" data-as-situacao="{{ chip.valor }}"{% if chip.ativo %} aria-current="true"{% endif %}>
+        <i class="bi {{ chip.icone }}" aria-hidden="true"></i> {{ chip.rotulo }} <b>{{ chip.quantos }}</b>
+      </a>
+    {% endfor %}
+  </nav>
+  {% if chips_objeto %}
+  <nav class="ls-as-chips" aria-label="Objeto">
+    {% for chip in chips_objeto %}
+      <a class="ls-as-chip{% if chip.ativo %} ativo{% endif %}" href="{{ chip.url }}" data-as-objeto="{{ chip.valor }}"{% if chip.ativo %} aria-current="true"{% endif %}>
+        <i class="bi {{ chip.icone }}" aria-hidden="true"></i> {{ chip.rotulo }} <b>{{ chip.quantos }}</b>
+      </a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+</section>
+
+<p class="ls-as-conta" aria-live="polite">
+  {{ total }} documento{{ total|pluralize }}{% if busca %} com “{{ busca }}”{% endif %}{% if pagina.paginator.num_pages > 1 %} · página {{ pagina.number }} de {{ pagina.paginator.num_pages }}{% endif %}
+</p>
+
+{% if cartoes %}
+<section class="ls-as-grade" aria-label="Assinaturas">
+  {% for c in cartoes %}
+  <article class="ls-as-card {{ c.situacao }}" data-as-card="{{ c.documento.pk }}" data-as-objeto-tipo="{{ c.objeto.tipo }}">
+    <header class="ls-as-card-topo">
+      <a class="ls-as-objeto" href="{{ c.objeto.url }}" title="Abrir {{ c.objeto.rotulo }}">
+        <i class="bi {{ c.objeto.icone }}" aria-hidden="true"></i>
+        <span>{{ c.objeto.rotulo }}</span>
+        <i class="bi bi-chevron-right ls-as-objeto-seta" aria-hidden="true"></i>
+      </a>
+      {% if c.situacao == "assinado" %}
+        <span class="ls-as-selo assinado"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Assinado</span>
+      {% elif c.situacao == "suspenso" %}
+        <span class="ls-as-selo suspenso"><i class="bi bi-pause-circle-fill" aria-hidden="true"></i> Suspenso</span>
+      {% else %}
+        <span class="ls-as-selo aguardando"><i class="bi bi-hourglass-split" aria-hidden="true"></i> Aguardando</span>
+      {% endif %}
+    </header>
+
+    <div class="ls-as-card-corpo">
+      <h2 class="ls-as-cliente">{{ c.cliente }}</h2>
+      <span class="ls-as-papel"><i class="bi bi-file-earmark-ruled" aria-hidden="true"></i> {{ c.papel }}</span>
+      {% if c.situacao == "assinado" %}
+        <dl class="ls-as-dados">
+          <div><dt>Quem assinou</dt><dd>{{ c.documento.assinante_nome }}</dd></div>
+          <div><dt>Quando</dt><dd>{{ c.documento.assinado_em|date:"d/m/Y" }} às {{ c.documento.assinado_em|date:"H:i" }}</dd></div>
+        </dl>
+      {% else %}
+        <dl class="ls-as-dados">
+          <div><dt>Gerado em</dt><dd>{{ c.documento.criacao|date:"d/m/Y" }} às {{ c.documento.criacao|date:"H:i" }}</dd></div>
+          <div><dt>{% if c.situacao == "suspenso" %}Por quê{% else %}Link{% endif %}</dt>
+            <dd>{% if c.situacao == "suspenso" %}{% if c.objeto.tipo == "os" %}A O.S. foi cancelada ou refeita{% else %}O orçamento não está mais aprovado{% endif %}{% elif c.documento.links_gerados %}{{ c.documento.links_gerados }} gerado{{ c.documento.links_gerados|pluralize }} · vale {{ validade_texto }}{% else %}Ainda não enviado{% endif %}</dd></div>
+        </dl>
+      {% endif %}
+    </div>
+
+    <footer class="ls-as-card-acoes">
+      {% if c.situacao == "assinado" %}
+        <a class="btn btn-success" href="{{ c.url_imprimir }}" target="_blank" rel="noopener" data-as-imprimir>
+          <i class="bi bi-printer-fill" aria-hidden="true"></i> Imprimir ou PDF
+        </a>
+        <a class="btn btn-outline-secondary" href="{{ c.url_via }}" target="_blank" rel="noopener" data-as-ver>
+          <i class="bi bi-file-text" aria-hidden="true"></i> Ver
+        </a>
+      {% elif c.pode_qr %}
+        <a class="btn btn-warning" href="{{ c.url_pagina }}" data-as-qr>
+          <i class="bi bi-qr-code" aria-hidden="true"></i> {% if c.situacao == "suspenso" %}Abrir documento{% else %}Abrir o QR e o link{% endif %}
+        </a>
+        <a class="btn btn-outline-secondary" href="{{ c.url_via }}" target="_blank" rel="noopener" data-as-ver>
+          <i class="bi bi-file-text" aria-hidden="true"></i> Ver
+        </a>
+      {% else %}
+        <a class="btn btn-outline-secondary" href="{{ c.url_via }}" target="_blank" rel="noopener" data-as-ver>
+          <i class="bi bi-file-text" aria-hidden="true"></i> Ver o documento
+        </a>
+      {% endif %}
+    </footer>
+  </article>
+  {% endfor %}
+</section>
+
+{% if pagina.paginator.num_pages > 1 %}
+<nav class="ls-as-paginas" aria-label="Páginas de assinaturas">
+  {% if pagina.has_previous %}<a class="btn btn-outline-secondary" href="{{ url_pagina }}page={{ pagina.previous_page_number }}"><i class="bi bi-chevron-left" aria-hidden="true"></i> Anterior</a>{% endif %}
+  <span>Página {{ pagina.number }} de {{ pagina.paginator.num_pages }}</span>
+  {% if pagina.has_next %}<a class="btn btn-outline-secondary" href="{{ url_pagina }}page={{ pagina.next_page_number }}">Próxima <i class="bi bi-chevron-right" aria-hidden="true"></i></a>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<div class="ls-as-vazio">
+  <i class="bi bi-pen" aria-hidden="true"></i>
+  <strong>{% if busca %}Nenhuma assinatura com “{{ busca }}”.{% elif situacao == "assinadas" %}Nenhum documento assinado por aqui ainda.{% elif situacao == "aguardando" %}Nenhum documento esperando assinatura.{% else %}Nenhum documento de assinatura ainda.{% endif %}</strong>
+  <span>{% if busca %}Confira o nome ou o número, ou limpe a busca.{% else %}O documento nasce na tela do orçamento aprovado ou da ordem de serviço, no botão de gerar o documento para assinatura.{% endif %}</span>
+  {% if busca %}<a class="btn btn-outline-secondary" href="{{ url_limpar }}"><i class="bi bi-x-lg" aria-hidden="true"></i> Limpar a busca</a>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

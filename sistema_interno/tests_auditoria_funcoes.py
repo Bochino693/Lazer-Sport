@@ -39,6 +39,9 @@ MATRIZ = {
     "orcamentos_inner": COMERCIAL | FINANCEIRO,
     "pedidos_projeto_3d": COMERCIAL,
     "dados_contrato_inner": {"gestao"},
+    # as assinaturas num lugar só (seção 137): quem gera o documento do
+    # orçamento (Comercial) e quem vê a O.S. (Produção, Financeiro, Gestão)
+    "assinaturas_inner": COMERCIAL | PRODUCAO | FINANCEIRO,
     "transportadoras_inner": {"vendas", "gestao", "producao"},
     # financeiro
     "financeiro_inner": FINANCEIRO,

@@ -1,0 +1,127 @@
+/* ======================================================================
+   AS ASSINATURAS NUM LUGAR SÓ -- a busca, os chips e os cards
+   (LEIA-ME-V10, seção 137; views_assinaturas.py).
+
+   SÓ PAPÉIS DE COR DO TEMA (nenhuma cor escrita à mão): o mesmo card no
+   Sol, na Lua e no Eclipse. Um card por documento, no máximo 4 por
+   fileira; no celular, um por fileira, com os botões da largura do dedo.
+   Nada se sobrepõe: o card é uma coluna (topo, corpo, ações) e o texto
+   comprido quebra ou encurta com reticências.
+   ====================================================================== */
+
+/* ------------------------------------------------------------- filtros */
+/* minmax(0,1fr): a fileira de chips rola por dentro no celular, sem alargar a tela */
+.ls-as-filtros{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;margin:0 0 14px}
+.ls-as-busca{position:relative;display:flex;align-items:center;gap:8px;margin:0}
+.ls-as-busca > i{position:absolute;left:14px;color:var(--muted);pointer-events:none}
+.ls-as-busca input{
+  flex:1 1 auto;min-width:0;min-height:48px;padding:10px 44px 10px 40px;
+  border:1px solid var(--line);border-radius:14px;background:var(--bg-1);color:var(--text);font:inherit;
+}
+.ls-as-busca input::placeholder{color:var(--muted)}
+.ls-as-busca input:focus{outline:none;border-color:var(--acento);box-shadow:0 0 0 3px rgba(var(--acento-rgb),.2)}
+.ls-as-busca input::-webkit-search-cancel-button{display:none}
+.ls-as-busca-limpar{
+  position:absolute;right:118px;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;
+  color:var(--muted);text-decoration:none;
+}
+.ls-as-busca-limpar:hover,.ls-as-busca-limpar:focus-visible{color:var(--text);background:rgba(var(--acento-rgb),.14)}
+.ls-as-busca-ir{
+  flex:0 0 auto;min-height:48px;padding:0 18px;display:inline-flex;align-items:center;gap:8px;
+  border:1px solid rgba(var(--acento-rgb),.45);border-radius:14px;cursor:pointer;
+  background:rgba(var(--acento-rgb),.14);color:var(--acento-texto);font:inherit;font-weight:800;
+}
+.ls-as-busca-ir:hover,.ls-as-busca-ir:focus-visible{background:rgba(var(--acento-rgb),.24)}
+
+.ls-as-chips{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0}
+.ls-as-chip{
+  min-height:40px;padding:7px 14px;display:inline-flex;align-items:center;gap:7px;
+  border:1px solid var(--line);border-radius:999px;text-decoration:none;white-space:nowrap;
+  color:var(--text-2);background:rgba(var(--verniz-rgb),.035);font-size:.84rem;font-weight:800;line-height:1;
+  transition:border-color .15s ease,background .15s ease,color .15s ease;
+}
+.ls-as-chip b{
+  min-width:22px;padding:3px 7px;border-radius:999px;text-align:center;font-size:.72rem;
+  color:var(--text-2);background:rgba(var(--muted-rgb),.16);
+}
+.ls-as-chip:hover,.ls-as-chip:focus-visible{border-color:var(--line-forte);color:var(--text);background:rgba(var(--acento-rgb),.1)}
+.ls-as-chip:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.ls-as-chip.ativo{border-color:var(--acento);color:var(--acento-texto);background:rgba(var(--acento-rgb),.18)}
+.ls-as-chip.ativo b{color:var(--acento-tinta);background:var(--acento)}
+
+.ls-as-conta{margin:0 0 12px;color:var(--muted);font-size:.84rem;font-weight:700}
+
+/* --------------------------------------------------------------- cards */
+.ls-as-grade{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0 0 18px}
+@media (max-width:1240px){.ls-as-grade{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:900px){.ls-as-grade{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.ls-as-grade{grid-template-columns:minmax(0,1fr)}}
+
+.ls-as-card{
+  --as-rgb:var(--yellow-rgb);--as-cor:var(--yellow-texto);
+  position:relative;display:flex;flex-direction:column;gap:12px;min-width:0;padding:14px;
+  border:1px solid var(--line);border-top:3px solid rgba(var(--as-rgb),.7);border-radius:var(--radius-lg);
+  background:var(--panel);box-shadow:var(--shadow-soft);
+}
+.ls-as-card.assinado{--as-rgb:var(--green-rgb);--as-cor:var(--green-texto)}
+.ls-as-card.suspenso{--as-rgb:var(--muted-rgb);--as-cor:var(--muted)}
+
+/* o objeto em cima e o selo embaixo, sempre: o número comprido da O.S. não empurra o selo ora para o lado, ora para baixo */
+.ls-as-card-topo{display:flex;flex-direction:column;align-items:flex-start;gap:8px;min-width:0}
+.ls-as-objeto{
+  min-width:0;max-width:100%;min-height:36px;padding:5px 10px;display:inline-flex;align-items:center;gap:7px;
+  border:1px solid var(--line);border-radius:11px;text-decoration:none;
+  color:var(--text);background:var(--panel-2);font-size:.8rem;font-weight:800;
+}
+.ls-as-objeto > i:first-child{color:var(--acento-texto)}
+.ls-as-objeto span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-as-objeto-seta{font-size:.7rem;color:var(--muted)}
+.ls-as-objeto:hover,.ls-as-objeto:focus-visible{border-color:var(--acento);color:var(--text);background:rgba(var(--acento-rgb),.12)}
+.ls-as-selo{
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;
+  font-size:.72rem;font-weight:800;line-height:1.3;white-space:nowrap;
+  color:var(--as-cor);background:rgba(var(--as-rgb),.12);border:1px solid rgba(var(--as-rgb),.36);
+}
+
+.ls-as-card-corpo{display:flex;flex-direction:column;gap:8px;min-width:0;flex:1 1 auto}
+.ls-as-cliente{
+  margin:0;color:var(--text);font-size:1.02rem;font-weight:900;line-height:1.25;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
+}
+.ls-as-papel{display:inline-flex;align-items:center;gap:6px;color:var(--text-2);font-size:.8rem;font-weight:700}
+.ls-as-papel i{color:var(--muted)}
+.ls-as-dados{display:grid;gap:6px;margin:2px 0 0;padding:10px 12px;border-radius:var(--radius-md);background:var(--panel-2)}
+.ls-as-dados div{display:flex;align-items:baseline;justify-content:space-between;gap:10px;min-width:0}
+.ls-as-dados dt{flex:0 0 auto;margin:0;color:var(--muted);font-size:.72rem;font-weight:700}
+.ls-as-dados dd{margin:0;min-width:0;color:var(--text);font-size:.82rem;font-weight:800;text-align:right;overflow-wrap:anywhere}
+
+.ls-as-card-acoes{display:flex;gap:8px;min-width:0}
+.ls-as-card-acoes .btn{
+  min-height:44px;padding:8px 12px;display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  border-radius:13px;font-size:.84rem;font-weight:800;line-height:1.15;white-space:normal;
+}
+.ls-as-card-acoes .btn:first-child{flex:1 1 auto;min-width:0}
+.ls-as-card-acoes .btn:not(:first-child){flex:0 0 auto}
+.ls-as-card-acoes .btn:only-child{width:100%}
+
+/* ------------------------------------------------------ páginas e vazio */
+.ls-as-paginas{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px;margin:0 0 18px;color:var(--text-2);font-weight:700}
+.ls-as-paginas .btn{min-height:44px;display:inline-flex;align-items:center;gap:6px;border-radius:13px;font-weight:800}
+.ls-as-vazio{
+  display:flex;flex-direction:column;align-items:center;gap:8px;margin:0 0 18px;padding:34px 18px;text-align:center;
+  border:1px dashed var(--line-forte);border-radius:var(--radius-xl);background:var(--panel);color:var(--text-2);
+}
+.ls-as-vazio > i{font-size:2rem;color:var(--muted-2)}
+.ls-as-vazio strong{color:var(--text);font-size:1rem}
+.ls-as-vazio span{max-width:46ch;font-size:.86rem;line-height:1.45}
+.ls-as-vazio .btn{margin-top:6px;min-height:44px;display:inline-flex;align-items:center;gap:6px;border-radius:13px}
+
+@media (max-width:600px){
+  .ls-as-busca-ir span{display:none}
+  .ls-as-busca-ir{padding:0 16px}
+  .ls-as-busca-limpar{right:62px}
+  .ls-as-chips{flex-wrap:nowrap;overflow-x:auto;margin:0 -2px;padding:2px;scrollbar-width:none}
+  .ls-as-chips::-webkit-scrollbar{display:none}
+  .ls-as-chip{flex:0 0 auto;min-height:44px}
+  .ls-as-card-acoes .btn{min-height:48px}
+}

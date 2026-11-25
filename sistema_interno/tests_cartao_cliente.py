@@ -629,6 +629,7 @@ class PaginaFechaAFileiraTests(SimpleTestCase):
 
     def test_toda_lista_do_painel_pagina_em_multiplo_de_12(self):
         from contas.views import SegurancaContasView
+        from sistema_interno.views_assinaturas import AssinaturasInnerView
         from sistema_interno.views_clientes import ClientesInnerView
         from sistema_interno.views_gestao import OrcamentosInnerView
         from sistema_interno.views_notas_entrada import NotasEntradaView
@@ -640,6 +641,7 @@ class PaginaFechaAFileiraTests(SimpleTestCase):
             "orçamentos": OrcamentosInnerView.POR_PAGINA,
             "O.S.": OrdensServicoInnerView.POR_PAGINA,
             "notas": NotasEntradaView.POR_PAGINA,
+            "assinaturas": AssinaturasInnerView.POR_PAGINA,
             "contas": SegurancaContasView.POR_PAGINA,
             "pedidos 3D": views_pedidos_projeto3d.POR_PAGINA,
         }

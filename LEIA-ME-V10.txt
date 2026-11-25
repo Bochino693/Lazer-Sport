@@ -10316,7 +10316,123 @@ Dependência nova: rjsmin (requirements.txt).
    folhas em templates/documento_assinatura/ e templates/assinatura_os/,
    static/interno/documento-assinatura.js e avisos-resolver.js;
    core/views_assinatura.py, core/templates/assinatura_publica.html,
-   core/static/site/paginas/assinatura.js; rh/termo.py.
+   core/static/site/paginas/assinatura.js e assinatura.css (saiu o estilo
+   ".relogio", que ficou sem uso); rh/termo.py.
    TESTES: sistema_interno/tests_documento_assinatura.py (vale dentro das 24
    horas e expira depois; o prazo em palavras e no relógio; a página sem
    relógio; o RH com 10 minutos) e tests_etapas_do_pedido.py.
+   CONFERIDO NO CHROMIUM (Playwright, servidor local, banco SQLite com
+   dados SINTÉTICOS), no celular 390 e no PC 1366: a página do cliente sem
+   relógio e sem buraco no topo, a frase "Leia com calma: este link vale 24
+   horas, até DD/MM às HH:MM", e a assinatura de ponta a ponta no celular
+   (nome, CPF, "Li e concordo", o traço, a folha de confirmar, o
+   comprovante); o cartão do painel do orçamento e da O.S. com "23h59"
+   dentro do anel (88 px de texto no anel de 128 px no PC; 64 px no de 92
+   px no celular), os textos "24 horas" e o toast do "Gerar novo link"
+   ("Link novo gerado: vale 24 horas a partir de agora."). Sem rolagem
+   lateral e sem erro de JavaScript.
+
+137) AS ASSINATURAS NUM LUGAR SÓ, ORGANIZADAS PELO OBJETO (ORÇAMENTO E O.S.)
+   O PEDIDO: "e no sistema interno ter com facilidade e orientado com os
+   objetos as assinaturas, para fáceis impressões e etc."
+
+   A CAUSA: a assinatura do cliente só se achava entrando em cada orçamento
+   ou em cada ordem de serviço. Para imprimir o contrato assinado de um
+   cliente era preciso lembrar de qual objeto ele era, achar a linha e
+   abrir a tela do documento.
+
+   A TELA "ASSINATURAS" (interno: /assinaturas/, rota assinaturas_inner)
+     * Um CARD por documento que o cliente assina no celular
+       (DocumentoAssinatura), do mais recente para o mais antigo (pela
+       data da assinatura; sem assinatura, pela data em que foi gerado).
+     * Cada card mostra: o OBJETO ("Orçamento nº 0007/2026" ou "O.S.
+       OS-00002/2026"), que é um botão para o próprio objeto (a janela do
+       orçamento ou da O.S.); a situação (Assinado, Aguardando, Suspenso);
+       o cliente; o papel (Contrato de compra e venda, Termo de compra ou
+       Ordem de serviço); e quem assinou e quando -- ou, se ainda espera,
+       quando foi gerado e quantos links saíram (ou por que está suspenso).
+     * Os botões: assinado -> "Imprimir ou PDF" (abre a via já com a
+       janela de impressão do aparelho, onde também se salva em PDF) e
+       "Ver"; aguardando -> "Abrir o QR e o link" (a tela do documento, com
+       o QR, o WhatsApp e o relógio de 24 horas) e "Ver". Quem só lê a
+       O.S. (o Financeiro) vê "Ver o documento" no lugar do QR.
+     * Filtros por CHIPS (nenhum <select>), cada um com o número do que
+       mostra: Todas / Assinadas / Aguardando e, para quem vê os dois
+       objetos, Todos os objetos / Orçamentos / Ordens de serviço. No
+       celular os chips rolam de lado dentro da fileira.
+     * Busca por cliente, por quem assinou ou pelo número (vale "12",
+       "#12", "0012/2026" e "OS-00012/2026").
+     * No máximo 4 cards por fileira (3, 2 e 1 conforme a tela encolhe) e
+       24 por página (múltiplo de 12); a paginação guarda os filtros.
+     * O documento "substituído" (gerado de novo antes de alguém assinar)
+       não entra: nunca teve assinatura e o link dele não vale mais.
+     * O CPF do assinante e a imagem do traço NÃO vão para a lista: ficam
+       na via, como antes.
+     * A tela só LÊ. Não há tabela nem migração nova, e nenhuma regra de
+       assinatura mudou: imprimir, QR e link continuam nas telas de cada
+       objeto, que conferem a permissão de novo.
+
+   ONDE FICA NO MENU (sistema_interno/menu.py), item "Assinaturas":
+     * Vendas, Vendedor ambulante e Gestão: bloco Comercial, depois de
+       "Projetos 3D do site".
+     * Engenharia de produção e Financeiro: bloco Operação, depois de
+       "Ordens de Serviço". (Uma vez só em cada função.)
+
+   QUEM VÊ O QUÊ (permissoes.capacidades; vale também digitando o endereço)
+     * `assinaturas` (entra na tela): Vendas, Ambulante, Gestão, Produção e
+       Financeiro. A Criação do site não entra (volta para a tela dela).
+     * `assinaturas_orcamentos` (as dos orçamentos): Vendas, Ambulante e
+       Gestão -- a mesma regra de quem gera o documento do orçamento
+       (`orcamentos_editar_comercial`). O Ambulante só vê as da própria
+       carteira, inclusive pela busca e pelos filtros.
+     * `assinaturas_os` (as das O.S.): Produção, Financeiro e Gestão -- a
+       mesma regra de quem vê a O.S. O QR e o link, só quem edita a O.S.
+     * ATENÇÃO, UMA ESCOLHA: o Financeiro NÃO vê as assinaturas dos
+       orçamentos nesta tela, porque hoje a via do contrato do orçamento
+       (documento_assinatura_via) só abre para o Comercial. O card não
+       oferece o que a tela do objeto recusa. Para o Financeiro passar a
+       ver, é preciso abrir a via do orçamento para ele primeiro
+       (views_documento_assinatura.pode_documento) e depois acrescentar
+       `acesso_financeiro` em `assinaturas_orcamentos`.
+
+   POUCAS IDAS AO BANCO: duas consultas da tela, quaisquer que sejam os
+   cards -- os números de todos os chips numa só (aggregate com filtros;
+   o chip aceso já é o total da página, que não conta de novo) e os cards
+   com o orçamento e a O.S. juntos (select_related), sem o PNG do traço
+   nem o diário (defer).
+
+   ARQUIVOS NOVOS: sistema_interno/views_assinaturas.py,
+   templates/assinaturas_inner.html, static/interno/assinaturas.css (só
+   variáveis do tema) e tests_assinaturas.py.
+   ARQUIVOS MEXIDOS: sistema_interno/urls.py (a rota), menu.py (o item nos
+   dois blocos), permissoes.py (as quatro chaves `assinaturas*`),
+   tests_auditoria_funcoes.py (a matriz) e tests_cartao_cliente.py (a
+   página múltipla de 12).
+
+   TESTES: sistema_interno/tests_assinaturas.py (25): a tela e os cards; o
+   assinado imprime e o que espera abre o QR; o CPF e o traço fora da
+   lista; o substituído e o suspenso; cada função vê só o que é dela (o
+   Ambulante nem pela busca); o Financeiro sem o QR; a Criação e quem não
+   entrou não abrem; NENHUM botão de um card leva a uma tela que a pessoa
+   não abre (cada endereço é aberto de verdade, por função); os chips e os
+   números deles; a busca; a página de 24 e a paginação; as consultas não
+   crescem com os cards; o item no menu de cada função, uma vez só; o CSS
+   sem cor escrita à mão e a tela sem <select>, alert nem confirm. A
+   varredura de tests_urls.py abre a rota nova sozinha (é uma tela de GET
+   sem parâmetro) e a auditoria das funções (tests_auditoria_funcoes.py)
+   confere quem abre.
+   Comando da suíte: DJANGO_SETTINGS_MODULE=lazer.settings_test python
+   manage.py test core sistema_interno contas rh --parallel 1
+
+   CONFERIDO NO CHROMIUM (Playwright, servidor local, banco SQLite com
+   dados SINTÉTICOS), no celular 390 e no PC 1366: a tela com 9 cards (4
+   por fileira no PC, 1 no celular), nada vazando do card e sem rolagem
+   lateral; os chips e a busca clicados (inclusive a busca sem resultado
+   e o "Limpar a busca"); "Ver" abrindo a via noutra aba; "Abrir o QR e o
+   link" chegando ao cartão com o QR; o botão do objeto abrindo a janela
+   do orçamento; o item do menu clicado; a tela como dono, Vendas,
+   Ambulante, Produção, Financeiro e Criação (esta volta para a tela
+   dela); os temas Lua, Sol e Eclipse. Sem erro de JavaScript. NÃO
+   conferido na tela: a janela de impressão do aparelho (o navegador de
+   teste não a mostra; o teste confere que a via chega com o "imprimir ao
+   abrir") e o site no ar (nada foi publicado).

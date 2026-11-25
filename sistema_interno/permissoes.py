@@ -320,6 +320,17 @@ def capacidades(user) -> dict[str, bool]:
         # Os dados do vendedor no contrato de compra e venda (o representante
         # da empresa): quem responde pela identidade jurídica no papel.
         "dados_contrato": gestao,
+        # AS ASSINATURAS NUM LUGAR SÓ (seção 137): a tela junta os documentos
+        # que o cliente assina, organizados pelo objeto. Cada um vê as do
+        # objeto que já abre: as do ORÇAMENTO, quem gera o documento dele (o
+        # Comercial -- e o Ambulante só as da própria carteira); as da O.S.,
+        # quem vê a O.S. (o Financeiro incluído, que cobra pelo papel
+        # assinado). `assinaturas_menu_operacao` só decide em que bloco do
+        # menu o item aparece para quem não é do Comercial.
+        "assinaturas": comercial or producao or acesso_financeiro,
+        "assinaturas_orcamentos": comercial,
+        "assinaturas_os": producao or acesso_financeiro or gestao,
+        "assinaturas_menu_operacao": (producao or acesso_financeiro) and not comercial,
         # ENTRADA DE NOTA FISCAL (seção 115): lança quem paga a compra -- o
         # Financeiro, e a Gestão (o superusuário tem todas). A Engenharia de
         # produção, dona do estoque, VÊ as notas lançadas (não as que ainda

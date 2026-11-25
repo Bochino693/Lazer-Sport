@@ -55,6 +55,7 @@ from .views_montagem import ListaMontagemView
 from .views_notas_entrada import ArquivoNotaEntradaView, NotaEntradaView, NotasEntradaView
 from .views_transportadoras import TransportadorasInnerView
 from .views_dados_contrato import DadosContratoInnerView
+from .views_assinaturas import AssinaturasInnerView
 from .views_etapas import EtapasDoOrcamentoView
 from .views_assinatura_os import (
     AssinaturaOSInnerView,
@@ -293,6 +294,10 @@ urlpatterns = [
 
     # ---------------- orçamentos ----------------
     path('orcamentos/', OrcamentosInnerView.as_view(), name='orcamentos_inner'),
+    # As assinaturas dos clientes num lugar só, organizadas pelo objeto
+    # (orçamento ou O.S.), para imprimir e baixar. Ver `views_assinaturas.py`
+    # e LEIA-ME-V10, seção 137.
+    path('assinaturas/', AssinaturasInnerView.as_view(), name='assinaturas_inner'),
     path(
         'orcamentos/<int:pk>/previa/',
         OrcamentoPreviaInnerView.as_view(),
