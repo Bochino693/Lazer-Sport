@@ -100,6 +100,18 @@
       </div>
     </fieldset>
 
+    <fieldset>
+      <legend><i class="bi bi-coin" aria-hidden="true"></i> Moedeiro <small>(o preço com moedeiro das máquinas)</small></legend>
+      <p class="ls-dc-nota">O preço do cadastro é o da máquina SEM moedeiro. Com moedeiro, o sistema soma este valor — o mesmo para todas as máquinas (brinquedões, espaços e kits não têm a opção).</p>
+      <div class="ls-dc-grade">
+        <label class="ls-dc-campo">
+          <span>Acréscimo do moedeiro <small>(R$)</small></span>
+          <input class="form-control" type="text" name="acrescimo_moedeiro" maxlength="12" inputmode="decimal" autocomplete="off" placeholder="Ex.: 350,00" aria-describedby="dcAjudaMoedeiro" value="{% if dados.acrescimo_moedeiro %}{{ dados.acrescimo_moedeiro|moeda }}{% endif %}" data-rotulo="Acréscimo do moedeiro">
+          <em class="ls-dc-ajuda" id="dcAjudaMoedeiro">{% if dados.acrescimo_moedeiro %}Hoje: máquina com moedeiro = preço do cadastro + R$ {{ dados.acrescimo_moedeiro|moeda }}.{% else %}Vazio: a opção “com moedeiro” não aparece em lugar nenhum.{% endif %}</em>
+        </label>
+      </div>
+    </fieldset>
+
     <div class="ls-dc-acoes">
       <button type="submit" class="btn btn-success btn-lg"><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Salvar dados do contrato</button>
     </div>

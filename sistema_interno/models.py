@@ -3189,6 +3189,14 @@ class DadosContrato(Prime):
         "Endereço residencial do representante", max_length=240, blank=True,
         help_text="Como sai no contrato: “residente e domiciliado na …”.",
     )
+    # O ACRÉSCIMO DO MOEDEIRO (seção 143): um valor único, somado ao preço
+    # da máquina quando ela sai COM moedeiro. Vazio ou zero = a opção não
+    # aparece em lugar nenhum (`moedeiro.py`). Mora aqui porque é a Gestão
+    # que define, na mesma tela dos dados comerciais do contrato.
+    acrescimo_moedeiro = models.DecimalField(
+        "Acréscimo do moedeiro", max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Somado ao preço da máquina com moedeiro. Vazio: a opção não aparece.",
+    )
     atualizado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

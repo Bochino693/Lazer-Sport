@@ -10971,3 +10971,125 @@ Dependência nova: rjsmin (requirements.txt).
    máquina de verdade. NÃO conferido: com os pedidos reais; como Vendas e
    Financeiro na tela (só nos testes); o modo "Cards" da lista com a
    coluna nova; os temas Sol e Eclipse.
+
+143) AS FICHAS QUE ERAM ADESIVOS ("CANDY", O BALDE) E A PRIMEIRA FATIA DO MOEDEIRO
+   PARTE 1 -- O PEDIDO: "foi salvo uns brinquedos que na verdade eram para
+   ser adesivos, air game kids adesivo cand, balde e xícara também... apaga
+   os objetos e adicione como adesivo." Decidido pelo dono: o adesivo se
+   chama "Candy" e NÃO tem preço próprio (vale o preço da máquina).
+
+   O QUE A MIGRAÇÃO core/0218 FAZ (só dados; a regra em core/variantes.py:
+   FICHAS_QUE_SAO_ADESIVOS, FICHAS_REPETIDAS, juntar_as_fichas_que_sao_
+   adesivos, unir_as_fichas_repetidas):
+     * "Air Game Kids cand" -> vira o adesivo "Candy" do Air Game Kids. O
+       preço, o nome e o adesivo padrão do Air Game Kids não mudam; o preço
+       da ficha (5.680,00) é descartado.
+     * "Multijogos 32"" (aceita as aspas retas, curvas, duas simples, ou sem
+       aspas) -> vira o adesivo "Candy" do Multi Jogos (o preço do Multi
+       Jogos não muda).
+     * "Balde giratório" + "Balde Giratório Manual" -> UM produto. Fica a
+       ficha "Manual" (com as fotos, as medidas 1,1 x 1,5 x 1,5, a voltagem
+       e a categoria dela), que passa a se chamar "Balde Giratório" e a
+       custar R$ 8.500,00; o adesivo padrão dela (com as fotos) ganha o
+       nome "Candy" se ainda se chama "Padrão". A outra ficha (a de R$
+       850.000,00, sem foto) é apagada.
+     Em todos: as fotos, o 3D e TODAS as referências (orçamento, carrinho
+     -- com o adesivo --, pedido, favorito, lista de desejos, promoção,
+     combo, cliques) passam para o produto que fica; a ficha à parte é
+     apagada; o endereço antigo (/brinquedo/<id antigo>/) redireciona.
+   SE O NOME NO AR FOR OUTRO: a ficha é achada pelo nome, exatamente (sem
+   "parecido com": "Air Game Premium", "Multijogos 42"" e "Balde Giratório
+   Elétrico" não são tocados). Com outro nome, AQUELE par não muda e o log
+   da migração diz "ficha não encontrada" -- aí é acertar o nome em
+   core/variantes.py e rodar de novo (python manage.py shell, as duas
+   funções com django.apps.apps), ou renomear a ficha no painel antes do
+   deploy. Sem o produto que fica, a ficha também fica. Rodar de novo não
+   muda nada.
+   A XÍCARA: não entrou (falta o nome da ficha e a máquina). É uma linha a
+   mais em FICHAS_QUE_SAO_ADESIVOS e uma migração de dados igual à 0218.
+   NÃO FEITO: a ação "Transformar em adesivo de..." no cadastro do
+   brinquedo do painel. A regra já é reutilizável (`_juntar_ficha` com
+   django.apps.apps), mas a tela do cadastro (a seção "Adesivos") é grande
+   e a ação apaga uma ficha: fica para uma entrega própria, com a folha de
+   confirmação e os testes dela.
+
+   PARTE 2 -- O PEDIDO: "entenda também que os moedeiros nas máquinas, que
+   não são brinquedões, arenas esportivas nem esses brinquedões grandes,
+   têm dois preços com moedeiro ou sem." Decidido pelo dono: o preço do
+   cadastro é o SEM moedeiro; o COM moedeiro é ele + um acréscimo fixo, o
+   mesmo para todas as máquinas; a escolha deve aparecer no orçamento do
+   painel, no site (produto, carrinho, pedido) e nos documentos.
+
+   O QUE ENTROU (a primeira fatia: a regra, a configuração e a conta):
+     * DadosContrato.acrescimo_moedeiro (sistema_interno/0083, só esquema):
+       a Gestão digita em Comercial > Dados do contrato, no bloco
+       "Moedeiro" ("350", "350,00", "1.250,50"). VAZIO OU ZERO = a opção
+       não aparece em lugar nenhum.
+     * Brinquedos.moedeiro (core/0219, só esquema): vazio = a regra decide;
+       "sim"/"nao" = a palavra da Gestão para aquela máquina.
+     * sistema_interno/moedeiro.py -- o único lugar da conta: ativo(),
+       aceita(brinquedo), oferece(brinquedo), preco(brinquedo,
+       com_moedeiro) e opcoes(brinquedo) (os dois chips com o preço de cada
+       um). A REGRA de quem aceita é a mesma da lista de montagem
+       (montagem.Regras.e_projeto: a categoria marcada nas regras da
+       produção, ou a palavra no nome): brinquedão, espaço, trampolim,
+       quadra... NÃO; kit eletrônico NÃO; o resto (as máquinas) SIM. O
+       preço é sempre calculado no servidor: pedir "com moedeiro" de quem
+       não oferece devolve o preço do cadastro.
+   O QUE FICOU PARA AS PRÓXIMAS FATIAS (nada disso existe ainda; com o
+   acréscimo digitado, a opção AINDA não aparece para ninguém):
+     1. O liga/desliga por máquina no cadastro do brinquedo (o campo
+        existe; falta o controle na tela do cadastro).
+     2. O orçamento do painel: ItemOrcamento.com_moedeiro, os chips "Sem
+        moedeiro / Com moedeiro" ao pôr a máquina na proposta (o editor de
+        itens e a busca de itens), o preço entrando pelo moedeiro.preco.
+     3. Os documentos: a linha do item na proposta pública, no retrato do
+        contrato e da ordem de serviço, na O.S., na lista de montagem e nas
+        etiquetas ("com moedeiro"), para a fábrica saber montar.
+     4. O site: os chips na página do produto (ao lado do adesivo, mudando
+        o preço), ItemCarrinho.moedeiro e ItemPedido (o preço validado no
+        servidor no carrinho e no pagamento), promoções e combos.
+     5. A ficha "Air Game Premium com Sistema de Ficheiro" -> a opção "com
+        moedeiro" do Air Game Premium: depende do item 2 e do 4 (é preciso
+        ter onde marcar a opção nas referências repontadas).
+   DÚVIDAS PARA O DONO:
+     1. O VALOR do acréscimo (é só digitar na tela).
+     2. A ficha "com Sistema de Ficheiro" custa R$ 14.990,00. Com o
+        acréscimo fixo, o preço dela passa a ser Air Game Premium +
+        acréscimo, que pode não dar 14.990: qual vale?
+     3. Promoções e combos: a máquina em promoção com moedeiro soma o
+        mesmo acréscimo ao preço da promoção?
+     4. A XÍCARA: qual é a ficha e de qual máquina ela é adesivo?
+     5. A regra "máquina aceita, brinquedão não" usa a marcação de
+        brinquedão das regras da produção. Há máquina comum que NÃO leva
+        moedeiro (mesas, pebolim)? Se sim, são desligadas uma a uma (item 1).
+
+   ARQUIVOS NOVOS: core/migrations/0218_fichas_que_sao_adesivos.py,
+   0219_moedeiro_por_maquina.py; sistema_interno/migrations/
+   0083_acrescimo_do_moedeiro.py; sistema_interno/moedeiro.py;
+   core/tests_fichas_que_sao_adesivos.py; sistema_interno/tests_moedeiro.py.
+   ARQUIVOS MEXIDOS: core/variantes.py, core/models.py,
+   sistema_interno/models.py, views_dados_contrato.py,
+   templates/dados_contrato_inner.html.
+   TESTES: core/tests_fichas_que_sao_adesivos.py (10): cada ficha vira o
+   adesivo certo, os preços dos produtos não mudam, o Balde vira um só a
+   8.500 com as medidas e a foto, as referências vão junto, o endereço
+   antigo redireciona, os vizinhos de nome parecido não são tocados, rodar
+   de novo não muda nada, com outro nome nada acontece, sem o produto a
+   ficha fica, a xícara não está. sistema_interno/tests_moedeiro.py (11):
+   sem o acréscimo a opção não existe; máquina aceita e brinquedão/kit não;
+   a Gestão liga e desliga por máquina; o preço com moedeiro; a tela (os
+   formatos em reais, vazio e zero desligam, o valor inválido volta com o
+   campo, só a Gestão muda); as migrações de esquema sem RunPython.
+   Comando da suíte: DJANGO_SETTINGS_MODULE=lazer.settings_test python
+   manage.py test core sistema_interno contas rh --parallel 1
+
+   CONFERIDO NO CHROMIUM (servidor local, catálogo SINTÉTICO com os nomes
+   e os preços do que está no ar), em 390 e 1366 px: a página do Air Game
+   Kids com ?adesivo=candy (a foto do Candy, o preço do Air Game Kids), o
+   endereço da ficha apagada indo para o produto, o Balde Giratório a
+   8.500 e o endereço do balde apagado; a tela Dados do contrato com o
+   bloco Moedeiro vazio, o valor inválido (a folha de erro) e o valor
+   salvo. NÃO conferido: o Multi Jogos na tela (só nos testes) e, sobretudo,
+   O BANCO NO AR -- a migração roda no deploy; os nomes das fichas no ar
+   podem diferir dos que o dono descreveu.

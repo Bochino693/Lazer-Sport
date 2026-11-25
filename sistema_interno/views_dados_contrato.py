@@ -17,6 +17,7 @@ gerados DEPOIS -- o contrato já gerado guarda a cópia dele (o retrato).
 from __future__ import annotations
 
 import re
+from decimal import Decimal, InvalidOperation
 
 from django.shortcuts import render
 from django.utils.html import escape
@@ -82,6 +83,28 @@ class DadosContratoInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
             )
         return mark_safe(html)
 
+    @staticmethod
+    def acrescimo_digitado(request):
+        """O acréscimo do moedeiro (seção 143): "350", "350,00", "1.250,50". Vazio = sem a opção."""
+        bruto = (request.POST.get("acrescimo_moedeiro") or "").strip().replace("R$", "").replace(" ", "")
+        if not bruto:
+            return None
+        if "," in bruto:
+            bruto = bruto.replace(".", "").replace(",", ".")
+        try:
+            valor = Decimal(bruto).quantize(Decimal("0.01"))
+        except (InvalidOperation, ValueError):
+            raise ErroDeFormulario(
+                "Digite o acréscimo do moedeiro em reais, como 350,00 — ou deixe vazio para não oferecer a opção.",
+                campo="acrescimo_moedeiro",
+            )
+        if valor < 0 or valor > Decimal("99999.99"):
+            raise ErroDeFormulario(
+                "O acréscimo do moedeiro precisa ser um valor entre R$ 0,00 e R$ 99.999,99.",
+                campo="acrescimo_moedeiro",
+            )
+        return valor or None
+
     def get(self, request):
         dados = DadosContrato.atual()
         return render(request, self.template_name, {
@@ -102,6 +125,7 @@ class DadosContratoInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
         dados.representante_rg = RG_COM_ROTULO.sub("", dados.representante_rg).strip()
         dados.representante_endereco = dados.representante_endereco.rstrip(" .;,")
         dados.endereco_sede = dados.endereco_sede.rstrip(" .;,")
+        dados.acrescimo_moedeiro = self.acrescimo_digitado(request)
         dados.cnpj = cnpj_pontuado(dados.cnpj)
         dados.atualizado_por = request.user
         dados.save()
