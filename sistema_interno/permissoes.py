@@ -328,8 +328,14 @@ def capacidades(user) -> dict[str, bool]:
         # assinado). `assinaturas_menu_operacao` só decide em que bloco do
         # menu o item aparece para quem não é do Comercial.
         "assinaturas": comercial or producao or acesso_financeiro,
-        "assinaturas_orcamentos": comercial,
+        # O Financeiro também vê as dos orçamentos (o dono liberou: ele cobra
+        # pelo contrato assinado). Só LÊ e imprime: gerar o documento, o QR e
+        # o link continuam com o Comercial (`orcamentos_editar_comercial`).
+        "assinaturas_orcamentos": comercial or acesso_financeiro,
         "assinaturas_os": producao or acesso_financeiro or gestao,
+        # o item no bloco Comercial do menu: só para quem é do Comercial (o
+        # Financeiro, que agora também vê as dos orçamentos, fica no Operação)
+        "assinaturas_menu_comercial": comercial,
         "assinaturas_menu_operacao": (producao or acesso_financeiro) and not comercial,
         # ENTRADA DE NOTA FISCAL (seção 115): lança quem paga a compra -- o
         # Financeiro, e a Gestão (o superusuário tem todas). A Engenharia de

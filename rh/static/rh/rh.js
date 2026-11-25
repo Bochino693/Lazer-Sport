@@ -15,7 +15,7 @@
      * FICHA: CPF e PIS conferidos pelos dígitos enquanto se digita; as
        especialidades só aparecem para a Engenharia de produção.
      * TAREFAS: o filtro dos chips de responsável e o "Sugerir pela etapa".
-     * TERMO: o QR e o link de 10 minutos, renovados sozinhos. */
+     * TERMO: o QR e o link de 24 horas, renovados sozinhos. */
 (function (window, document) {
   "use strict";
 
@@ -278,7 +278,13 @@
     var linkAtual = "";
     var fim = 0;
     var diferenca = 0;
-    var validade = 600;  // segundos; o servidor manda o número certo
+    var validade = 86400;  // segundos; o servidor manda o número certo
+    var validadeTexto = "24 horas";
+    // "23h59" com uma hora ou mais, "9:59" abaixo disso
+    function noRelogio(resta) {
+      if (resta >= 3600) return Math.floor(resta / 3600) + "h" + ("0" + Math.floor((resta % 3600) / 60)).slice(-2);
+      return Math.floor(resta / 60) + ":" + ("0" + (resta % 60)).slice(-2);
+    }
     var renovando = false;
 
     function pedir() {
@@ -305,6 +311,7 @@
         diferenca = json.agora - Date.now();
         fim = json.expira_em;
         validade = json.validade || validade;
+        validadeTexto = json.validade_texto || validadeTexto;
       }).catch(function () { renovando = false; });
     }
 
@@ -312,14 +319,14 @@
       if (!document.body.contains(caixa)) { clearInterval(tique); return; }
       if (!fim) return;
       var resta = Math.max(0, Math.round((fim - (Date.now() + diferenca)) / 1000));
-      relogio.textContent = Math.floor(resta / 60) + ":" + ("0" + (resta % 60)).slice(-2);
+      relogio.textContent = noRelogio(resta);
       if (resta <= 5) pedir();
     }, 1000);
 
     caixa.querySelector("[data-rh-novo-link]").addEventListener("click", pedir);
     caixa.querySelector("[data-rh-copiar-link]").addEventListener("click", function () {
       if (!linkAtual) return;
-      var feito = function () { aviso("sucesso", "Link copiado. Ele vale " + Math.round(validade / 60) + " minutos."); };
+      var feito = function () { aviso("sucesso", "Link copiado. Ele vale " + validadeTexto + "."); };
       if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(linkAtual).then(feito, function () { aviso("info", linkAtual, "Copie o link"); });
       } else {

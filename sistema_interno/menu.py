@@ -91,7 +91,7 @@ BLOCOS = {
         Item("Projetos 3D do site", "pedidos_projeto_3d", "bi-badge-3d-fill", "clientes",
              ativo=("pedido_projeto_3d",)),
         # as assinaturas dos clientes num lugar só, por orçamento e por O.S. (seção 137)
-        Item("Assinaturas", "assinaturas_inner", "bi-pen-fill", "assinaturas_orcamentos"),
+        Item("Assinaturas", "assinaturas_inner", "bi-pen-fill", "assinaturas_menu_comercial"),
         Item("Clientes no mapa", "clientes_admin", "bi-geo-alt-fill", "gestao"),
         Item("Dados do contrato", "dados_contrato_inner", "bi-file-earmark-ruled-fill", "dados_contrato"),
     ),

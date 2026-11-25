@@ -10436,3 +10436,39 @@ Dependência nova: rjsmin (requirements.txt).
    conferido na tela: a janela de impressão do aparelho (o navegador de
    teste não a mostra; o teste confere que a via chega com o "imprimir ao
    abrir") e o site no ar (nada foi publicado).
+
+138) O FINANCEIRO VÊ AS ASSINATURAS DOS ORÇAMENTOS, E O TERMO DO RH TAMBÉM VALE 24 HORAS
+   O dono respondeu "sim para os 3" às perguntas das seções 136 e 137:
+   publicar, liberar o Financeiro e pôr o RH em 24 horas.
+
+   O FINANCEIRO (só lê e imprime)
+     * permissoes.capacidades: `assinaturas_orcamentos` = Comercial OU
+       Financeiro. Na tela Assinaturas ele vê os contratos dos orçamentos e
+       as O.S., com "Imprimir ou PDF" e "Ver o documento" -- sem o QR e o
+       link, que continuam de quem gera o documento (Comercial).
+     * A via do contrato (`documento_assinatura_via`) abre para ele
+       (`views_documento_assinatura.pode_ver_a_via`, `so_leitura`); o
+       "voltar" dela leva à lista das assinaturas. O cartão do documento, o
+       link e o estado continuam 403 para o Financeiro.
+     * No menu ele continua com UM item, no bloco Operação
+       (`assinaturas_menu_comercial` decide o item do bloco Comercial).
+
+   O RH EM 24 HORAS
+     * rh.termo.VALIDADE_DO_LINK voltou a ler a constante do contrato
+       (documento_assinatura.VALIDADE_DO_LINK, 24 horas): os dois andam
+       juntos de novo. A seção 136 dizia 10 minutos para o RH; não vale mais.
+     * Os textos do RH leem o prazo em palavras ("link de 24 horas",
+       "O link vale por 24 horas", "Link copiado. Ele vale 24 horas.") e os
+       relógios do cartão e da página do termo mostram "23h59" (rh.js,
+       rh-assinar.js). A página do termo do colaborador CONTINUA com o
+       relógio (o pedido de tirar foi para o contrato do cliente).
+     * NÃO conferido no navegador: as telas do termo do RH com as 24 horas
+       (só pelos testes).
+
+   ARQUIVOS: sistema_interno/permissoes.py, menu.py, views_assinaturas.py,
+   views_documento_assinatura.py; rh/termo.py, rh/views_termo.py,
+   rh/templates/rh/termo_publico.html e termo_colaborador.html,
+   rh/static/rh/rh.js e rh-assinar.js.
+   TESTES: tests_assinaturas.py (o Financeiro vê as dos orçamentos e das
+   O.S. só para ler; um item no menu), tests_documento_assinatura.py (a via
+   abre, o resto 403; o RH com 24 horas). Suíte completa: 3545 testes, OK.

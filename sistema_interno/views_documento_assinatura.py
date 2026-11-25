@@ -72,9 +72,18 @@ def _conversa_whatsapp(telefone, mensagem):
     return OrcamentosInnerView.conversa_whatsapp(telefone, mensagem)
 
 
+def pode_ver_a_via(user) -> bool:
+    """Quem LÊ e imprime o documento do orçamento: quem o gera (Comercial) e
+    quem vê as assinaturas dos orçamentos (o Financeiro, seção 138)."""
+    return pode_documento(user) or capacidades(user)["assinaturas_orcamentos"]
+
+
 class _BaseDocumento(OrcamentoInternoRequiredMixin, View):
+    #: Só a via (ler e imprimir) abre para quem não gera o documento.
+    so_leitura = False
+
     def orcamento(self, request, pk):
-        if not pode_documento(request.user):
+        if not (pode_ver_a_via(request.user) if self.so_leitura else pode_documento(request.user)):
             raise PermissionDenied(
                 "O documento de assinatura pertence a quem edita o orçamento (Comercial)."
             )
@@ -324,7 +333,12 @@ class ViaDocumentoAssinaturaInnerView(_BaseDocumento):
     "Salvar em PDF" -- o mesmo caminho da proposta ("Imprimir ou salvar em
     PDF"). Com `?imprimir=1` a janela de impressão abre sozinha: é o
     "Baixar PDF" do cartão.
+
+    É a única tela do documento que o Financeiro abre (`so_leitura`): ele
+    lê e imprime o contrato assinado, e volta para a lista das assinaturas.
     """
+
+    so_leitura = True
 
     def get(self, request, pk):
         orcamento = self.orcamento(request, pk)
@@ -336,11 +350,18 @@ class ViaDocumentoAssinaturaInnerView(_BaseDocumento):
         else:
             documento = svc.documento_atual(orcamento)
         if documento is None:
-            return redirect(self.urls(orcamento)["pagina"])
+            # sem documento: quem gera vai para o cartão; quem só lê, para a lista
+            return redirect(
+                self.urls(orcamento)["pagina"] if pode_documento(request.user)
+                else reverse("assinaturas_inner", urlconf=URLCONF)
+            )
 
         from core.views_assinatura import contexto_da_folha
 
         contexto = contexto_da_folha(documento, painel=True)
-        contexto["voltar_url"] = self.urls(orcamento)["pagina"]
+        contexto["voltar_url"] = (
+            self.urls(orcamento)["pagina"] if pode_documento(request.user)
+            else reverse("assinaturas_inner", urlconf=URLCONF)
+        )
         contexto["imprimir_ao_abrir"] = request.GET.get("imprimir") == "1"
         return _sem_cache(render(request, "assinatura_via.html", contexto))

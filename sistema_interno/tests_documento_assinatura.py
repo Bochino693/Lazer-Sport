@@ -414,11 +414,12 @@ class LinkDeCincoMinutosTests(BaseDocumento):
                 self.assertEqual(svc.texto_do_prazo(segundos), palavras)
                 self.assertEqual(svc.relogio_do_prazo(segundos), relogio)
 
-    def test_o_termo_do_colaborador_continua_com_10_minutos(self):
-        # o pedido das 24 horas foi "dos clientes": o RH tem o número dele
+    def test_o_termo_do_colaborador_anda_junto_com_24_horas(self):
+        # o dono liberou as 24 horas para o RH também (seção 138)
         from rh import termo
 
-        self.assertEqual(termo.VALIDADE_DO_LINK, 10 * 60)
+        self.assertEqual(termo.VALIDADE_DO_LINK, svc.VALIDADE_DO_LINK)
+        self.assertEqual(termo.VALIDADE_DO_LINK, 24 * 60 * 60)
 
     def test_o_envio_fora_da_janela_nao_grava_nada(self):
         documento = self.gerar()
@@ -784,10 +785,15 @@ class PermissoesDoDocumentoTests(BaseDocumento):
 
         financeiro = self.usuario("financeiro", "financeiro")
         self.client.force_login(financeiro)
-        for caminho in ("", "link/", "estado/", "via/"):
+        for caminho in ("", "link/", "estado/"):
             with self.subTest(caminho=caminho):
                 metodo = self.client.post if caminho == "link/" else self.client.get
                 self.assertEqual(metodo(f"/orcamentos/{self.orcamento.pk}/documento/{caminho}", **INTERNO).status_code, 403)
+        # a via (ler e imprimir) abre para o Financeiro (seção 138); sem
+        # documento gerado, ele volta para a lista das assinaturas
+        resposta = self.client.get(f"/orcamentos/{self.orcamento.pk}/documento/via/", **INTERNO)
+        self.assertEqual(resposta.status_code, 302)
+        self.assertIn("/assinaturas/", resposta["Location"])
         self.assertEqual(
             self.client.post(f"/orcamentos/{self.orcamento.pk}/documento/", {"action": "gerar"}, **AJAX).status_code,
             403,

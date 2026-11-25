@@ -182,7 +182,9 @@
     var botao = document.querySelector("[data-rh-assinar-botao]");
     function pintar() {
       var resta = Math.max(0, Math.round((fim - Date.now()) / 1000));
-      texto.textContent = Math.floor(resta / 60) + ":" + ("0" + (resta % 60)).slice(-2);
+      texto.textContent = resta >= 3600
+        ? Math.floor(resta / 3600) + "h" + ("0" + Math.floor((resta % 3600) / 60)).slice(-2)
+        : Math.floor(resta / 60) + ":" + ("0" + (resta % 60)).slice(-2);
       if (resta === 0) {
         caixa.classList.add("acabou");
         texto.textContent = "Link expirado: peça um novo";

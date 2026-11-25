@@ -7,7 +7,7 @@ Dois jeitos de assinar, o mesmo quadro e a mesma conferência:
     termo é o DELA -- nenhum id viaja no formulário.
   * PELO CELULAR, sem conta: a Gestão abre o termo da pessoa e mostra o QR
     (ou manda o link pelo WhatsApp). O link é o mesmo do termo de compra:
-    vale 10 minutos e o cartão pede outro sozinho. A página do link abre
+    vale 24 horas e o cartão pede outro sozinho. A página do link abre
     sem login, mostra só aquele termo e exige o CPF da ficha.
 """
 
@@ -146,6 +146,7 @@ class TermoColaboradorView(BaseRH):
             c=colaborador, termo=termo, situacao=svc.situacao_de(colaborador),
             rotulos=svc.ROTULOS, aviso_modelo=svc.AVISO_DO_MODELO,
             validade_minutos=svc.VALIDADE_DO_LINK // 60,
+            validade_texto=svc.assinatura_base.texto_do_prazo(svc.VALIDADE_DO_LINK),
             assinados=colaborador.termos.filter(situacao=TermoExclusividade.Estado.ASSINADO),
             versao=svc.VERSAO_DO_TERMO,
         )
@@ -180,6 +181,7 @@ class TermoColaboradorView(BaseRH):
                 "expira_em": expira_em * 1000,
                 "agora": int(timezone.now().timestamp() * 1000),
                 "validade": svc.VALIDADE_DO_LINK,
+                "validade_texto": svc.assinatura_base.texto_do_prazo(svc.VALIDADE_DO_LINK),
                 "numero": termo.links_gerados,
                 "whatsapp": f"https://wa.me/{telefone}?text={quote(mensagem, safe='')}",
             })
@@ -276,6 +278,7 @@ class TermoPublicoView(View):
             "estado": "assinar", "termo": termo, "doc": termo.conteudo, "token": token,
             "segundos_restantes": leitura.segundos_restantes,
             "validade_minutos": svc.VALIDADE_DO_LINK // 60,
+            "validade_relogio": svc.assinatura_base.relogio_do_prazo(svc.VALIDADE_DO_LINK),
             "cpf_mascarado": mascarar_cpf(termo.colaborador.cpf),
             "aviso_modelo": svc.AVISO_DO_MODELO,
             **extra,

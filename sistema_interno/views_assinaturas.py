@@ -19,7 +19,8 @@ QUEM VÊ O QUÊ (`permissoes.capacidades`), também por URL direta:
 
   * as assinaturas dos ORÇAMENTOS: quem gera o documento do orçamento
     (`assinaturas_orcamentos`: Vendas, Ambulante e Gestão) -- o Ambulante,
-    só as da própria carteira (`limitar_orcamentos`);
+    só as da própria carteira (`limitar_orcamentos`) -- e o Financeiro, que
+    só lê e imprime (sem o QR e o link);
   * as das ORDENS DE SERVIÇO: quem vê a O.S. (`assinaturas_os`: Produção,
     Financeiro e Gestão); o QR e o link, só quem edita a O.S.
 
@@ -117,7 +118,9 @@ def _cartao(documento, acesso) -> dict:
             "url": f"{lista}?q={orcamento.pk}&editar={orcamento.pk}",
         }
         cliente = orcamento.nome_cliente
-        pode_qr = True
+        # o QR e o link são de quem gera o documento (Comercial); o
+        # Financeiro lê e imprime
+        pode_qr = acesso["orcamentos_editar_comercial"]
         suspenso = not documento.assinado and bool(svc.motivo_da_suspensao(documento, orcamento))
     else:
         pagina = reverse("assinatura_os_inner", args=[ordem.pk], urlconf=URLCONF)

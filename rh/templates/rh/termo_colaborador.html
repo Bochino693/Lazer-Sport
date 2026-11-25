@@ -28,7 +28,7 @@
   </section>
 {% elif situacao == "enviado" %}
   <section class="rh-painel" aria-labelledby="rhQrTitulo" data-rh-termo-qr data-acao="{% url 'rh_termo' c.pk %}">
-    <header><h2 id="rhQrTitulo"><i class="bi bi-qr-code" aria-hidden="true"></i> Assinar pelo celular</h2><span class="rh-selo rh-selo--alerta">link de {{ validade_minutos }} minutos, renovado sozinho</span></header>
+    <header><h2 id="rhQrTitulo"><i class="bi bi-qr-code" aria-hidden="true"></i> Assinar pelo celular</h2><span class="rh-selo rh-selo--alerta">link de {{ validade_texto }}, renovado sozinho</span></header>
     <div class="rh-qr">
       <div class="rh-qr-imagem" data-rh-qr aria-live="polite"><span class="rh-nota">Gerando o link…</span></div>
       <div class="rh-tela">

@@ -210,8 +210,8 @@ class PermissoesDasAssinaturasTests(BaseAssinaturas):
                 ids = self.ids(self.abrir(self.ambulante, consulta))
                 self.assertLessEqual(ids, {self.doc_ambulante.pk})
 
-    def test_producao_e_financeiro_veem_so_as_das_ordens_de_servico(self):
-        for usuario in (self.tecnico, self.financeiro):
+    def test_a_producao_ve_so_as_das_ordens_de_servico(self):
+        for usuario in (self.tecnico,):
             with self.subTest(usuario=usuario.username):
                 resposta = self.abrir(usuario)
                 self.assertEqual(
@@ -224,12 +224,30 @@ class PermissoesDasAssinaturasTests(BaseAssinaturas):
                     {self.doc_os_aguardando.pk, self.doc_os_assinado.pk},
                 )
 
+    def test_o_financeiro_ve_as_dos_orcamentos_e_das_os_so_para_ler(self):
+        """O dono liberou (seção 138): o Financeiro lê e imprime tudo, sem QR."""
+        resposta = self.abrir(self.financeiro)
+        self.assertEqual(self.ids(resposta), self.ids(self.abrir(self.gestao)))
+        self.assertContains(resposta, "Buffet Alegria Sintético")
+        # a via do contrato do orçamento abre para ele; o cartão do QR, não
+        via = f"/orcamentos/{self.orc_assinado.pk}/documento/via/?documento={self.doc_assinado.pk}"
+        self.client.force_login(self.financeiro)
+        self.assertEqual(self.client.get(via, **INTERNO).status_code, 200)
+        self.assertContains(self.client.get(via, **INTERNO), "/assinaturas/")
+        self.assertEqual(
+            self.client.get(f"/orcamentos/{self.orc_assinado.pk}/documento/", **INTERNO).status_code, 403,
+        )
+        self.assertEqual(
+            self.client.post(f"/orcamentos/{self.orc_assinado.pk}/documento/link/", **INTERNO).status_code, 403,
+        )
+
     def test_o_financeiro_ve_o_papel_mas_nao_o_qr(self):
         resposta = self.abrir(self.financeiro)
         self.assertNotContains(resposta, "Abrir o QR e o link")
         self.assertContains(resposta, "Ver o documento")
         self.assertContains(resposta, "Imprimir ou PDF")
-        self.assertNotContains(resposta, "editar=")
+        # a O.S., que ele só lê, não abre na janela de editar
+        self.assertNotRegex(resposta.content.decode(), r'ordens-servico/\?q=[^"]*editar=')
         # a Produção, que edita a O.S., tem o QR
         self.assertContains(self.abrir(self.tecnico), "Abrir o QR e o link")
 
@@ -269,7 +287,7 @@ class PermissoesDasAssinaturasTests(BaseAssinaturas):
             self.vendedor: (True, True, False),
             self.ambulante: (True, True, False),
             self.tecnico: (True, False, True),
-            self.financeiro: (True, False, True),
+            self.financeiro: (True, True, True),
             self.criacao: (False, False, False),
         }
         for usuario, (entra, orcamentos, ordens) in esperado.items():
