@@ -4,10 +4,10 @@
    assinar, com validações de tempo e tudo". O cartão faz isso sozinho:
 
      * ao abrir, pede um link (POST): o QR, o endereço e o anel do relógio;
-     * o anel esvazia em 10 minutos e, quando zera, pede outro -- só com a
+     * o anel esvazia em 24 horas e, quando zera, pede outro -- só com a
        tela à vista: aba escondida não gera link que ninguém vai mostrar;
      * "Gerar novo link" pede na hora; "Enviar no WhatsApp" pede um link
-       fresco para o cliente receber os 10 minutos inteiros;
+       fresco para o cliente receber as 24 horas inteiras;
      * a cada 10 segundos pergunta se o cliente já assinou (GET leve), e
        troca o QR pelo "Assinado por ..." com o PDF -- sem recarregar.
 
@@ -31,7 +31,8 @@
 
   var link = "";
   var expira = 0;           // em ms do relógio DESTE navegador
-  var validade = 600;       // segundos (o servidor manda o número certo)
+  var validade = 86400;     // segundos (o servidor manda o número certo)
+  var validadeTexto = "";   // "24 horas" (o servidor manda; senão, a conta daqui)
   var pedindo = null;       // a promessa do link em voo
   var ultimaResposta = null;
   var relogio = null;
@@ -85,6 +86,31 @@
   function aberto() { var c = cartao(); return !!c && c.getAttribute("data-aberto") === "1"; }
   function noAr() { return document.body.contains(raiz); }
 
+  /* O prazo em palavras ("24 horas", "10 minutos", "1 hora e 30 minutos")
+     e no relógio ("23h59" com uma hora ou mais, "9:59" abaixo disso). */
+  function prazoEmPalavras(segundos) {
+    var minutos = Math.max(1, Math.floor(segundos / 60));
+    var horas = Math.floor(minutos / 60);
+    var resto = minutos % 60;
+    var partes = [];
+    if (horas) partes.push(horas + (horas === 1 ? " hora" : " horas"));
+    if (resto) partes.push(resto + (resto === 1 ? " minuto" : " minutos"));
+    return partes.join(" e ");
+  }
+  function prazo() { return validadeTexto || prazoEmPalavras(validade); }
+  function doisDigitos(n) { return (n < 10 ? "0" : "") + n; }
+  function noRelogio(resta) {
+    if (resta >= 3600) return Math.floor(resta / 3600) + "h" + doisDigitos(Math.floor((resta % 3600) / 60));
+    return Math.floor(resta / 60) + ":" + doisDigitos(resta % 60);
+  }
+  function restaEmPalavras(resta) {
+    var horas = Math.floor(resta / 3600);
+    var min = Math.floor((resta % 3600) / 60);
+    var seg = resta % 60;
+    if (horas) return horas + (horas === 1 ? " hora e " : " horas e ") + min + (min === 1 ? " minuto" : " minutos");
+    return min + (min === 1 ? " minuto e " : " minutos e ") + seg + (seg === 1 ? " segundo" : " segundos");
+  }
+
   /* ------------------------------------------------------------- o link */
   function pedirLink(canal) {
     if (situacao() !== "aguardando") return Promise.reject(new Error("Sem documento aguardando assinatura."));
@@ -96,7 +122,8 @@
       pedindo = null;
       ultimaResposta = corpo;
       link = corpo.link;
-      validade = corpo.validade || 600;
+      validade = corpo.validade || 86400;
+      validadeTexto = corpo.validade_texto || "";
       // O prazo vem no relógio do servidor; a diferença entre os dois
       // relógios sai da conta aqui.
       expira = Date.now() + (corpo.expira_em - corpo.agora);
@@ -126,7 +153,7 @@
     var campo = raiz.querySelector("[data-doc-link]");
     if (campo) campo.value = corpo.link;
     var numero = raiz.querySelector("[data-doc-numero]");
-    if (numero) numero.textContent = "Link nº " + corpo.numero + " · renova sozinho a cada " + Math.round(validade / 60) + " minutos";
+    if (numero) numero.textContent = "Link nº " + corpo.numero + " · renova sozinho a cada " + prazo();
   }
 
   function tique() {
@@ -136,17 +163,15 @@
     var caixa = raiz.querySelector("[data-doc-relogio]");
     if (!anel || !tempo || !expira) return;
     var resta = Math.max(0, Math.round((expira - Date.now()) / 1000));
-    var min = Math.floor(resta / 60);
-    var seg = resta % 60;
-    tempo.textContent = min + ":" + (seg < 10 ? "0" : "") + seg;
+    tempo.textContent = noRelogio(resta);
     anel.style.strokeDashoffset = String(100 - Math.min(100, (resta / validade) * 100));
     caixa.classList.toggle("pouco", resta > 0 && resta <= 60);
     caixa.classList.toggle("acabou", resta === 0);
-    caixa.setAttribute("aria-label", "O link expira em " + min + " minutos e " + seg + " segundos");
+    caixa.setAttribute("aria-label", "O link expira em " + restaEmPalavras(resta));
     if (resta === 0) {
       var qr = raiz.querySelector("[data-doc-qr]");
       if (qr) qr.classList.add("velho");
-      // A cada 10 minutos, um link novo -- com a tela à vista e sem o
+      // A cada 24 horas, um link novo -- com a tela à vista e sem o
       // cliente com o contrato já aberto no aparelho dele.
       if (document.visibilityState === "visible" && !pedindo && !aberto() && Date.now() >= esperarAte) {
         pedirLink().catch(function () { /* a sondagem conta o que mudou */ });
@@ -301,7 +326,7 @@
     } else if (acao === "renovar") {
       botao.disabled = true;
       pedirLink().then(function () {
-        aviso("Link novo gerado: vale " + Math.round(validade / 60) + " minutos a partir de agora.", "ok");
+        aviso("Link novo gerado: vale " + prazo() + " a partir de agora.", "ok");
       }, function (erro) { aviso(erro.message, "erro"); }).then(function () { botao.disabled = false; });
     } else if (acao === "copiar") {
       if (!link) return;

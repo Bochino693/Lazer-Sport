@@ -3,10 +3,10 @@
 A regra de negócio mora em `documento_assinatura.py`; aqui fica só o que o
 painel mostra e o que ele pede:
 
-  * a tela do documento (o cartão com o QR, o relógio de 10 minutos, o link,
+  * a tela do documento (o cartão com o QR, o relógio de 24 horas, o link,
     o WhatsApp e, depois, o "Assinado por ..." com o PDF);
   * gerar (e gerar de novo, enquanto ninguém assinou);
-  * um link novo -- o cartão pede sozinho a cada 10 minutos, e no botão;
+  * um link novo -- o cartão pede sozinho a cada 24 horas, e no botão;
   * o estado, que o cartão consulta a cada 10 segundos enquanto está aberto;
   * a via para imprimir ou salvar em PDF.
 
@@ -139,6 +139,8 @@ class _BaseDocumento(OrcamentoInternoRequiredMixin, View):
             "urls": self.urls(orcamento),
             "validade_minutos": svc.VALIDADE_DO_LINK // 60,
             "validade_segundos": svc.VALIDADE_DO_LINK,
+            "validade_texto": svc.prazo_do_link(),
+            "validade_relogio": svc.relogio_do_prazo(svc.VALIDADE_DO_LINK),
             # o diário de bordo e o cliente com o contrato aberto (seção 109)
             "diario": svc.linhas_do_diario(documento) if documento else [],
             "cliente_com_o_contrato": svc.aberto_agora(documento),
@@ -200,7 +202,7 @@ class DocumentoAssinaturaInnerView(_BaseDocumento):
 
 
 class LinkDocumentoAssinaturaView(_BaseDocumento):
-    """Um link novo de 10 minutos, com o QR e a conversa do WhatsApp prontos."""
+    """Um link novo de 24 horas, com o QR e a conversa do WhatsApp prontos."""
 
     def get(self, request, pk):
         # Gerar link conta no histórico do documento: só por POST.
@@ -250,6 +252,7 @@ class LinkDocumentoAssinaturaView(_BaseDocumento):
             "expira_em": expira_em * 1000,
             "agora": int(timezone.now().timestamp() * 1000),
             "validade": svc.VALIDADE_DO_LINK,
+            "validade_texto": svc.prazo_do_link(),
             "numero": documento.links_gerados,
             "mensagem": mensagem,
             "whatsapp": _conversa_whatsapp(orcamento.whatsapp_destinatario, mensagem),

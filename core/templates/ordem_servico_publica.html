@@ -31,7 +31,7 @@
 {% comment %}
   A ORDEM DE SERVIÇO ASSINADA NO CELULAR (LEIA-ME-V10, seção 124): é a
   evolução da ciência. Assinada, o comprovante; esperando, o caminho é o
-  link de assinatura que o atendente manda (vale 10 minutos) -- e o
+  link de assinatura que o atendente manda (vale 24 horas) -- e o
   "confirmar ciência" sai, para não haver dois jeitos de aceitar a O.S.
 {% endcomment %}
 {% if documento_assinatura and documento_assinatura.assinado %}<section class="block confirm"><span class="confirm-mark"><i class="bi bi-patch-check-fill"></i></span><h2>Ordem de serviço assinada</h2><p>{{ documento_assinatura.assinante_nome }} · {{ documento_assinatura.assinado_em|date:"d/m/Y \à\s H:i" }}{% if not previsualizacao %} · <a href="{% url 'documento_assinado_publico' documento_assinatura.codigo_publico %}">Ver a cópia assinada</a>{% endif %}</p></section>

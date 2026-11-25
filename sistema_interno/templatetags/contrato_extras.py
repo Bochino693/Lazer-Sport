@@ -47,3 +47,13 @@ def minutos_do_link():
     from sistema_interno.documento_assinatura import minutos_do_link as minutos
 
     return minutos()
+
+
+@register.simple_tag
+def prazo_do_link():
+    """O tempo que cada link de assinatura vale, em palavras ("cada um válido
+    por 24 horas"), lido da regra -- o texto da folha não fica para trás
+    quando o tempo muda."""
+    from sistema_interno.documento_assinatura import prazo_do_link as prazo
+
+    return prazo()

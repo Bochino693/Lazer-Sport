@@ -488,7 +488,7 @@ urlpatterns = [
         name="ordem_servico_publica",
     ),
     # O termo de compra do orçamento pago, assinado no telefone do cliente
-    # (LEIA-ME-V10, seção 81). O link vale 10 minutos e é gerado pelo painel;
+    # (LEIA-ME-V10, seção 81). O link vale 24 horas e é gerado pelo painel;
     # a cópia assinada fica no código aleatório do documento.
     path(
         "assinar/<str:token>/",

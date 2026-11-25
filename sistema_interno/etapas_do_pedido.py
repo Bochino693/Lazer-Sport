@@ -151,7 +151,7 @@ def _proximo(orcamento, acomp, documento, acesso, tela) -> ProximoPasso:
     Status = Orcamento.Status
     fases = {fase.chave: fase for fase in acomp.fases}
     janela = f"{_url('orcamentos_inner')}?q={orcamento.pk}&editar={orcamento.pk}"
-    minutos = svc.minutos_do_link()
+    prazo = svc.prazo_do_link()
 
     # PAROU: recusada, vencida, trocada por outra versão.
     if orcamento.status == Status.RECUSADO:
@@ -210,14 +210,14 @@ def _proximo(orcamento, acomp, documento, acesso, tela) -> ProximoPasso:
         if documento is None:
             texto = "Gere o contrato e passe para o cliente assinar."
             detalhe = (
-                f"Mostre o QR na tela ou mande o link pelo WhatsApp (vale {minutos} minutos). "
+                f"Mostre o QR na tela ou mande o link pelo WhatsApp (vale {prazo}). "
                 "O cliente também assina sozinho em Meus pedidos."
             )
             acao = "Gerar o contrato"
         elif svc.aberto_agora(documento):
             texto = "O cliente está com o contrato aberto."
             detalhe = (
-                f"Ele tem {svc.TEMPO_PARA_ASSINAR // 60} minutos para assinar naquele aparelho, "
+                f"Ele assina naquele aparelho enquanto o link valer ({prazo}), "
                 "sem link novo. A régua anda sozinha quando ele assinar."
             )
             acao = "Acompanhar"
@@ -228,8 +228,8 @@ def _proximo(orcamento, acomp, documento, acesso, tela) -> ProximoPasso:
         else:
             texto = "Passe o contrato para o cliente assinar."
             detalhe = (
-                f"Mostre o QR ou mande o link pelo WhatsApp: vale {minutos} minutos para abrir, "
-                f"e quem abre tem {svc.TEMPO_PARA_ASSINAR // 60} para assinar."
+                f"Mostre o QR ou mande o link pelo WhatsApp: vale {prazo}, "
+                "e o cliente assina quando puder dentro desse prazo."
             )
             acao = "Abrir o QR e o link"
         return ProximoPasso(

@@ -36,13 +36,8 @@
     <span><strong>Lazer &amp; Sport</strong><small>{% if estado == "assinado" %}Comprovante{% elif estado == "assinar" %}{% if e_servico %}Ordem de serviço{% elif e_contrato %}Contrato de compra e venda{% else %}Termo de compra{% endif %}{% else %}Assinatura{% endif %}</small></span>
   </span>
   {% if estado == "assinar" %}
-    <span class="relogio" id="relogio" role="timer" aria-live="off"
-          data-expira="{{ expira_em_ms }}" data-restante="{{ segundos_restantes }}"
-          data-validade="{{ validade_minutos }}"
-          title="Tempo que falta para este link expirar">
-      <svg viewBox="0 0 36 36" aria-hidden="true"><circle class="relogio-fundo" cx="18" cy="18" r="15.5"/><circle class="relogio-arco" id="relogioArco" cx="18" cy="18" r="15.5" pathLength="100"/></svg>
-      <b id="relogioTexto">{{ segundos_restantes|default:0 }}s</b>
-    </span>
+    {# SEM RELÓGIO NA TELA (seção 136): o cliente lê as cláusulas à vontade. O prazo vai escondido, só para o script saber quando o link venceu. #}
+    <span id="prazoDoLink" hidden data-expira="{{ expira_em_ms }}" data-restante="{{ segundos_restantes }}"></span>
   {% elif estado == "assinado" %}
     <span class="app-barra-selo"><i class="bi bi-patch-check-fill" aria-hidden="true"></i> Assinado</span>
   {% endif %}
@@ -62,11 +57,11 @@
     {% endif %}
     <h1>Olá{% if doc.cliente.nome %}, {{ doc.cliente.nome }}{% endif %}! Falta só assinar.</h1>
     {% if e_servico %}
-      <p>Leia a ordem de serviço abaixo — o equipamento, o serviço, as peças, os valores e a garantia — e assine com o dedo no fim da página. Neste aparelho você tem {{ validade_minutos }} minutos para assinar, sem precisar de link novo.</p>
+      <p>Leia a ordem de serviço abaixo — o equipamento, o serviço, as peças, os valores e a garantia — e assine com o dedo no fim da página. Leia com calma: este link vale {{ prazo_do_link }}, até {{ assinar_ate|date:"d/m" }} às {{ assinar_ate|date:"H:i" }}.</p>
     {% elif e_contrato %}
-      <p>Leia o contrato de compra e venda abaixo — com as fotos do que você está comprando — e assine com o dedo no fim da página. Neste aparelho você tem {{ validade_minutos }} minutos para assinar, sem precisar de link novo.</p>
+      <p>Leia o contrato de compra e venda abaixo — com as fotos do que você está comprando — e assine com o dedo no fim da página. Leia com calma: este link vale {{ prazo_do_link }}, até {{ assinar_ate|date:"d/m" }} às {{ assinar_ate|date:"H:i" }}.</p>
     {% else %}
-      <p>Confira o termo de compra abaixo e assine com o dedo. Neste aparelho você tem {{ validade_minutos }} minutos para assinar, sem precisar de link novo.</p>
+      <p>Confira o termo de compra abaixo e assine com o dedo. Leia com calma: este link vale {{ prazo_do_link }}, até {{ assinar_ate|date:"d/m" }} às {{ assinar_ate|date:"H:i" }}.</p>
     {% endif %}
     <ol class="passos" aria-label="Como assinar">
       <li><span>1</span>{% if e_contrato or e_servico %}Leia{% else %}Confira{% endif %}</li>
@@ -155,7 +150,7 @@
       <div data-passo="expirou" hidden>
         <span class="icone-grande ambar"><i class="bi bi-hourglass-bottom" aria-hidden="true"></i></span>
         <h2>O tempo do link acabou</h2>
-        <p>Por segurança, cada link vale {{ minutos_do_link }} minutos. Nada foi salvo. Peça um link novo ao atendente — seu nome e documento continuam preenchidos neste aparelho.</p>
+        <p>Por segurança, cada link vale {{ prazo_do_link }}. Nada foi salvo. Peça um link novo ao atendente — seu nome e documento continuam preenchidos neste aparelho.</p>
         {% if whatsapp_empresa %}<a class="botao-principal verde" href="https://wa.me/{{ whatsapp_empresa }}?text={% if e_servico %}{{ 'Olá! O link para assinar a ordem de serviço '|urlencode }}{% elif e_contrato %}{{ 'Olá! O link para assinar o contrato do pedido nº '|urlencode }}{% else %}{{ 'Olá! O link para assinar o termo do pedido nº '|urlencode }}{% endif %}{{ numero_documento|urlencode }}{{ ' expirou. Pode me mandar um novo?'|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="bi bi-whatsapp" aria-hidden="true"></i> Pedir um novo link</a>{% endif %}
         <button type="button" class="botao-secundario" data-fechar>Fechar</button>
       </div>
@@ -188,7 +183,7 @@
     {% if estado == "expirado" %}
       <span class="icone-grande ambar"><i class="bi bi-hourglass-bottom" aria-hidden="true"></i></span>
       <h1>Este link expirou</h1>
-      <p>Peça um novo ao atendente. Por segurança, cada link de assinatura vale só {{ minutos_do_link }} minutos.</p>
+      <p>Peça um novo ao atendente. Por segurança, cada link de assinatura vale {{ prazo_do_link }}.</p>
     {% elif estado == "substituido" %}
       <span class="icone-grande ambar"><i class="bi bi-arrow-repeat" aria-hidden="true"></i></span>
       <h1>Este link foi trocado</h1>

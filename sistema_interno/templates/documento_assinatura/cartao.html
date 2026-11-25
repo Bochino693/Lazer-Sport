@@ -4,14 +4,14 @@
   estado (é ele que troca o QR pelo "Assinado por ..." sem recarregar).
 
   As caras: sem aprovação (não gera), aprovado sem documento (o botão
-  grande de gerar), aguardando (o QR, o relógio de 10 minutos, o link, o
+  grande de gerar), aguardando (o QR, o relógio de 24 horas, o link, o
   WhatsApp), suspenso (o orçamento deixou de estar aprovado depois -- ou,
   no termo antigo que dizia "quitado", o pagamento foi desfeito) e
   assinado (quem, quando, a assinatura e o PDF). O termo sai na
   APROVAÇÃO: o pagamento é o estágio seguinte, e não muda o cartão.
 
   O LINK NÃO VEM AQUI. Ele é pedido pelo script do cartão ao abrir e a
-  cada 10 minutos (`documento_assinatura_link`): um link escrito no HTML
+  cada 24 horas (`documento_assinatura_link`): um link escrito no HTML
   seria guardado pela navegação do painel e reaberto já vencido.
 {% endcomment %}
 <section class="ls-doc-cartao ls-doc-{{ situacao_cartao }}"
@@ -44,7 +44,7 @@
       (os itens com as fotos, o valor por extenso, a condição de pagamento, o prazo de entrega e as
       onze cláusulas) ou a <strong>ordem de serviço</strong> de manutenção e serviços — e fica
       <strong>congelado</strong>. O cliente assina no telefone dele por um link que vale
-      {{ validade_minutos }} minutos e se renova sozinho aqui. O pagamento vem depois, como último passo.
+      {{ validade_texto }} e se renova sozinho aqui. O pagamento vem depois, como último passo.
     </p>
     {% comment %}
       QUAL PAPEL (LEIA-ME-V10, seção 124): venda de equipamento ou serviço de
@@ -159,21 +159,21 @@
       <p>Esta tela troca sozinha quando ele assinar.</p>
       {% else %}
       <h2>Peça para o cliente apontar a câmera</h2>
-      <p>O link vale {{ validade_minutos }} minutos para abrir e se renova sozinho. Quem abriu tem {{ tempo_para_assinar_min }} minutos para assinar naquele aparelho.</p>
+      <p>O link vale {{ validade_texto }} e se renova sozinho. O cliente assina quando puder dentro desse prazo, sem link novo.</p>
       {% endif %}
     </div>
   </header>
 
   {% comment %}
     O CLIENTE JÁ ESTÁ COM O CONTRATO ABERTO: o painel não gira mais o QR (o
-    aparelho dele assina por {{ tempo_para_assinar_min }} min sem link novo).
+    aparelho dele assina enquanto o link valer, sem link novo).
     "Mostrar o QR de novo" volta ao QR, para outro aparelho.
   {% endcomment %}
   <div class="ls-doc-aberto" data-doc-aberto>
     <span class="ls-doc-icone verde"><i class="bi bi-phone-vibrate" aria-hidden="true"></i></span>
     <div>
       <strong>O cliente está com o contrato aberto{% if documento.aberto_em %} desde {{ documento.aberto_em|date:"H:i" }}{% endif %}</strong>
-      <p>Ele tem {{ tempo_para_assinar_min }} minutos para assinar naquele aparelho, sem link novo. Esta tela avisa sozinha quando ele assinar.</p>
+      <p>Ele assina naquele aparelho enquanto o link valer ({{ validade_texto }}), sem link novo. Esta tela avisa sozinha quando ele assinar.</p>
       <button type="button" class="btn btn-sm btn-outline-secondary" data-doc-acao="mostrar-qr">
         <i class="bi bi-qr-code me-1" aria-hidden="true"></i> Mostrar o QR de novo
       </button>
@@ -193,7 +193,7 @@
             <circle class="arco" cx="60" cy="60" r="52" pathLength="100" data-doc-arco/>
           </svg>
           <div class="ls-doc-relogio-texto">
-            <strong data-doc-tempo>{{ validade_minutos }}:00</strong>
+            <strong data-doc-tempo>{{ validade_relogio }}</strong>
             <span>para expirar</span>
           </div>
         </div>
@@ -203,7 +203,7 @@
       <label class="form-label" for="docAssinaturaLink">Link de assinatura</label>
       <div class="ls-doc-link">
         <input class="form-control" id="docAssinaturaLink" type="text" readonly value="" data-doc-link
-               aria-label="Link de assinatura (vale {{ validade_minutos }} minutos)" placeholder="Gerando…">
+               aria-label="Link de assinatura (vale {{ validade_texto }})" placeholder="Gerando…">
         <button type="button" class="btn btn-outline-primary" data-doc-acao="copiar" aria-label="Copiar o link">
           <i class="bi bi-clipboard" aria-hidden="true"></i><span>Copiar</span>
         </button>

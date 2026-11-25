@@ -299,7 +299,7 @@ urlpatterns = [
         name='orcamento_previa_inner',
     ),
     # O documento para assinatura do orçamento pago: o cartão com o QR e o
-    # link de 10 minutos, o link novo, o estado (já assinou?) e a via em PDF.
+    # link de 24 horas, o link novo, o estado (já assinou?) e a via em PDF.
     # Ver `views_documento_assinatura.py` e LEIA-ME-V10, seção 81.
     # A régua do pedido (as seis fases e o próximo passo), em HTML pronto,
     # para a janela do orçamento. Ver `etapas_do_pedido.py` e LEIA-ME-V10, seção 117.
@@ -417,7 +417,7 @@ urlpatterns = [
         name='documentos_da_ordem_servico',
     ),
     # A ORDEM DE SERVIÇO ASSINADA NO CELULAR (LEIA-ME-V10, seção 124): o
-    # mesmo cartão do contrato (QR, link de 10 minutos, estado, via em PDF),
+    # mesmo cartão do contrato (QR, link de 24 horas, estado, via em PDF),
     # da O.S. e com ou sem pagamento. Ver `views_assinatura_os.py`.
     path(
         'ordens-servico/<int:pk>/assinatura/',

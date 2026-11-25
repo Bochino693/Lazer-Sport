@@ -1,4 +1,4 @@
-"""O documento para assinatura do orçamento aprovado, e o link de 10 minutos.
+"""O documento para assinatura do orçamento aprovado, e o link de 24 horas.
 
 O PEDIDO, nas palavras do cliente: "após o orçamento estar como pago, vc
 deve analisar o seguinte: como já está pago, finalizado, vc deve pôr uma
@@ -39,7 +39,7 @@ COMO FICOU, EM QUATRO PEÇAS:
      com sal próprio, sobre "id do documento + começo do hash". Não há
      tabela de tokens: a assinatura HMAC garante que ninguém fabrica um
      link, o carimbo de tempo dentro dele diz quando ele nasceu, e o
-     servidor recusa o que tiver mais de 10 minutos (VALIDADE_DO_LINK). Gerar o documento de
+     servidor recusa o que tiver mais de 24 horas (VALIDADE_DO_LINK). Gerar o documento de
      novo muda o hash (e o id): todos os links velhos morrem juntos.
 
   3. A ASSINATURA (`assinar`). Nome completo, CPF/CNPJ (conferido com o do
@@ -88,20 +88,54 @@ from .validacoes import (
 #: que vai ser gerado a cada 5 minutos"); depois o dono pediu "deixe o tempo
 #: de assinatura 10 min agora em vez de 5". O painel renova o link nesse
 #: ritmo e o servidor recusa o que passar dele -- na abertura E no envio.
-#: Todo texto que fala do tempo do link lê daqui (`minutos_do_link`).
-VALIDADE_DO_LINK = 10 * 60
+#: Agora: "mude o tempo de assinatura dos clientes para 24 horas em vez de
+#: 10 minutos" (LEIA-ME-V10, seção 136). O cliente recebe o link e assina
+#: quando puder, no mesmo dia ou no seguinte; o servidor continua recusando
+#: o que passar do prazo, e o link de uma versão substituída ou suspensa cai
+#: na hora, como sempre. Vale para o contrato e para a ordem de serviço do
+#: CLIENTE; o termo do colaborador (rh/termo.py) tem o prazo dele.
+#: Todo texto que fala do tempo do link lê daqui (`prazo_do_link`).
+VALIDADE_DO_LINK = 24 * 60 * 60
 
 #: O APARELHO QUE ABRIU NÃO PRECISA DE LINK NOVO (o dono: "quando estiver na
 #: mesma tela não deve relogar, poupando tempo"). Quem abriu um link válido
-#: tem esse tempo, no mesmo navegador, para ler e assinar -- mesmo que os 10
-#: minutos do link acabem no meio. O link continua valendo 10 minutos para
-#: ABRIR; é a sessão do aparelho que segura a assinatura.
+#: tem esse tempo, no mesmo navegador, para ler e assinar -- mesmo que o
+#: prazo do link acabe no meio. Enquanto o link vale (24 horas), o aparelho
+#: assina até o link vencer; a sessão do aparelho só entra quando o link
+#: vence com o contrato aberto.
 TEMPO_PARA_ASSINAR = 30 * 60
 
 
 def minutos_do_link():
-    """Os minutos do link, para os textos ("o link vale 10 minutos")."""
+    """Os minutos do link (1440, com o link de 24 horas). Para conta; o texto
+    que o cliente lê é o de `prazo_do_link`."""
     return VALIDADE_DO_LINK // 60
+
+
+def texto_do_prazo(segundos) -> str:
+    """Um prazo em palavras: "24 horas", "10 minutos", "1 hora e 30 minutos"."""
+    minutos = max(1, int(segundos) // 60)
+    horas, resto = divmod(minutos, 60)
+    partes = []
+    if horas:
+        partes.append(f"{horas} hora{'s' if horas != 1 else ''}")
+    if resto:
+        partes.append(f"{resto} minuto{'s' if resto != 1 else ''}")
+    return " e ".join(partes)
+
+
+def relogio_do_prazo(segundos) -> str:
+    """O prazo como o relógio do cartão o escreve: "24h00" com uma hora ou
+    mais, "9:59" abaixo disso (o mesmo formato do documento-assinatura.js)."""
+    segundos = max(0, int(segundos))
+    if segundos >= 3600:
+        return f"{segundos // 3600}h{segundos % 3600 // 60:02d}"
+    return f"{segundos // 60}:{segundos % 60:02d}"
+
+
+def prazo_do_link() -> str:
+    """O tempo do link, para os textos ("o link vale 24 horas")."""
+    return texto_do_prazo(VALIDADE_DO_LINK)
 
 CHAVE_DA_SESSAO = "assinatura_aberta"
 
@@ -571,7 +605,7 @@ def _carga(documento) -> str:
 
 
 def emitir_link(documento, canal="painel"):
-    """Um token novo, que vale VALIDADE_DO_LINK (10 minutos) a partir de agora.
+    """Um token novo, que vale VALIDADE_DO_LINK (24 horas) a partir de agora.
 
     Conta no documento quantos links já saíram (o histórico mostra o
     número, não uma linha por link). `F()` para dois painéis abertos não
@@ -845,7 +879,7 @@ def qr_svg(texto: str) -> str:
 
 
 def mensagem_whatsapp(documento, link) -> str:
-    """O texto pronto da conversa, com o link de 10 minutos.
+    """O texto pronto da conversa, com o link de 24 horas.
 
     "Aprovado", e não "pago": o termo sai na aprovação, antes do
     pagamento -- e é verdade também para os termos antigos, que saíram de
@@ -870,7 +904,7 @@ def mensagem_whatsapp(documento, link) -> str:
         f"Agora é só assinar {papel}, direto no seu celular. Assine aqui:",
         link,
         "",
-        f"⏱️ O link vale por *{minutos_do_link()} minutos*. Se passar, é só pedir outro aqui.",
+        f"⏱️ O link vale por *{prazo_do_link()}*. Se passar, é só pedir outro aqui.",
         f"{nome_empresa()} · CNPJ {cnpj_empresa()}",
     ])
 

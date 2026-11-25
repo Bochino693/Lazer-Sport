@@ -5,7 +5,7 @@ destinado a manutenções e serviços, para padronizar" -- inclusive das O.S.
 sem pagamento recebido.
 
 É o mesmo cartão do contrato de compra e venda (`views_documento_assinatura`):
-o QR, o relógio de 10 minutos, o link, o WhatsApp, o "já assinou?" a cada
+o QR, o relógio de 24 horas, o link, o WhatsApp, o "já assinou?" a cada
 10 segundos, o diário de bordo, o assinado com o traço e o PDF -- com o
 mesmo script (`interno/documento-assinatura.js`) e a mesma folha. Muda a
 origem (a O.S., e não o orçamento) e o papel (`documento_servico.py`).
@@ -142,6 +142,8 @@ class _BaseDocumentoOS(OrdemServicoInternoRequiredMixin, View):
             "urls": self.urls(ordem),
             "validade_minutos": svc.VALIDADE_DO_LINK // 60,
             "validade_segundos": svc.VALIDADE_DO_LINK,
+            "validade_texto": svc.prazo_do_link(),
+            "validade_relogio": svc.relogio_do_prazo(svc.VALIDADE_DO_LINK),
             "diario": svc.linhas_do_diario(documento) if documento else [],
             "cliente_com_o_contrato": svc.aberto_agora(documento),
             "marca_do_diario": marca_do_diario(documento),
@@ -199,7 +201,7 @@ class AssinaturaOSInnerView(_BaseDocumentoOS):
 
 
 class LinkAssinaturaOSView(_BaseDocumentoOS):
-    """Um link novo de 10 minutos, com o QR e a conversa do WhatsApp prontos."""
+    """Um link novo de 24 horas, com o QR e a conversa do WhatsApp prontos."""
 
     def get(self, request, pk):
         return JsonResponse({"status": "erro", "msg": "Use POST."}, status=405)
@@ -241,6 +243,7 @@ class LinkAssinaturaOSView(_BaseDocumentoOS):
             "expira_em": expira_em * 1000,
             "agora": int(timezone.now().timestamp() * 1000),
             "validade": svc.VALIDADE_DO_LINK,
+            "validade_texto": svc.prazo_do_link(),
             "numero": documento.links_gerados,
             "mensagem": mensagem,
             "whatsapp": OrdensServicoInnerView.conversa_whatsapp(ordem.whatsapp_destinatario, mensagem),

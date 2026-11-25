@@ -54,7 +54,11 @@ VERSAO_DO_TERMO = "2026-11"
 TITULO = "Termo de exclusividade e confidencialidade"
 
 #: Reaproveitado do termo de compra: a mesma janela do link.
-VALIDADE_DO_LINK = assinatura_base.VALIDADE_DO_LINK
+#: O termo do COLABORADOR continua com 10 minutos (assinado na hora, no RH).
+#: Era a mesma constante do contrato do cliente; quando o link do cliente
+#: passou a valer 24 horas (LEIA-ME-V10, seção 136), o pedido foi só "dos
+#: clientes" e o número do RH ficou aqui.
+VALIDADE_DO_LINK = 10 * 60
 SAL_DO_LINK = "rh.termo.link"
 PEDACO_DO_HASH = 16
 
