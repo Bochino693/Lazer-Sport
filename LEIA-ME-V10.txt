@@ -10559,3 +10559,84 @@ Dependência nova: rjsmin (requirements.txt).
    no ar antes do deploy. OBSERVADO E NÃO MEXIDO: com um nome de usuário
    muito comprido (mais de 40 letras, inventado para o teste) o botão do nome na
    barra do topo espreme o título da tela.
+
+140) OS TRÊS PONTOS OBSERVADOS NA SEÇÃO 139: A ABA ACESA À TOA, O TEXTO DO QR E O NOME COMPRIDO
+   O PEDIDO: "sim, pode publicar e arrume os três também" -- os três pontos
+   que a seção 139 tinha visto nos prints e deixado como estavam.
+
+   1) NO CELULAR, A ABA DE BAIXO "ESTOQUE" ACENDIA NA AVALIAÇÃO DOS SETORES
+     A CAUSA: não era o servidor. Na Avaliação dos setores (e em toda tela
+     que não é de nenhuma das abas) nenhuma aba sai marcada como "ativa" --
+     é o critério de sempre: só acende a aba cuja tela está aberta. O que
+     acendia era o :hover PRESO do toque: no celular não existe "passar o
+     mouse", e o navegador deixa o :hover no ponto do último toque. O botão
+     "Salvar avaliação" da janela fica bem em cima de onde a barra
+     reaparece quando a janela fecha; a aba que ficava embaixo do dedo
+     ("Estoque") pegava a cor de link em foco, igual à de aba acesa. Valia
+     para qualquer tela e qualquer aba, conforme onde o dedo tocou.
+     O QUE MUDOU: sem mouse (@media (hover:none)), a aba que não é a da
+     tela fica sempre na cor de repouso. No computador (janela estreita com
+     mouse) o realce ao passar continua. A aba certa continua acendendo
+     pelo servidor (tocar em "Orçamentos" acende Orçamentos).
+
+   2) NA TELA ASSINATURAS, O TEXTO DO TOPO FALAVA EM "ABRA O QR" PARA TODOS
+     O Financeiro só lê e imprime (seção 138) e não tem o botão do QR. O
+     texto agora acompanha o que a pessoa pode fazer: quem tem o QR de
+     algum objeto que vê (Comercial nos orçamentos, quem edita a O.S.)
+     continua com "...ou abra o QR de quem ainda não assinou."; quem só lê
+     vê "Imprima ou baixe o PDF assinado com um toque e acompanhe quem
+     ainda não assinou." (views_assinaturas: `pode_algum_qr`).
+
+   3) UM NOME DE USUÁRIO COMPRIDO ESPREMIA O TÍTULO DA TELA NA BARRA DO TOPO
+     A CAUSA (medida com um nome de 43 letras, sintético): o botão do nome
+     crescia com o nome inteiro (317 px) e era o único que não encolhia. O
+     título da tela ficava com 81 px em 1366 ("Avaliação dos..." em duas
+     linhas, cortado) e com ZERO em 1024 e em 768, onde o nome ainda
+     quebrava em três ou quatro linhas e saía da barra, e os atalhos das
+     funções passavam por cima do selo "Gestão interna".
+     O QUE MUDOU
+     * O botão do nome tem largura máxima (210 px; 150 px de 1201 a 1440)
+       e o nome encurta com reticências numa linha. O nome inteiro fica no
+       balão (title) e no rótulo falado.
+     * O título da tela tem largura mínima (150 px; 128 px de 761 a 940) e
+       os atalhos das funções não encolhem mais por cima do vizinho: quem
+       cede é o botão do nome.
+     * Para caber em qualquer largura mesmo com as sete funções do dono:
+       abaixo de 1366 px o selo "Gestão interna" (enfeite) sai; de 761 a
+       1200 px o botão do nome fica só com o ícone, redondo; de 761 a 940
+       px ele sai (como já saía no celular; a conta continua no pé do menu
+       lateral) e os atalhos ficam 6 px mais justos.
+     * Em 390 px nada mudou: o botão do nome já não aparecia e o título já
+       cabia.
+     Não é regra de cor: só de largura.
+
+   ARQUIVOS: sistema_interno/static/interno/interno_modern.css (seção nova
+   no fim, fora da "LISTA OU CARDS, SEGUNDA PARTE"),
+   templates/base_inner.html (o balão do nome),
+   templates/assinaturas_inner.html e views_assinaturas.py (o texto).
+   TESTES: sistema_interno/tests_barra_e_abas.py (8): o nome inteiro no
+   balão, a largura máxima com reticências, a largura mínima do título, a
+   seção só com variáveis do tema; nenhuma aba acesa nas telas que não são
+   de aba (Avaliação dos setores, Usuários da equipe, Assinaturas, Dados do
+   contrato), a aba certa acesa em Orçamentos e Estoque, e a regra do
+   hover:none. tests_assinaturas.py (+2): o texto do topo de quem só lê e
+   de quem tem o QR.
+   Comando da suíte: DJANGO_SETTINGS_MODULE=lazer.settings_test python
+   manage.py test core sistema_interno contas rh --parallel 1
+
+   CONFERIDO NO CHROMIUM (Playwright, servidor local, dados SINTÉTICOS),
+   com prints de antes e depois:
+     * ponto 1, em 390 px com toque: a avaliação salva pela janela, a aba
+       "Estoque" sob o dedo fica na cor de repouso (antes ficava laranja);
+       tocar em "Orçamentos" acende Orçamentos e só ela.
+     * ponto 2, em 1366 px: o texto como Financeiro (sem QR), Produção,
+       Vendas, Ambulante e dono (com QR). No celular o parágrafo do topo
+       não aparece (é assim em todas as telas).
+     * ponto 3, como dono (sete atalhos, nome de 43 letras), em 390, 768,
+       1024 e 1366 px, mais uma varredura nas larguras de fronteira (761,
+       940, 941, 1100, 1101, 1200, 1201, 1300, 1365, 1366, 1440, 1441 e
+       1920): título inteiro, nada cortado na borda direita, nada por cima
+       do vizinho, sem rolagem lateral; temas Sol e Eclipse em 390 e 1366.
+       Também como Vendas e Produção (um atalho) em 768, 1024, 1150 e 1366.
+   NÃO conferido: num celular de verdade (o :hover preso foi reproduzido
+   no Chromium com toque emulado) e com os nomes reais da equipe.

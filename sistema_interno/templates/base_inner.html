@@ -575,9 +575,11 @@ Dito em voz alta: este NÃO é o /adm do site. Quem trabalha nos
           </div>
         </div>
 
-        <a class="ls-user-pill text-decoration-none" href="{% url 'minha_conta_inner' %}">
-          <i class="bi bi-person-circle"></i>
-          <span>{{ user.get_full_name|default:user.username }}</span>
+        {# O nome encurta com reticências (seção 140): o inteiro fica no balão e no rótulo falado. #}
+        {% firstof user.get_full_name user.username as nome_na_barra %}
+        <a class="ls-user-pill text-decoration-none" href="{% url 'minha_conta_inner' %}" title="{{ nome_na_barra }}" aria-label="Minha conta: {{ nome_na_barra }}">
+          <i class="bi bi-person-circle" aria-hidden="true"></i>
+          <span>{{ nome_na_barra }}</span>
         </a>
       </div>
     </header>

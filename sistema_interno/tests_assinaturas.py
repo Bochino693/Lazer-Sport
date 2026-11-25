@@ -299,6 +299,29 @@ class PermissoesDasAssinaturasTests(BaseAssinaturas):
                 )
 
 
+class TextoDoTopoPorFuncaoTests(BaseAssinaturas):
+    """O texto do topo acompanha o que a pessoa pode fazer (seção 140)."""
+
+    COM_QR = "ou abra o QR de quem ainda não assinou."
+    SO_LE = "Imprima ou baixe o PDF assinado com um toque e acompanhe quem ainda não assinou."
+
+    def test_quem_so_le_nao_e_convidado_a_abrir_o_qr(self):
+        resposta = self.abrir(self.financeiro)
+        self.assertFalse(resposta.context["pode_algum_qr"])
+        self.assertContains(resposta, self.SO_LE)
+        self.assertNotContains(resposta, "abra o QR")
+        # e de fato não há botão de QR na tela dele
+        self.assertNotContains(resposta, "data-as-qr")
+
+    def test_quem_tem_o_qr_de_algum_objeto_continua_com_o_convite(self):
+        for usuario in (self.gestao, self.vendedor, self.ambulante, self.tecnico):
+            with self.subTest(usuario=usuario.username):
+                resposta = self.abrir(usuario)
+                self.assertTrue(resposta.context["pode_algum_qr"])
+                self.assertContains(resposta, self.COM_QR)
+                self.assertNotContains(resposta, "acompanhe quem ainda não assinou")
+
+
 # ======================================================================
 # CHIPS, BUSCA E PÁGINAS
 # ======================================================================

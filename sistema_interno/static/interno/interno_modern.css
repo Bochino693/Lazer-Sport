@@ -7162,3 +7162,61 @@ body.modal-open .ls-folha-veu{display:none!important}
   .ls-visao-alvo[data-visao="lista"] .ls-orcamentos-table .ls-block-review{grid-template-columns:minmax(0,1fr)}
   .ls-visao-alvo[data-visao="lista"] .ls-orcamentos-table .ls-review-item{min-height:44px;padding:6px 9px}
 }
+
+/* ======================================================================
+   A BARRA DO TOPO E AS ABAS DE BAIXO, SEM NADA ESPREMIDO NEM ACESO À TOA
+   (LEIA-ME-V10, seção 140). (Seção nova, fora da "LISTA OU CARDS,
+   SEGUNDA PARTE".)
+
+   O NOME COMPRIDO NÃO ESPREME O TÍTULO DA TELA. O botão do nome crescia
+   com o nome inteiro (317px com um nome de 43 letras) e, como era o único
+   que não encolhia, o título da tela ficava com 81px em 1366 e com ZERO
+   em 1024 e em 768 -- onde o nome ainda quebrava em quatro linhas e saía
+   da barra. Agora o botão tem largura máxima e o nome encurta com
+   reticências numa linha (o nome inteiro fica no balão), e o título tem
+   uma largura mínima que ninguém tira dele.
+   ====================================================================== */
+.ls-user-pill{flex:0 1 auto;min-width:0;max-width:210px}
+.ls-user-pill i{flex:0 0 auto}
+.ls-user-pill span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (min-width:761px){
+  .ls-topbar-copy{flex:1 1 0;min-width:150px}
+  .ls-topbar-side{min-width:0;flex:0 1 auto}
+  /* quem cede quando falta espaço é o botão do nome, e não os atalhos (que passariam por cima do vizinho) */
+  .ls-atalhos{flex:0 0 auto}
+}
+/* No tablet a barra já está cheia (os atalhos das funções e a pilha da
+   equipe). Abaixo de 1366px o selo "Gestão interna" (um enfeite) sai; de 761
+   a 1200px o botão do nome fica só com o ícone, redondo, como o "Aparência"
+   ao lado; de 761 a 940px o botão do nome sai também, como já sai no celular (a
+   conta continua no pé do menu lateral), e os atalhos ficam mais justos.
+   Assim nada passa da borda direita, mesmo para quem tem as sete funções. */
+@media (min-width:761px) and (max-width:1365px){
+  .ls-security-pill,.ls-topbar-side>.ls-ambiente{display:none}
+}
+/* Até 1440px o nome fica mais curto ainda: é o que deixa um título de três
+   palavras ("Documento para assinatura") numa linha só em 1366px. */
+@media (min-width:1201px) and (max-width:1440px){
+  .ls-user-pill{max-width:150px}
+}
+@media (min-width:761px) and (max-width:1200px){
+  .ls-user-pill{flex:0 0 40px;width:40px;padding:0;justify-content:center}
+  .ls-user-pill span{display:none}
+}
+@media (min-width:761px) and (max-width:940px){
+  .ls-user-pill{display:none}
+  .ls-topbar-copy{min-width:128px}
+  .ls-atalhos{gap:4px;margin:0 6px}
+  .ls-atalhos:not(.ls-atalhos--poucos) .ls-atalho-botao{width:34px;height:36px}
+  .ls-topbar-side{gap:6px}
+}
+
+/* A ABA DE BAIXO SÓ ACENDE QUANDO É A TELA DELA. No celular não existe
+   "passar o mouse": o toque deixa o :hover preso no ponto tocado. Quem
+   salvava uma janela cujo botão ficava sobre a barra (a avaliação de um
+   setor, por exemplo) via a aba que estava embaixo do dedo -- "Estoque" --
+   ficar da cor de aba acesa, numa tela que não é de nenhuma aba. Sem
+   mouse, a aba que não é a da tela fica sempre na cor de repouso. */
+@media (hover:none){
+  .ls-abas .ls-aba:not(.ativa):hover{color:var(--muted)}
+}

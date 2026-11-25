@@ -20,7 +20,7 @@
   <div class="ls-page-hero-copy">
     <span class="ls-page-kicker">Documentos · assinados no celular</span>
     <h1>Assinaturas</h1>
-    <p>{% if so_os %}As ordens de serviço que o cliente assina no celular, num lugar só.{% elif so_orcamentos %}Os contratos e termos dos {% if carteira_propria %}seus orçamentos{% else %}orçamentos{% endif %} que o cliente assina no celular, num lugar só.{% else %}Os contratos dos orçamentos e as ordens de serviço que o cliente assina no celular, num lugar só.{% endif %} Imprima ou baixe o PDF assinado com um toque, ou abra o QR de quem ainda não assinou.</p>
+    <p>{% if so_os %}As ordens de serviço que o cliente assina no celular, num lugar só.{% elif so_orcamentos %}Os contratos e termos dos {% if carteira_propria %}seus orçamentos{% else %}orçamentos{% endif %} que o cliente assina no celular, num lugar só.{% else %}Os contratos dos orçamentos e as ordens de serviço que o cliente assina no celular, num lugar só.{% endif %} {% if pode_algum_qr %}Imprima ou baixe o PDF assinado com um toque, ou abra o QR de quem ainda não assinou.{% else %}Imprima ou baixe o PDF assinado com um toque e acompanhe quem ainda não assinou.{% endif %}</p>
   </div>
 </section>
 

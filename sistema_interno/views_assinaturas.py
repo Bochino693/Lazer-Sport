@@ -229,6 +229,12 @@ class AssinaturasInnerView(InternoRequiredMixin, View):
             "objeto": objeto,
             "busca": busca,
             "ve_os_dois": ve_os_dois,
+            # O texto do topo só fala em "abrir o QR" a quem tem o QR de algum
+            # objeto que vê (seção 140): quem só lê, imprime e acompanha.
+            "pode_algum_qr": (
+                (acesso["assinaturas_orcamentos"] and acesso["orcamentos_editar_comercial"])
+                or (acesso["assinaturas_os"] and acesso["ordens_servico_editar"])
+            ),
             "so_orcamentos": acesso["assinaturas_orcamentos"] and not acesso["assinaturas_os"],
             "so_os": acesso["assinaturas_os"] and not acesso["assinaturas_orcamentos"],
             "carteira_propria": acesso["assinaturas_orcamentos"] and acesso["orcamentos_proprios"],
