@@ -766,7 +766,7 @@
 <!-- ================= MODAL: excluir ================= -->
 {% if permissoes_interno.excluir_clientes %}
 {% url 'clientes_inner' as exclusao_url %}
-{% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir cliente" exclusao_aviso="O cadastro e seus endereços serão apagados. Clientes com propostas ou vínculos comerciais continuam protegidos pelo servidor." %}
+{% include "includes/modal_confirmar_exclusao.html" with exclusao_url=exclusao_url exclusao_titulo="Excluir cliente" exclusao_aviso="O cadastro e seus endereços serão apagados. Clientes com propostas ou vínculos comerciais continuam protegidos pelo servidor." exclusao_com_tudo=user.is_superuser %}
 {% endif %}
 
 {{ clientes_dados|json_script:"clientesDados" }}
@@ -1367,6 +1367,99 @@ LSTela.pronto(function () {
   });
 
   Painel.ligarExclusao();
+
+  /* ====================================================================
+     APAGAR O CLIENTE COM TUDO O QUE É DELE (seção 141; só o superusuário
+     recebe o bloco `#excluirAlcance` na janela).
+
+     Ao abrir a janela de excluir, o servidor conta o que iria junto
+     (orçamentos, O.S., documentos assinados, vendas...) e o que fica. Só
+     então os dois chips aparecem -- e só para cliente que tem o que levar.
+     Escolher "O cliente e tudo o que é dele" mostra a conta e troca o
+     texto do botão; a palavra CONFIRMAR e o motivo são os de sempre, e o
+     servidor confere tudo de novo (permissão e confirmação).
+     ==================================================================== */
+  (function () {
+    var bloco = document.getElementById("excluirAlcance");
+    var form = document.getElementById("formExcluir");
+    if (!bloco || !form) return;
+    var painelTudo = document.getElementById("excluirTudo");
+    var nota = document.getElementById("excluirAlcanceNota");
+    var botao = form.querySelector('[type="submit"]');
+    var rotuloDoBotao = botao ? botao.textContent : "";
+    var detalhe = document.getElementById("excluirForcadaDetalhe");
+    var detalheDoCadastro = "";
+    var pedido = 0;
+
+    function linhas(lista, itens) {
+      lista.textContent = "";
+      (itens || []).forEach(function (item) {
+        var li = document.createElement("li");
+        var numero = document.createElement("b");
+        numero.textContent = item.quantos;
+        var texto = document.createElement("span");
+        texto.textContent = item.rotulo;
+        var detalhe = document.createElement("small");
+        detalhe.textContent = item.nota || "";
+        li.appendChild(numero); li.appendChild(texto); li.appendChild(detalhe);
+        lista.appendChild(li);
+      });
+    }
+
+    function pintar() {
+      var tudo = form.querySelector('[name="alcance"]:checked');
+      tudo = Boolean(tudo && tudo.value === "tudo" && !bloco.hidden);
+      painelTudo.hidden = !tudo;
+      nota.hidden = tudo;
+      if (botao) botao.textContent = tudo ? "Excluir o cliente e tudo o que é dele" : rotuloDoBotao;
+      /* o aviso de cima acompanha a escolha: "ficam sem cliente vinculado" só vale para "Só o cadastro" */
+      if (detalhe && detalheDoCadastro) {
+        detalhe.textContent = tudo
+          ? "Você escolheu apagar também os orçamentos, as ordens de serviço e os documentos deste cliente. A exclusão vai ficar registrada com o seu nome, com a lista do que foi junto."
+          : detalheDoCadastro;
+      }
+    }
+
+    form.querySelectorAll('[name="alcance"]').forEach(function (radio) {
+      radio.addEventListener("change", pintar);
+    });
+
+    Painel.aoClicar("[data-excluir]", function (gatilho) {
+      var numero = ++pedido;
+      bloco.hidden = true;
+      detalheDoCadastro = "";
+      pintar();
+      /* o texto que a janela comum acabou de escrever para este cliente */
+      detalheDoCadastro = detalhe ? detalhe.textContent : "";
+      var dados = new FormData();
+      dados.set("action", "previa_exclusao");
+      dados.set("id", gatilho.dataset.excluir || "");
+      dados.set("csrfmiddlewaretoken", form.querySelector('[name="csrfmiddlewaretoken"]').value);
+      fetch(form.getAttribute("action") || window.location.pathname, {
+        method: "POST", body: dados, credentials: "same-origin",
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      })
+        .then(function (resposta) { return resposta.ok ? resposta.json() : null; })
+        .then(function (json) {
+          /* outra janela foi aberta enquanto esta conta vinha: fica a mais nova */
+          if (numero !== pedido || !json || json.status !== "sucesso" || !json.tem_o_que_levar) return;
+          linhas(document.getElementById("excluirVaiJunto"), json.vai_junto);
+          var fica = document.getElementById("excluirFica");
+          var ficaTitulo = document.getElementById("excluirFicaTitulo");
+          linhas(fica, json.fica);
+          fica.hidden = ficaTitulo.hidden = !(json.fica && json.fica.length);
+          var alerta = document.getElementById("excluirAlerta");
+          var avisos = [];
+          if (json.pagos) avisos.push(json.pagos + (json.pagos === 1 ? " orçamento ou O.S. tem pagamento recebido" : " orçamentos ou O.S. têm pagamento recebido"));
+          if (json.assinados) avisos.push(json.assinados + (json.assinados === 1 ? " documento já foi assinado pelo cliente" : " documentos já foram assinados pelo cliente"));
+          alerta.hidden = !avisos.length;
+          alerta.textContent = avisos.length ? "Atenção: " + avisos.join(" e ") + ". Isso some do Financeiro e das Assinaturas, e não volta." : "";
+          bloco.hidden = false;
+          pintar();
+        })
+        .catch(function () { /* sem a conta, a janela continua com a exclusão de sempre */ });
+    });
+  })();
 
   /* ?abrir=<id>: quem acabou de cadastrar o cliente (pela importação do
      documento, por exemplo) chega com a ficha dele já aberta, e não numa

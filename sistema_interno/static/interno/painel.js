@@ -1802,6 +1802,9 @@
       form: formId,
       erro: erroId,
       rotuloCarregando: "Excluindo...",
+      /* O recado do servidor conta o que saiu de verdade ("levou junto...",
+         "ficou registrado..."): o aviso mostra ele, e não um "Salvo". */
+      mensagemPronta: function (json) { return json && json.msg; },
       antes: function () {
         if (confirmacaoCorreta()) return null;
         if (campo) {

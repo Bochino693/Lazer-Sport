@@ -36,6 +36,7 @@ from django.views.generic import View
 from core.models import Estabelecimentos
 
 from . import cartao_cliente
+from . import exclusao_cliente
 from . import clientes as svc
 from .completude_clientes import (
     faltas_do_cliente,
@@ -391,6 +392,17 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
             resumo=svc.opcao_de_busca(cliente),
         )
 
+    def acao_previa_exclusao(self, request):
+        """O que iria junto se o cliente fosse apagado com tudo. Só lê.
+
+        A folha de excluir pede isto ao abrir, para mostrar a conta ANTES
+        de qualquer confirmação. Só o superusuário recebe (403 para os demais).
+        """
+        if not getattr(request.user, "is_superuser", False):
+            return self.erro(request, "Só o superusuário apaga o cliente com tudo.", status=403)
+        cliente = get_object_or_404(Cliente, pk=request.POST.get("id"))
+        return self.sucesso(request, "", **exclusao_cliente.levantar(cliente).como_json())
+
     def acao_delete(self, request):
         superusuario = bool(getattr(request.user, "is_superuser", False))
         if not pode_excluir_cliente(request.user) and not superusuario:
@@ -402,6 +414,28 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
 
         cliente = get_object_or_404(Cliente, pk=request.POST.get("id"))
         exigir_confirmacao_exclusao(request)
+
+        # A OUTRA EXCLUSÃO (seção 141): o cliente COM os orçamentos, as O.S.,
+        # os documentos e as vendas dele. Só o superusuário -- quem não é
+        # não vê a opção, e o POST feito à mão volta 403 sem apagar nada.
+        if (request.POST.get("alcance") or "").strip() == "tudo":
+            if not superusuario:
+                return self.erro(
+                    request,
+                    "Apagar o cliente com os orçamentos e as ordens de serviço é só do superusuário.",
+                    status=403,
+                )
+            nome = cliente.nome_cliente
+            levantamento = exclusao_cliente.apagar_com_tudo(
+                cliente, autor=request.user, motivo=texto(request, "motivo_exclusao", limite=240),
+            )
+            foi = "; ".join(f"{linha['quantos']} {linha['rotulo']}" for linha in levantamento.vai_junto)
+            ficou = "; ".join(f"{linha['quantos']} {linha['rotulo']}" for linha in levantamento.fica)
+            recado = f"Cliente “{nome}” excluído com tudo o que era dele"
+            recado += f": {foi}." if foi else "."
+            if ficou:
+                recado += f" Ficou: {ficou}."
+            return self.sucesso(request, recado + " A exclusão foi registrada.")
 
         # Apagar levaria junto o vínculo dos orçamentos (SET_NULL) e o
         # histórico do cliente sumiria da proposta já enviada. Vale para

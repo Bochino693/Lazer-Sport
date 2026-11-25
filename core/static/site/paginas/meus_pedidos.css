@@ -252,6 +252,7 @@
 }
 
 .pd-foto {
+    position: relative;
     display: grid;
     place-items: center;
     width: 56px;
@@ -265,6 +266,9 @@
 }
 
 .pd-foto img {
+    /* presa à moldura: a foto alta não passa dela e não é cortada (seção 141) */
+    position: absolute;
+    inset: 0;
     display: block;
     width: 100%;
     height: 100%;
@@ -389,6 +393,7 @@
 }
 
 .pd-item-foto {
+    position: relative;
     display: grid;
     place-items: center;
     width: 72px;
@@ -402,6 +407,9 @@
 }
 
 .pd-item-foto img {
+    /* presa à moldura: a foto alta não passa dela e não é cortada (seção 141) */
+    position: absolute;
+    inset: 0;
     display: block;
     width: 100%;
     height: 100%;

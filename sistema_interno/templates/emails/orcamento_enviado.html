@@ -37,7 +37,7 @@
               {% if recado %}
                 <p style="margin:0 0 18px;padding:14px 16px;border-left:3px solid #071d68;background:#f4f7fd;color:#172033;font-size:15px;line-height:1.65;white-space:pre-line;">{{ recado }}</p>
               {% endif %}
-              <p style="margin:0 0 22px;color:#475569;font-size:15px;line-height:1.65;">Sua proposta nº <strong>{{ orcamento.pk }}</strong> está pronta. Confira os itens, fotos e condições e registre sua aprovação ou pedido de ajustes pela página abaixo.</p>
+              <p style="margin:0 0 22px;color:#475569;font-size:15px;line-height:1.65;">{% if consulta %}Segue o seu pedido nº <strong>{{ orcamento.pk }}</strong> ({{ situacao_do_pedido }}). Consulte e imprima os itens, as fotos e as condições pela página abaixo — não precisa de login.{% else %}Sua proposta nº <strong>{{ orcamento.pk }}</strong> está pronta. Confira os itens, fotos e condições e registre sua aprovação ou pedido de ajustes pela página abaixo.{% endif %}</p>
 
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:0 0 24px;border:1px solid #dfe6f1;border-radius:16px;background:#f8faff;">
                 <tr>
@@ -95,7 +95,7 @@
               <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 22px;">
                 <tr>
                   <td align="center" bgcolor="#0f9d58" style="border-radius:14px;">
-                    <a href="{{ link }}" target="_blank" style="display:inline-block;padding:16px 28px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:800;line-height:1;">Abrir proposta e responder</a>
+                    <a href="{{ link }}" target="_blank" style="display:inline-block;padding:16px 28px;color:#ffffff;text-decoration:none;font-size:16px;font-weight:800;line-height:1;">{% if consulta %}Abrir o pedido{% else %}Abrir proposta e responder{% endif %}</a>
                   </td>
                 </tr>
               </table>

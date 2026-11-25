@@ -469,7 +469,7 @@ def preambulo(vendedor: dict) -> dict:
     nome = vendedor.get("representante_nome") or ""
     representante = nome or "seu representante legal"
     if nome and vendedor.get("representante_rg"):
-        representante += f", portador da cédula de identidade RG {vendedor['representante_rg']}"
+        representante += f", portador da cédula de identidade RG: {vendedor['representante_rg']}"
     if nome and vendedor.get("representante_endereco"):
         representante += f", residente e domiciliado na {vendedor['representante_endereco']}"
     empresa = vendedor.get("nome_fantasia") or vendedor.get("razao_social") or "a empresa vendedora"
@@ -482,12 +482,16 @@ def preambulo(vendedor: dict) -> dict:
         partes.append(f"com sede na {vendedor['endereco_sede']}")
     return {
         "abertura": (
+            # A REDAÇÃO DO CONTRATO MODELO DA EMPRESA, palavra por palavra
+            # (LEIA-ME-V10, seção 141): "comparecem aqui, as partes, de um
+            # lado", "aqui doravante denominado", "neste ato representado
+            # por" e "RG:" com dois-pontos.
             "Pelo presente INSTRUMENTO PARTICULAR DE COMPRA E VENDA, e na forma "
-            "da Lei, comparecem aqui as partes: de um lado, na qualidade de "
-            "fornecedor, doravante denominado simplesmente VENDEDOR: "
+            "da Lei, comparecem aqui, as partes, de um lado, na qualidade de "
+            "fornecedor, aqui doravante denominado simplesmente VENDEDOR: "
             + ", ".join(partes)
-            + f", neste ato representada por {representante}; e, do outro lado, na "
-            "qualidade de comprador, doravante denominado simplesmente COMPRADOR:"
+            + f", neste ato representado por {representante}; e, do outro lado, na "
+            "qualidade de comprador, aqui doravante denominado simplesmente COMPRADOR:"
         ),
         "fechamento": (
             "As partes acima identificadas têm, entre si, justo e acertado o "

@@ -16,6 +16,8 @@ gerados DEPOIS -- o contrato já gerado guarda a cópia dele (o retrato).
 
 from __future__ import annotations
 
+import re
+
 from django.shortcuts import render
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
@@ -35,6 +37,10 @@ def cnpj_pontuado(valor: str) -> str:
     if len(chave) != 14 or not documento_valido(chave):
         raise ErroDeFormulario("CNPJ inválido. Confira os números.")
     return f"{chave[:2]}.{chave[2:5]}.{chave[5:8]}/{chave[8:12]}-{chave[12:]}"
+
+
+#: "RG", "RG:", "R.G. nº" escritos antes do número (o contrato já escreve "RG: ").
+RG_COM_ROTULO = re.compile(r"^\s*R\.?\s*G\.?\s*(?:n[.ºo°]*)?\s*[:\-–]?\s*(?=\d)", re.IGNORECASE)
 
 
 class DadosContratoInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
@@ -89,6 +95,13 @@ class DadosContratoInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
         for campo, rotulo, limite, obrigatorio in self.CAMPOS:
             valor = " ".join(texto(request, campo, obrigatorio=obrigatorio, rotulo=rotulo, limite=limite).split())
             setattr(dados, campo, valor)
+        # PARA SAIR COMO NO CONTRATO MODELO (seção 141): o texto já escreve
+        # "RG: " antes do número e "; e, do outro lado" depois do endereço.
+        # Quem digita "RG: 00.000.000-0" ou termina o endereço com ponto não
+        # ganha "RG: RG: ..." nem "cidade.; e, do outro lado".
+        dados.representante_rg = RG_COM_ROTULO.sub("", dados.representante_rg).strip()
+        dados.representante_endereco = dados.representante_endereco.rstrip(" .;,")
+        dados.endereco_sede = dados.endereco_sede.rstrip(" .;,")
         dados.cnpj = cnpj_pontuado(dados.cnpj)
         dados.atualizado_por = request.user
         dados.save()

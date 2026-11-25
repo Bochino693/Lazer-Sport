@@ -90,14 +90,18 @@ class AcoesConformeASituacaoTests(TestCase):
         self.assertTrue(vencida.pode_refazer)
         self.assertIn('value="refazer"', self.lista())
 
-    def test_respondida_nao_e_reenviada(self):
-        """Reenviar pediria uma decisão que o cliente já tomou."""
-        for status in (Orcamento.Status.APROVADO, Orcamento.Status.RECUSADO):
-            with self.subTest(status=status):
-                Orcamento.objects.all().delete()
-                self.proposta(status=status)
+    def test_recusada_nao_e_reenviada_e_a_aprovada_sai_para_consulta(self):
+        """A recusada pede a versão nova; a aprovada continua saindo (seção 141)."""
+        self.proposta(status=Orcamento.Status.RECUSADO)
+        recusada = Orcamento.objects.get()
+        self.assertFalse(recusada.pode_enviar)
+        self.assertFalse(recusada.envio_para_consulta)
 
-                self.assertFalse(Orcamento.objects.get().pode_enviar)
+        Orcamento.objects.all().delete()
+        self.proposta(status=Orcamento.Status.APROVADO)
+        aprovada = Orcamento.objects.get()
+        self.assertTrue(aprovada.pode_enviar)
+        self.assertTrue(aprovada.envio_para_consulta)
 
     def test_substituida_nao_e_reenviada_nem_refeita(self):
         self.proposta(status=Orcamento.Status.SUBSTITUIDO)

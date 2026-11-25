@@ -236,6 +236,7 @@
                 {% if pode_editar_comercial and orcamento.pode_enviar %}<button type="button" class="btn btn-sm btn-outline-primary"
                         data-acao-cartao="{% if orcamento.enviado_em %}Link{% else %}Enviar{% endif %}" data-acao-ordem="4"
                         data-enviar="{{ orcamento.id }}"
+                        {% if orcamento.envio_para_consulta %}data-consulta="1"{% endif %}
                         data-orcamento-id="{{ orcamento.id }}"
                         data-nome="{{ orcamento.destinatario }}"
                         data-whatsapp="{{ orcamento.whatsapp_destinatario }}"

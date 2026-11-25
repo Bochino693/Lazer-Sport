@@ -2370,10 +2370,20 @@ class Orcamento(Prime):
         prazo o caminho é `Refazer`, que cria a versão nova com o preço
         de hoje.
 
-        Substituída e respondida também saem: a primeira foi trocada por
-        outra versão, e a segunda o cliente já respondeu -- reenviar
-        pediria uma decisão que já foi tomada.
+        Substituída e recusada também saem: a primeira foi trocada por
+        outra versão (manda-se a que vale), e a segunda o cliente recusou
+        -- o caminho é a proposta nova.
+
+        A APROVADA CONTINUA SAINDO (LEIA-ME-V10, seção 141). O dono: "mesmo
+        com pedidos finalizados, o orçamento ainda pode ser enviado e
+        visualizado pelo cliente sem login, como nas fases antes da
+        aprovação". Aprovado, pago, em produção ou entregue, o link segue
+        valendo e a equipe pode mandá-lo de novo -- só que PARA CONSULTA
+        (`envio_para_consulta`): a mensagem não pede decisão, a página não
+        tem botão de aprovar, e o reenvio não mexe na situação.
         """
+        if self.status == self.Status.APROVADO:
+            return True
         if self.vencido:
             return False
         return self.status in (
@@ -2381,6 +2391,16 @@ class Orcamento(Prime):
             self.Status.AGUARDANDO_RESPOSTA,
             self.Status.EM_NEGOCIACAO,
         )
+
+    @property
+    def envio_para_consulta(self):
+        """O envio de agora é só para o cliente consultar e imprimir?
+
+        Verdade para a proposta já aprovada (e tudo o que vem depois:
+        contrato assinado, pagamento, produção, entrega). A decisão já foi
+        tomada: reenviar não a pede de novo.
+        """
+        return self.status == self.Status.APROVADO
 
     @property
     def pode_receber_pagamento(self):
@@ -3128,8 +3148,8 @@ class DadosContrato(Prime):
     """Os dados do VENDEDOR no contrato de compra e venda (LEIA-ME-V10, 107).
 
     O contrato que o cliente assina no celular diz quem vende e quem
-    representa a empresa: "neste ato representada por {nome}, portador da
-    cédula de identidade RG {rg}, residente e domiciliado na {endereço}".
+    representa a empresa: "neste ato representado por {nome}, portador da
+    cédula de identidade RG: {rg}, residente e domiciliado na {endereço}".
 
     DOIS TIPOS DE DADO, DOIS TRATAMENTOS. Os da EMPRESA (nome fantasia,
     razão social, CNPJ e sede) são públicos -- estão no site, na proposta,

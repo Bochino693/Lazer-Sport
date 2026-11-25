@@ -865,13 +865,13 @@ Cadastro mínimo de propósito: nome, valor e categoria. Foto e texto de
   <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Enviar proposta</h5>
+        <h5 class="modal-title" id="linkTitulo">Enviar proposta</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
       </div>
       <div class="modal-body">
         <div class="visually-hidden" id="linkErro" role="alert"></div>
         <div class="visually-hidden" id="linkSucesso" role="status"></div>
-        <p class="text-muted small mb-2">Escolha como compartilhar com <strong id="linkCliente"></strong>. O cliente abre uma página Lazer &amp; Sport com todos os detalhes e responde por ali.</p>
+        <p class="text-muted small mb-2">Escolha como compartilhar com <strong id="linkCliente"></strong>. <span id="linkExplica">O cliente abre uma página Lazer &amp; Sport com todos os detalhes e responde por ali.</span></p>
         <input type="hidden" id="linkOrcamentoId">
         <section class="ls-share-preview" aria-label="Prévia do compartilhamento">
           <div class="ls-share-preview-mark"><i class="bi bi-file-earmark-check"></i></div>
@@ -3159,10 +3159,21 @@ LSTela.pronto(function () {
     var titulo = document.getElementById("linkPreviaTitulo");
     var resumo = document.getElementById("linkPreviaResumo");
     var id = document.getElementById("linkOrcamentoId").value;
-    if (titulo) titulo.textContent = "Proposta nº " + id + " · " + (propostaAtual.total || "valor calculado");
-    if (resumo) resumo.textContent = propostaAtual.validade
-      ? "Válida até " + propostaAtual.validade + " · resposta on-line"
-      : "Itens, fotos, condições e resposta on-line";
+    /* JÁ APROVADA (seção 141): o envio é para o cliente consultar e
+       imprimir. A janela diz isso em vez de falar em resposta e validade. */
+    var consulta = Boolean(propostaAtual.consulta);
+    var tituloDaJanela = document.getElementById("linkTitulo");
+    var explica = document.getElementById("linkExplica");
+    if (tituloDaJanela) tituloDaJanela.textContent = consulta ? "Enviar o pedido aprovado" : "Enviar proposta";
+    if (explica) explica.textContent = consulta
+      ? "Este pedido já foi aprovado: o link abre sem login, só para o cliente consultar e imprimir. Enviar de novo não muda a situação."
+      : "O cliente abre uma página Lazer & Sport com todos os detalhes e responde por ali.";
+    if (titulo) titulo.textContent = (consulta ? "Pedido nº " : "Proposta nº ") + id + " · " + (propostaAtual.total || "valor calculado");
+    if (resumo) resumo.textContent = consulta
+      ? "Aprovado · consulta e impressão, sem login"
+      : (propostaAtual.validade
+        ? "Válida até " + propostaAtual.validade + " · resposta on-line"
+        : "Itens, fotos, condições e resposta on-line");
     /* A caixa da mensagem não entra aqui: quem escreve nela é
        `receberMensagemDoServidor`, que respeita o que foi editado. */
   }
@@ -3325,6 +3336,8 @@ LSTela.pronto(function () {
         previa: botao.dataset.previa || "",
         total: botao.dataset.total || "",
         validade: botao.dataset.validade || "",
+        /* já aprovada: a janela fala em consulta, e não em resposta (seção 141) */
+        consulta: botao.dataset.consulta === "1",
         mensagemPadrao: botao.dataset.mensagem || "",
         /* Cada proposta abre com o texto dela. Guardar a edição entre
            aberturas mandaria para o cliente B o recado escrito para o

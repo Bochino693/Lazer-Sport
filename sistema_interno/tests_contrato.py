@@ -184,7 +184,8 @@ class BloqueioTests(BaseDocumento):
         """O dono: "a assinatura está travando... nem precisa travar"."""
         documento = svc.gerar(self.orcamento, self.vendedor)
         abertura = documento.conteudo["preambulo"]["abertura"]
-        self.assertIn("neste ato representada por seu representante legal", abertura)
+        self.assertIn("neste ato representado por seu representante legal", abertura)
+        self.assertNotIn("RG:", abertura)
         self.assertNotIn("RG ,", abertura)
         self.assertNotIn("residente e domiciliado na ;", abertura)
 
@@ -279,7 +280,8 @@ class TelaDosDadosTests(TestCase):
         # O menu leva à tela; o preâmbulo aparece como sai no contrato.
         self.assertContains(pagina, 'href="/orcamentos/dados-do-contrato/"')
         self.assertContains(pagina, 'data-dc-previa="representante_nome"')
-        self.assertContains(pagina, "neste ato representada por")
+        self.assertContains(pagina, "neste ato representado por")
+        self.assertContains(pagina, "portador da cédula de identidade RG: <mark")
 
     def test_salvar_confere_o_cnpj_e_diz_o_que_falta(self):
         self.client.force_login(self.gestor)
@@ -424,16 +426,22 @@ class ContratoTests(BaseDocumento):
         conteudo = self.gerar().conteudo
         abertura = conteudo["preambulo"]["abertura"]
         for pedaco in (
-            "Pelo presente INSTRUMENTO PARTICULAR DE COMPRA E VENDA, e na forma da Lei",
+            # a redação do contrato modelo da empresa, palavra por palavra (seção 141)
+            "Pelo presente INSTRUMENTO PARTICULAR DE COMPRA E VENDA, e na forma da Lei, "
+            "comparecem aqui, as partes, de um lado, na qualidade de fornecedor, aqui "
+            "doravante denominado simplesmente VENDEDOR: Brinquedos Lazer & Sport",
             "VENDEDOR: Brinquedos Lazer & Sport, razão social Fábrica de Brinquedos Lazer & Sport Oficial – LTDA",
             "inscrita no CNPJ sob o n. 54.486.908/0001-86",
             "com sede na Rua São Roque de Minas, n. 104, Jardim Peri, São Paulo, Capital",
-            f"neste ato representada por {REPRESENTANTE_FICTICIO['representante_nome']}",
-            f"RG {REPRESENTANTE_FICTICIO['representante_rg']}",
+            f"neste ato representado por {REPRESENTANTE_FICTICIO['representante_nome']}, "
+            f"portador da cédula de identidade RG: {REPRESENTANTE_FICTICIO['representante_rg']}, "
+            f"residente e domiciliado na {REPRESENTANTE_FICTICIO['representante_endereco']}; e, do outro lado, "
+            "na qualidade de comprador, aqui doravante denominado simplesmente COMPRADOR:",
             f"residente e domiciliado na {REPRESENTANTE_FICTICIO['representante_endereco']};",
-            "doravante denominado simplesmente COMPRADOR:",
         ):
             self.assertIn(pedaco, abertura)
+        for antigo in ("representada por", "identidade RG 0", "comparecem aqui as partes:", ", doravante"):
+            self.assertNotIn(antigo, abertura)
         self.assertTrue(conteudo["preambulo"]["fechamento"].startswith("As partes acima identificadas têm, entre si"))
         cliente = conteudo["cliente"]
         self.assertEqual(cliente["documento"], CPF_DO_CLIENTE)
