@@ -294,7 +294,7 @@
                   assinatura, a opção de pagamento deve ser o último
                   estágio." O termo aparece na aprovação (antes vinha só
                   com o orçamento pago), e diz em que pé está: falta gerar,
-                  o cliente ainda vai assinar (o link de 10 minutos), já
+                  o cliente ainda vai assinar (o link de 24 horas), já
                   assinou (o PDF) ou ficou suspenso. Vem ANTES do botão do
                   pagamento, na ordem dos estágios. A tela do documento é
                   `views_documento_assinatura.py`.
@@ -311,7 +311,7 @@
                    data-documento-assinatura="{{ situacao }}"
                    data-acao-cartao="{% if situacao == 'assinado' %}Assinado{% elif situacao == 'suspenso' %}Suspenso{% elif situacao == 'aguardando' %}Assinatura{% else %}Documento{% endif %}" data-acao-ordem="3"
                    aria-label="{% if situacao == 'assinado' %}Documento assinado{% elif situacao == 'suspenso' %}Documento suspenso{% elif situacao == 'aguardando' %}Assinatura pendente{% else %}Gerar documento para assinatura{% endif %} do orçamento {{ orcamento.id }}"
-                   title="{% if situacao == 'assinado' %}O cliente já assinou: baixar o PDF{% elif situacao == 'suspenso' %}O orçamento não está mais aprovado: o termo não pode ser assinado{% elif situacao == 'aguardando' %}O QR e o link de 10 minutos para o cliente assinar{% else %}Gerar o termo de compra para o cliente assinar no telefone{% endif %}">
+                   title="{% if situacao == 'assinado' %}O cliente já assinou: baixar o PDF{% elif situacao == 'suspenso' %}O orçamento não está mais aprovado: o termo não pode ser assinado{% elif situacao == 'aguardando' %}O QR e o link de 24 horas para o cliente assinar{% else %}Gerar o termo de compra para o cliente assinar no telefone{% endif %}">
                   <i class="bi {% if situacao == 'assinado' %}bi-patch-check-fill{% elif situacao == 'suspenso' %}bi-pause-circle{% elif situacao == 'aguardando' %}bi-hourglass-split{% else %}bi-pen{% endif %}" aria-hidden="true"></i><span class="ls-action-label">{% if situacao == 'assinado' %}Documento assinado{% elif situacao == 'suspenso' %}Documento suspenso{% elif situacao == 'aguardando' %}Assinatura pendente{% else %}Gerar documento para assinatura{% endif %}</span>
                 </a>
                 {% endwith %}

@@ -22,7 +22,7 @@ O QUE ESTE MÓDULO FAZ, E SÓ ISSO:
     (`prazo_de_entrega_do_orcamento`);
   * diz o que falta para o contrato poder sair (`pendencias`).
 
-A regra do documento (gerar, link de 10 minutos, assinar, suspender) mora
+A regra do documento (gerar, link de 24 horas, assinar, suspender) mora
 em `documento_assinatura.py`, e a cara do papel nos templates
 `documento_assinatura/contrato.html` e `site/paginas/assinatura.css`.
 """

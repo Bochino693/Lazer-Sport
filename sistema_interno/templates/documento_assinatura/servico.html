@@ -173,7 +173,7 @@
         <div><dt>Assinado em</dt><dd>{{ documento.assinado_em|date:"d/m/Y H:i:s O" }}</dd></div>
         <div><dt>Assinante</dt><dd>{{ documento.assinante_nome }} · {{ assinante_documento }}</dd></div>
         <div><dt>IP</dt><dd>{{ documento.assinatura_ip|default:"não informado" }}</dd></div>
-        <div><dt>Links gerados</dt><dd>{{ documento.links_gerados }} (cada um válido por {% minutos_do_link %} minutos)</dd></div>
+        <div><dt>Links gerados</dt><dd>{{ documento.links_gerados }} (cada um válido por {% prazo_do_link %})</dd></div>
         <div class="largo"><dt>Aparelho (navegador)</dt><dd>{{ documento.assinatura_navegador|default:"não informado" }}</dd></div>
         <div class="largo"><dt>SHA-256 do documento</dt><dd class="hash">{{ documento.hash_conteudo }}</dd></div>
         <div class="largo"><dt>SHA-256 conferido na assinatura</dt><dd class="hash">{{ documento.hash_assinado }}</dd></div>

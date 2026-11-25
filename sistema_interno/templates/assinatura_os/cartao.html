@@ -7,12 +7,12 @@
 
   As caras: bloqueado (rascunho, cancelada, substituída ou agenda vencida:
   o motivo e a saída), sem documento (o botão grande de gerar), aguardando
-  (o QR, o relógio de 10 minutos, o link, o WhatsApp), suspenso (a O.S. foi
+  (o QR, o relógio de 24 horas, o link, o WhatsApp), suspenso (a O.S. foi
   cancelada ou substituída depois de o papel sair) e assinado (quem,
   quando, a assinatura e o PDF). O PAGAMENTO NÃO TRAVA NADA: pendente,
   parcial ou pago, o papel sai e diz em que pé está.
 
-  O LINK NÃO VEM AQUI: o script o pede ao abrir e a cada 10 minutos.
+  O LINK NÃO VEM AQUI: o script o pede ao abrir e a cada 24 horas.
 {% endcomment %}
 <section class="ls-doc-cartao ls-doc-{{ situacao_cartao }}"
          id="docAssinaturaCartao"
@@ -40,7 +40,7 @@
       O documento padronizado de <strong>manutenção e serviços</strong> sai desta O.S. — o
       equipamento, o defeito, o serviço, as peças e os valores, a garantia, a situação do
       pagamento e as onze cláusulas — e fica <strong>congelado</strong>. O cliente assina no
-      telefone dele por um link que vale {{ validade_minutos }} minutos e se renova sozinho
+      telefone dele por um link que vale {{ validade_texto }} e se renova sozinho
       aqui. <strong>Com ou sem pagamento</strong>: hoje,
       {% if ordem.quitado %}pago{% else %}{{ ordem.get_status_pagamento_display|lower }}{% endif %}.
     </p>
@@ -116,7 +116,7 @@
       <p>Esta tela troca sozinha quando ele assinar.</p>
       {% else %}
       <h2>Peça para o cliente apontar a câmera</h2>
-      <p>O link vale {{ validade_minutos }} minutos para abrir e se renova sozinho. Quem abriu tem {{ tempo_para_assinar_min }} minutos para assinar naquele aparelho.</p>
+      <p>O link vale {{ validade_texto }} e se renova sozinho. O cliente assina quando puder dentro desse prazo, sem link novo.</p>
       {% endif %}
     </div>
   </header>
@@ -125,7 +125,7 @@
     <span class="ls-doc-icone verde"><i class="bi bi-phone-vibrate" aria-hidden="true"></i></span>
     <div>
       <strong>O cliente está com a ordem de serviço aberta{% if documento.aberto_em %} desde {{ documento.aberto_em|date:"H:i" }}{% endif %}</strong>
-      <p>Ele tem {{ tempo_para_assinar_min }} minutos para assinar naquele aparelho, sem link novo. Esta tela avisa sozinha quando ele assinar.</p>
+      <p>Ele assina naquele aparelho enquanto o link valer ({{ validade_texto }}), sem link novo. Esta tela avisa sozinha quando ele assinar.</p>
       <button type="button" class="btn btn-sm btn-outline-secondary" data-doc-acao="mostrar-qr">
         <i class="bi bi-qr-code me-1" aria-hidden="true"></i> Mostrar o QR de novo
       </button>
@@ -145,7 +145,7 @@
             <circle class="arco" cx="60" cy="60" r="52" pathLength="100" data-doc-arco/>
           </svg>
           <div class="ls-doc-relogio-texto">
-            <strong data-doc-tempo>{{ validade_minutos }}:00</strong>
+            <strong data-doc-tempo>{{ validade_relogio }}</strong>
             <span>para expirar</span>
           </div>
         </div>
@@ -155,7 +155,7 @@
       <label class="form-label" for="docAssinaturaLink">Link de assinatura</label>
       <div class="ls-doc-link">
         <input class="form-control" id="docAssinaturaLink" type="text" readonly value="" data-doc-link
-               aria-label="Link de assinatura (vale {{ validade_minutos }} minutos)" placeholder="Gerando…">
+               aria-label="Link de assinatura (vale {{ validade_texto }})" placeholder="Gerando…">
         <button type="button" class="btn btn-outline-primary" data-doc-acao="copiar" aria-label="Copiar o link">
           <i class="bi bi-clipboard" aria-hidden="true"></i><span>Copiar</span>
         </button>

@@ -10269,3 +10269,54 @@ Dependência nova: rjsmin (requirements.txt).
    todos os sites naquele PC. E os endereços que já foram salvos antes
    continuam na conta Google de quem salvou: apagar em
    chrome://settings/addresses.
+
+136) O LINK DE ASSINATURA DO CLIENTE VALE 24 HORAS, E A PÁGINA NÃO TEM MAIS RELÓGIO
+   O PEDIDO: "mude o tempo de assinatura dos clientes para 24 horas em vez
+   de 10 minutos." E, no meio do trabalho: "tem o tempo dele dentro do
+   documento... acho melhor tirar, para ele ficar à vontade para ler as
+   cláusulas."
+
+   O LINK VALE 24 HORAS
+     * documento_assinatura.VALIDADE_DO_LINK = 24 * 60 * 60 (era 10 * 60;
+       seção 117). Vale para o contrato de compra e venda, o termo e a
+       ordem de serviço do CLIENTE. O servidor continua recusando o link
+       vencido, na abertura e no envio; o link de um documento substituído
+       ou suspenso cai na hora, como antes.
+     * O TERMO DO COLABORADOR (RH) CONTINUA COM 10 MINUTOS: o pedido foi
+       "dos clientes". rh.termo.VALIDADE_DO_LINK deixou de ler a constante
+       do contrato e tem o número dele (10 * 60). Para mudar, é ali.
+     * Nenhum texto escreve o número à mão: `prazo_do_link()` devolve
+       "24 horas" (`texto_do_prazo(segundos)`: "10 minutos", "1 hora e 30
+       minutos"...), a tag `{% prazo_do_link %}` nas folhas em PDF ("cada
+       um válido por 24 horas"), `validade_texto` no cartão do painel e no
+       JSON do link (o toast "vale 24 horas", "renova sozinho a cada 24
+       horas"). A conversa do WhatsApp diz "*24 horas*".
+     * O cartão do painel (o QR): o anel agora mostra "23h59" enquanto
+       falta uma hora ou mais e "9:59" abaixo disso
+       (`relogio_do_prazo`, e a mesma conta no documento-assinatura.js).
+       O QR só se renova sozinho quando as 24 horas acabam.
+     * A régua do pedido (etapas_do_pedido.py) e os textos fixos das listas
+       de orçamentos e de O.S., de Meus pedidos e da O.S. pública dizem 24
+       horas.
+
+   A PÁGINA DO CLIENTE SEM RELÓGIO (core/templates/assinatura_publica.html)
+     * Saiu o relógio que corria no topo do contrato. No lugar, uma frase:
+       "Leia com calma: este link vale 24 horas, até DD/MM às HH:MM."
+     * O prazo continua conferido, em silêncio (assinatura.js): se o link
+       vencer com a página aberta, o botão para e a folha "O tempo do link
+       acabou" explica. O servidor confere de novo no envio.
+     * O prazo da página é o do LINK (core/views_assinatura.py): antes, o
+       aparelho que abria tinha 30 minutos (TEMPO_PARA_ASSINAR) e a página
+       "vencia" com o link ainda bom. TEMPO_PARA_ASSINAR ficou só para
+       quem está com o contrato aberto quando o link vence.
+
+   ARQUIVOS: sistema_interno/documento_assinatura.py, documento_servico.py,
+   etapas_do_pedido.py, views_documento_assinatura.py,
+   views_assinatura_os.py, templatetags/contrato_extras.py, os cartões e as
+   folhas em templates/documento_assinatura/ e templates/assinatura_os/,
+   static/interno/documento-assinatura.js e avisos-resolver.js;
+   core/views_assinatura.py, core/templates/assinatura_publica.html,
+   core/static/site/paginas/assinatura.js; rh/termo.py.
+   TESTES: sistema_interno/tests_documento_assinatura.py (vale dentro das 24
+   horas e expira depois; o prazo em palavras e no relógio; a página sem
+   relógio; o RH com 10 minutos) e tests_etapas_do_pedido.py.

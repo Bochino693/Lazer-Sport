@@ -3,13 +3,13 @@
 Mora no `core` pelo mesmo motivo da proposta (ver `views_orcamento.py`): o
 painel responde em interno.lazersport.com.br, atrás de login de equipe, e
 o cliente não tem login. Aqui a página sai no site, aberta, e quem abre a
-porta é o link de 10 minutos gerado pelo painel.
+porta é o link de 24 horas gerado pelo painel.
 
 O QUE SUSTENTA ISSO (o resto está em `sistema_interno/documento_assinatura.py`):
 
   * o link é um `TimestampSigner` com sal próprio, preso ao id e ao hash do
     documento: não se fabrica, não se aproveita de outro documento e morre
-    em 10 minutos -- conferido ao ABRIR e de novo ao ENVIAR;
+    em 24 horas -- conferido ao ABRIR e de novo ao ENVIAR;
   * a página mostra o documento daquele link e mais nada: nenhum outro
     orçamento, nenhum id de cadastro, nenhum caminho para o painel;
   * o envio leva o CSRF do Django, passa por um freio curto por IP e trava
@@ -22,12 +22,14 @@ from __future__ import annotations
 
 import logging
 import time
+from datetime import datetime, timezone as dt_timezone
 
 from django.conf import settings
 from django.db import transaction
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_http_methods
 
 from core.registro_cadastro import ip_da_requisicao
@@ -133,7 +135,7 @@ def _tela_de_aviso(request, situacao, documento=None, *, status, mensagem="", mo
         # Por que o termo está suspenso: "aprovacao" ou "pagamento" (ver
         # `documento_assinatura.motivo_da_suspensao`).
         "motivo": motivo,
-        "minutos_do_link": svc.minutos_do_link(),
+        "prazo_do_link": svc.prazo_do_link(),
         **_contato_empresa(),
     }
     return _cabecalhos(render(request, "assinatura_publica.html", contexto, status=status))
@@ -172,7 +174,11 @@ def assinar_documento(request, token):
     if leitura.valido:
         # O APARELHO QUE ABRIU NÃO PRECISA DE LINK NOVO: tem TEMPO_PARA_ASSINAR
         # para ler e assinar (o painel para de girar o QR e anota no diário).
-        ate = svc.liberar_aparelho(request.session, leitura.documento)
+        # Com o link valendo 24 horas, o prazo do aparelho é o do próprio
+        # link (seção 136): o relógio da página não zera em 30 minutos com
+        # o link ainda bom. A marca da sessão segura quem estiver com o
+        # contrato aberto quando o link vencer.
+        ate = max(leitura.expira_em, svc.liberar_aparelho(request.session, leitura.documento))
         svc.registrar_abertura(leitura.documento, request.META.get("HTTP_USER_AGENT", ""))
 
     contexto = contexto_da_folha(leitura.documento)
@@ -183,10 +189,18 @@ def assinar_documento(request, token):
         # navegador desconta a diferença do relógio dele (`agora`).
         "expira_em_ms": ate * 1000,
         "segundos_restantes": max(0, ate - int(time.time())),
-        "validade_minutos": svc.TEMPO_PARA_ASSINAR // 60,
-        "minutos_do_link": svc.minutos_do_link(),
+        **_prazo_da_pagina(ate),
     })
     return _cabecalhos(render(request, "assinatura_publica.html", contexto))
+
+
+def _prazo_da_pagina(ate) -> dict:
+    """O que a página de assinar escreve sobre o prazo: "até quando" em data
+    e hora e o prazo em palavras. Sem relógio na tela (seção 136)."""
+    return {
+        "assinar_ate": timezone.localtime(datetime.fromtimestamp(ate, tz=dt_timezone.utc)),
+        "prazo_do_link": svc.prazo_do_link(),
+    }
 
 
 def _liberado(request, leitura) -> int:
@@ -265,8 +279,7 @@ def _enviar_assinatura(request, token):
                 "token": token,
                 "expira_em_ms": ate * 1000,
                 "segundos_restantes": max(0, ate - int(time.time())),
-                "validade_minutos": svc.TEMPO_PARA_ASSINAR // 60,
-                "minutos_do_link": svc.minutos_do_link(),
+                **_prazo_da_pagina(ate),
                 "erro": str(recusa),
                 "erro_campo": recusa.campo,
                 "nome_tentado": request.POST.get("nome", "")[:160],

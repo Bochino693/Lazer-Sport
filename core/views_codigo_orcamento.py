@@ -13,7 +13,7 @@ DUAS PORTAS, AS DUAS POR POST E SÓ PARA QUEM ESTÁ LOGADO:
     um código de orçamento?". A regra mora em
     `sistema_interno.codigo_orcamento.vincular`; aqui ficam o freio de
     tentativas e as mensagens (o sistema de avisos do site: toasts).
-  * assinar o termo (`AssinarTermoView`): o link de 10 minutos da
+  * assinar o termo (`AssinarTermoView`): o link de 24 horas da
     assinatura, gerado NA HORA pela mesma função do painel
     (`documento_assinatura.emitir_link`), e só para a conta a que o
     orçamento está vinculado. Por POST porque cada link gerado conta no
@@ -196,14 +196,14 @@ class VincularOrcamentoView(LoginRequiredMixin, View):
 
 
 class AssinarTermoView(LoginRequiredMixin, View):
-    """"Assinar o termo": um link novo de 10 minutos, e direto para a assinatura.
+    """"Assinar o termo": um link novo de 24 horas, e direto para a assinatura.
 
     O MESMO LINK DO PAINEL. A equipe manda o QR ou o WhatsApp; aqui o
     próprio cliente pede o dele, pela mesma `emitir_link` -- que conta no
     documento quantos links saíram. As mesmas recusas do painel: sem
     termo gerado, já assinado, ou suspenso (o orçamento deixou de estar
     aprovado). Na página de assinatura valem todas as conferências de
-    sempre (o relógio de 10 minutos, o CPF do cadastro, "Li e concordo").
+    sempre (o relógio de 24 horas, o CPF do cadastro, "Li e concordo").
     """
 
     login_url = "login"

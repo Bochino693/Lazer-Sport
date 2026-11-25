@@ -1382,8 +1382,8 @@
         else window.location.href = destino;
         liberar(b);
         b.classList.add("feito");
-        // o número vem do servidor (VALIDADE_DO_LINK, seção 117)
-        b.lastChild.textContent = "Link enviado: vale " + Math.round((corpo.validade || 600) / 60) + " minutos";
+        // o prazo vem do servidor (VALIDADE_DO_LINK, seções 117 e 136)
+        b.lastChild.textContent = "Link enviado: vale " + (corpo.validade_texto || "24 horas");
       }).catch(function (falha) {
         if (janela && !janela.closed) janela.close();
         liberar(b);

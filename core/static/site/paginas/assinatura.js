@@ -2,12 +2,12 @@
 
    Três peças, todas nesta página e sem biblioteca:
 
-   1. O RELÓGIO do link. O servidor diz quantos segundos faltam
-      (`data-restante`); a conta é feita contra o relógio DESTE aparelho a
-      partir daí, então um celular com a hora errada não ganha nem perde
-      tempo. Acabou: o botão para e a folha "O tempo do link acabou" sobe.
-      O servidor confere de novo no envio -- o relógio da tela é aviso, a
-      regra é a de lá.
+   1. O PRAZO do link, sem relógio na tela (o link vale 24 horas e o
+      cliente lê à vontade; seção 136). O servidor diz quantos segundos
+      faltam (`data-restante`); a conta é feita contra o relógio DESTE
+      aparelho a partir daí, então um celular com a hora errada não ganha
+      nem perde tempo. Acabou: o botão para e a folha "O tempo do link
+      acabou" sobe. O servidor confere de novo no envio -- a regra é a de lá.
 
    2. O QUADRO de assinar. Eventos de ponteiro (dedo, caneta e mouse com o
       mesmo código), `touch-action:none` para o dedo não rolar a página,
@@ -103,22 +103,15 @@
     if (evento.key === "Escape" && !folha.hidden) fecharFolha();
   });
 
-  /* ------------------------------------------------------------ relógio */
-  var relogio = document.getElementById("relogio");
-  var relogioTexto = document.getElementById("relogioTexto");
-  var relogioArco = document.getElementById("relogioArco");
-  var validade = (parseInt(relogio.getAttribute("data-validade"), 10) || 5) * 60;
-  var fim = Date.now() + (parseInt(relogio.getAttribute("data-restante"), 10) || 0) * 1000;
+  /* -------------------------------------------------------------- prazo */
+  /* Sem relógio na tela (seção 136): com o link valendo 24 horas, o cliente
+     lê as cláusulas à vontade. O prazo continua sendo conferido em silêncio:
+     se o link vencer com a página aberta, o botão para e a folha explica. */
+  var prazoDoLink = document.getElementById("prazoDoLink");
+  var fim = Date.now() + (parseInt(prazoDoLink ? prazoDoLink.getAttribute("data-restante") : "0", 10) || 0) * 1000;
 
-  function pintarRelogio() {
+  function conferirPrazo() {
     var resta = Math.max(0, Math.round((fim - Date.now()) / 1000));
-    var min = Math.floor(resta / 60);
-    var seg = resta % 60;
-    relogioTexto.textContent = min + ":" + (seg < 10 ? "0" : "") + seg;
-    relogioArco.style.strokeDashoffset = String(100 - Math.min(100, (resta / validade) * 100));
-    relogio.classList.toggle("pouco", resta > 0 && resta <= 60);
-    relogio.classList.toggle("acabou", resta === 0);
-    relogio.setAttribute("aria-label", resta ? "Faltam " + min + " minutos e " + seg + " segundos" : "Link expirado");
     if (resta === 0 && !acabou) {
       acabou = true;
       botaoAssinar.disabled = true;
@@ -127,10 +120,14 @@
     }
     return resta;
   }
-  pintarRelogio();
+  conferirPrazo();
   var tique = setInterval(function () {
-    if (pintarRelogio() === 0) clearInterval(tique);
-  }, 1000);
+    if (conferirPrazo() === 0) clearInterval(tique);
+  }, 15000);
+  // o celular que dormiu com a página aberta confere ao voltar
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") conferirPrazo();
+  });
 
   /* --------------------------------- o que já foi digitado neste aparelho */
   var chaveRascunho = "ls-assinatura-" + form.getAttribute("data-documento");
@@ -400,7 +397,7 @@
       if (corpo.situacao === "expirado") {
         acabou = true;
         fim = Date.now();
-        pintarRelogio();
+        conferirPrazo();
         abrirFolha("expirou");
         return;
       }

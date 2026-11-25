@@ -16,7 +16,7 @@ O que estes testes protegem:
     não refaz e não troca o documento; recusar (ou expirar) o orçamento
     suspende o link; o termo antigo, que declara "quitado", ainda é
     suspenso se o pagamento for desfeito;
-  * o link vale 10 minutos (o relógio do `TimestampSigner` é o que se
+  * o link vale 24 horas (o relógio do `TimestampSigner` é o que se
     adianta aqui -- não há freezegun no projeto) e é recusado depois, na
     abertura e no envio; o envio fora da janela não grava nada;
   * link fabricado, cortado ou de outro sal é inválido; o link não tem "_"
@@ -359,21 +359,23 @@ class GerarDocumentoTests(BaseDocumento):
 
 
 # ======================================================================
-# O LINK DE 5 MINUTOS
+# O LINK DE 24 HORAS (eram 5 minutos, depois 10)
 # ======================================================================
 class LinkDeCincoMinutosTests(BaseDocumento):
 
-    def test_vale_dentro_dos_10_minutos_e_expira_depois(self):
+    def test_vale_dentro_das_24_horas_e_expira_depois(self):
         documento = self.gerar()
         agora = 1_800_000_000
         with mock.patch("django.core.signing.time.time", return_value=agora):
             token = self.link(documento)
 
-        self.assertEqual(svc.VALIDADE_DO_LINK, 10 * 60)  # o pedido: "10 min agora em vez de 5"
+        # o pedido: "24 horas em vez de 10 minutos" (seção 136)
+        self.assertEqual(svc.VALIDADE_DO_LINK, 24 * 60 * 60)
+        self.assertEqual(svc.prazo_do_link(), "24 horas")
         limite = svc.VALIDADE_DO_LINK
-        for passados, esperado in ((0, "valido"), (60, "valido"), (300, "valido"), (301, "valido"),
-                                   (limite - 1, "valido"), (limite, "valido"),
-                                   (limite + 1, "expirado"), (3600, "expirado")):
+        for passados, esperado in ((0, "valido"), (60, "valido"), (601, "valido"), (3600, "valido"),
+                                   (12 * 3600, "valido"), (limite - 1, "valido"), (limite, "valido"),
+                                   (limite + 1, "expirado"), (limite + 3600, "expirado")):
             with self.subTest(segundos=passados):
                 with mock.patch("django.core.signing.time.time", return_value=agora + passados):
                     self.assertEqual(svc.ler_link(token).situacao, esperado)
@@ -381,9 +383,19 @@ class LinkDeCincoMinutosTests(BaseDocumento):
         with mock.patch("django.core.signing.time.time", return_value=agora + 120):
             resposta = self.client.get(f"/assinar/{token}/")
         self.assertEqual(resposta.status_code, 200)
-        # quem abriu tem TEMPO_PARA_ASSINAR neste aparelho (sem link novo)
-        self.assertContains(resposta, f'data-restante="{svc.TEMPO_PARA_ASSINAR}"')
+        # quem abriu assina até o link vencer: o relógio da página é o do
+        # link (24 horas), e não os 30 minutos da sessão do aparelho
+        self.assertContains(resposta, f'data-restante="{limite - 120}"')
+        self.assertContains(resposta, "Leia com calma: este link vale 24 horas, até ")
+        # sem relógio correndo na página: o cliente lê as cláusulas à vontade
+        self.assertNotContains(resposta, 'id="relogio"')
+        self.assertNotContains(resposta, 'role="timer"')
+        self.assertNotContains(resposta, "minutos para assinar")
 
+        # abriu de novo perto do fim: o link vence com o contrato aberto e
+        # este aparelho continua (TEMPO_PARA_ASSINAR, pela sessão)
+        with mock.patch("django.core.signing.time.time", return_value=agora + limite - 60):
+            self.assertEqual(self.client.get(f"/assinar/{token}/").status_code, 200)
         with mock.patch("django.core.signing.time.time", return_value=agora + limite + 1):
             self.assertEqual(self.client.get(f"/assinar/{token}/").status_code, 200)
             # outro aparelho, com o link vencido, não entra
@@ -391,7 +403,22 @@ class LinkDeCincoMinutosTests(BaseDocumento):
         self.assertEqual(resposta.status_code, 410)
         self.assertContains(resposta, "Este link expirou", status_code=410)
         self.assertContains(resposta, "Peça um novo ao atendente", status_code=410)
+        self.assertContains(resposta, "cada link de assinatura vale 24 horas", status_code=410)
         self.assertNotContains(resposta, "Cama elástica", status_code=410)
+
+    def test_o_prazo_em_palavras_e_no_relogio(self):
+        casos = ((600, "10 minutos", "10:00"), (60, "1 minuto", "1:00"), (3600, "1 hora", "1h00"),
+                 (5400, "1 hora e 30 minutos", "1h30"), (86400, "24 horas", "24h00"))
+        for segundos, palavras, relogio in casos:
+            with self.subTest(segundos=segundos):
+                self.assertEqual(svc.texto_do_prazo(segundos), palavras)
+                self.assertEqual(svc.relogio_do_prazo(segundos), relogio)
+
+    def test_o_termo_do_colaborador_continua_com_10_minutos(self):
+        # o pedido das 24 horas foi "dos clientes": o RH tem o número dele
+        from rh import termo
+
+        self.assertEqual(termo.VALIDADE_DO_LINK, 10 * 60)
 
     def test_o_envio_fora_da_janela_nao_grava_nada(self):
         documento = self.gerar()
@@ -446,7 +473,9 @@ class LinkDeCincoMinutosTests(BaseDocumento):
         self.assertEqual(corpo["validade"], svc.VALIDADE_DO_LINK)
         self.assertAlmostEqual(corpo["expira_em"] - corpo["agora"], svc.VALIDADE_DO_LINK * 1000, delta=2000)
         self.assertIn("wa.me/5511977776655", corpo["whatsapp"])
-        self.assertIn("*10 minutos*", corpo["mensagem"])
+        self.assertEqual(corpo["validade_texto"], "24 horas")
+        self.assertIn("*24 horas*", corpo["mensagem"])
+        self.assertNotIn("minutos", corpo["mensagem"])
         # O termo sai na aprovação: a conversa diz "aprovado", não "pago".
         self.assertIn(f"Seu pedido nº {self.orcamento.numero_documento} foi *aprovado*", corpo["mensagem"])
         self.assertIn("Assine aqui", corpo["mensagem"])
@@ -963,9 +992,11 @@ class AparelhoQueAbriuEDiarioTests(BaseDocumento):
     def test_o_link_vencido_ainda_assina_no_aparelho_que_abriu(self):
         documento = self.gerar()
         token = self.link(documento)
-        self.assertEqual(self.abrir(token).status_code, 200)
+        # o cliente abre o link perto do fim das 24 horas...
+        with self.depois(svc.VALIDADE_DO_LINK - 300):
+            self.assertEqual(self.abrir(token).status_code, 200)
 
-        with self.depois(svc.VALIDADE_DO_LINK + 120):  # o link venceu enquanto lia
+        with self.depois(svc.VALIDADE_DO_LINK + 120):  # ...e o link venceu enquanto lia
             # recarregar a página continua mostrando o contrato
             self.assertContains(self.abrir(token), 'id="quadroAssinatura"')
             # outro aparelho com o mesmo link vencido: não
@@ -983,7 +1014,11 @@ class AparelhoQueAbriuEDiarioTests(BaseDocumento):
         documento = self.gerar()
         token = self.link(documento)
         self.abrir(token)
+        # meia hora depois o link de 24 horas ainda vale: assina sem link novo
         with self.depois(svc.TEMPO_PARA_ASSINAR + 60):
+            self.assertContains(self.abrir(token), 'id="quadroAssinatura"')
+        # vencido o link, e passado o tempo do aparelho que abriu: link novo
+        with self.depois(svc.VALIDADE_DO_LINK + 60):
             self.assertEqual(self.assinar(token).status_code, 410)
 
     def test_o_diario_de_bordo_conta_o_que_aconteceu(self):

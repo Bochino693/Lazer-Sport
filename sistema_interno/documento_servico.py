@@ -1118,10 +1118,10 @@ def gerar_da_ordem(ordem, usuario):
 
 
 def mensagem_whatsapp(documento, link) -> str:
-    """O texto pronto da conversa da O.S., com o link de 10 minutos."""
+    """O texto pronto da conversa da O.S., com o link de 24 horas."""
     from core.email_utils import cnpj_empresa, nome_empresa
 
-    from .documento_assinatura import minutos_do_link
+    from .documento_assinatura import prazo_do_link
 
     conteudo = documento.conteudo or {}
     nome = (conteudo.get("cliente") or {}).get("nome", "")
@@ -1141,7 +1141,7 @@ def mensagem_whatsapp(documento, link) -> str:
         "Leia e assine direto no seu celular:",
         link,
         "",
-        f"⏱️ O link vale por *{minutos_do_link()} minutos*. Se passar, é só pedir outro aqui.",
+        f"⏱️ O link vale por *{prazo_do_link()}*. Se passar, é só pedir outro aqui.",
         f"{nome_empresa()} · CNPJ {cnpj_empresa()}",
     ])
     return "\n".join(linhas)

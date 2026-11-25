@@ -3009,7 +3009,7 @@ class DocumentoAssinatura(Prime):
     orçamento depois não muda uma vírgula do que o cliente assina -- o
     papel é o retrato, e não o orçamento vivo.
 
-    NÃO guarda o link. O link de 10 minutos é uma assinatura de tempo do
+    NÃO guarda o link. O link de 24 horas é uma assinatura de tempo do
     Django (`TimestampSigner`) presa ao id e ao hash deste documento: ele
     se confere sozinho, e por isso não precisa de tabela -- ver
     `documento_assinatura.py`. Daqui sai só a contagem de quantos links a
@@ -3032,7 +3032,7 @@ class DocumentoAssinatura(Prime):
     # DUAS ORIGENS, UMA DE CADA VEZ (LEIA-ME-V10, seção 124): o orçamento
     # aprovado (o contrato de compra e venda, ou a ordem de serviço quando
     # a proposta é de manutenção) OU a ordem de serviço (o documento de
-    # manutenção e serviços, `documento_servico.py`). O link de 10 minutos,
+    # manutenção e serviços, `documento_servico.py`). O link de 24 horas,
     # a página do cliente, a assinatura e o PDF são os mesmos.
     orcamento = models.ForeignKey(
         Orcamento,

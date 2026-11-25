@@ -93,7 +93,7 @@ class EtapasDoPedidoTests(_BaseEtapas):
         self.assertIn("nova versão", regua.proximo.texto)
         self.assertIn("Trocar a cor para azul", regua.proximo.detalhe)
 
-    def test_aprovado_sem_contrato_o_comercial_gera_e_passa_o_link_de_10_minutos(self):
+    def test_aprovado_sem_contrato_o_comercial_gera_e_passa_o_link_de_24_horas(self):
         orcamento = self.orcamento()
         regua = etapas(orcamento, self.vendas)
         self.assertEqual(self.estados(regua)["aprovacao"], "feita")
@@ -102,7 +102,7 @@ class EtapasDoPedidoTests(_BaseEtapas):
         self.assertEqual(regua.proximo.quem, "Comercial")
         self.assertEqual(regua.proximo.acao, "Gerar o contrato")
         self.assertEqual(regua.proximo.url, f"/orcamentos/{orcamento.pk}/documento/")
-        self.assertIn(f"vale {svc.minutos_do_link()} minutos", regua.proximo.detalhe)
+        self.assertIn("vale 24 horas", regua.proximo.detalhe)
         # o Financeiro vê o passo, mas o botão é do Comercial
         regua_fin = etapas(orcamento, self.financeiro)
         self.assertEqual(regua_fin.proximo.texto, regua.proximo.texto)
