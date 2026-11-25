@@ -585,7 +585,7 @@ def preambulo(prestador: dict) -> dict:
     nome = prestador.get("representante_nome") or ""
     representante = nome or "seu representante legal"
     if nome and prestador.get("representante_rg"):
-        representante += f", portador da cédula de identidade RG {prestador['representante_rg']}"
+        representante += f", portador da cédula de identidade RG: {prestador['representante_rg']}"
     if nome and prestador.get("representante_endereco"):
         representante += f", residente e domiciliado na {prestador['representante_endereco']}"
     empresa = prestador.get("nome_fantasia") or prestador.get("razao_social") or "a empresa prestadora"
@@ -599,11 +599,15 @@ def preambulo(prestador: dict) -> dict:
     return {
         "abertura": (
             "Pelo presente INSTRUMENTO PARTICULAR DE PRESTAÇÃO DE SERVIÇOS, que vale "
-            "também como ORDEM DE SERVIÇO, e na forma da Lei, comparecem aqui as "
-            "partes: de um lado, na qualidade de prestadora dos serviços, doravante "
+            # A mesma redação do contrato de venda (seção 141), com a
+            # concordância da O.S.: a CONTRATADA é "denominada" e
+            # "representada"; o resto ("comparecem aqui, as partes, de um
+            # lado", "aqui doravante", "RG:") é igual.
+            "também como ORDEM DE SERVIÇO, e na forma da Lei, comparecem aqui, as "
+            "partes, de um lado, na qualidade de prestadora dos serviços, aqui doravante "
             "denominada simplesmente CONTRATADA: " + ", ".join(partes)
             + f", neste ato representada por {representante}; e, do outro lado, na "
-            "qualidade de tomador dos serviços, doravante denominado simplesmente "
+            "qualidade de tomador dos serviços, aqui doravante denominado simplesmente "
             "CONTRATANTE:"
         ),
         "fechamento": (

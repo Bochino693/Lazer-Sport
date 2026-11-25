@@ -552,6 +552,112 @@ def juntar_os_achados_depois(apps, schema_editor=None, avisar=print):
 
 
 # ----------------------------------------------------------------------
+# A 0218: as fichas salvas como brinquedo que eram ADESIVOS (LEIA-ME-V10, seção 143)
+# ----------------------------------------------------------------------
+# O dono: "foi salvo uns brinquedos que na verdade eram para ser adesivos, air game kids adesivo
+# cand, balde e xícara também... apaga os objetos e adicione como adesivo." Decidido por ele: o
+# adesivo se chama "Candy" e NÃO tem preço próprio (vale o preço da máquina).
+#
+# A ficha é achada pelo NOME normalizado, exatamente (sem "parecido com"): se no ar o nome for
+# outro, nada acontece com aquele par (e a migração conta isso no log). Cada ficha aceita mais de
+# uma grafia (as aspas de polegada do "Multijogos 32" podem ser retas, curvas ou duas simples).
+
+#: (produto que fica, [grafias da ficha que vira adesivo], nome do adesivo, slug).
+#: A XÍCARA entra aqui quando o dono disser o nome da ficha e a máquina: uma linha a mais.
+FICHAS_QUE_SAO_ADESIVOS = (
+    ("Air Game Kids", ("Air Game Kids cand", "Air Game Kids Candy"), "Candy", "candy"),
+    ("Multi Jogos", ('Multijogos 32"', "Multijogos 32”", "Multijogos 32''", "Multijogos 32″", "Multijogos 32"),
+     "Candy", "candy"),
+)
+
+#: Duas fichas do MESMO produto que viram uma: (a que fica, [a que sai], o nome final, o nome do
+#: adesivo da que fica, o preço final). A que fica guarda as fotos, as medidas e a voltagem dela;
+#: as fotos dela são o adesivo (o padrão, que ganha o nome); as referências das duas apontam para ela.
+FICHAS_REPETIDAS = (
+    ("Balde Giratório Manual", ("Balde giratório",), "Balde Giratório", ("Candy", "candy"), "8500.00"),
+)
+
+
+def _achar_uma_grafia(nomes, Brinquedos):
+    for nome in nomes:
+        achado = _achar(nome, Brinquedos)
+        if achado is not None:
+            return achado
+    return None
+
+
+def juntar_as_fichas_que_sao_adesivos(apps, schema_editor=None, avisar=print):
+    """A 0218: cada ficha de FICHAS_QUE_SAO_ADESIVOS vira o adesivo do produto e é apagada.
+
+    Idempotente: a ficha que já não existe (já rodou, ou o nome no ar é outro) não faz nada. O
+    preço, o nome e o adesivo padrão do produto NÃO mudam; o preço da ficha é descartado.
+    Devolve [(produto, ficha, o que aconteceu)] para o log e para os testes.
+    """
+    Brinquedos = apps.get_model("core", "Brinquedos")
+    VarianteAdesivo = apps.get_model("core", "VarianteAdesivo")
+    feito = []
+    for produto, grafias, nome, slug in FICHAS_QUE_SAO_ADESIVOS:
+        base = _achar(produto, Brinquedos)
+        ficha = _achar_uma_grafia(grafias, Brinquedos)
+        if base is None or ficha is None or ficha.pk == base.pk:
+            motivo = "produto não encontrado" if base is None else "ficha não encontrada (já juntada, ou com outro nome)"
+            avisar(f"{grafias[0]} -> {produto}: {motivo}; nada a fazer.")
+            feito.append((produto, grafias[0], motivo))
+            continue
+        with transaction.atomic():
+            _padrao_do(base, VarianteAdesivo, Brinquedos)  # o produto com o adesivo padrão dele, como está
+            base.refresh_from_db()
+            livre = slug
+            while VarianteAdesivo.objects.filter(brinquedo=base, slug=livre).exclude(id_antigo=ficha.pk).exists():
+                livre += "-1"  # o produto já tinha um "candy" de outra origem: este entra ao lado
+            _juntar_ficha(apps, base, ficha, nome, livre, avisar)
+        feito.append((produto, grafias[0], "juntada"))
+    return feito
+
+
+def unir_as_fichas_repetidas(apps, schema_editor=None, avisar=print):
+    """A 0218: as duas fichas do mesmo produto viram uma (o Balde Giratório).
+
+    A ficha que FICA ganha o nome e o preço finais, e o adesivo padrão dela (com as fotos) ganha o
+    nome do adesivo -- se ainda se chama "Padrão" (o nome dado no painel fica). A que SAI tem as
+    referências repontadas, as fotos (se tiver) entram na que fica sem posição, e ela é apagada; o
+    endereço antigo dela redireciona (o `id_antigo` do adesivo). Idempotente: sem a que sai, só
+    confere o nome e o preço se a que fica ainda está com o nome de antes.
+    """
+    Brinquedos = apps.get_model("core", "Brinquedos")
+    VarianteAdesivo = apps.get_model("core", "VarianteAdesivo")
+    ImagemBrinquedo = apps.get_model("core", "ImagemBrinquedo")
+    feito = []
+    for nome_da_que_fica, saem, nome_final, (adesivo, slug), preco in FICHAS_REPETIDAS:
+        base = _achar(nome_da_que_fica, Brinquedos)
+        if base is None:
+            avisar(f"{nome_da_que_fica}: não está no catálogo (já unida, ou com outro nome); nada a fazer.")
+            feito.append((nome_final, "ficha não encontrada"))
+            continue
+        with transaction.atomic():
+            padrao = _padrao_do(base, VarianteAdesivo, Brinquedos)
+            if padrao.nome == NOME_DO_PADRAO and not VarianteAdesivo.objects.filter(brinquedo=base, slug=slug).exists():
+                VarianteAdesivo.objects.filter(pk=padrao.pk).update(nome=adesivo, slug=slug)
+            for nome_da_que_sai in saem:
+                ficha = _achar(nome_da_que_sai, Brinquedos)
+                if ficha is None or ficha.pk == base.pk:
+                    continue
+                # as fotos da que sai (se tiver) não se perdem: entram na que fica, sem posição
+                ImagemBrinquedo.objects.filter(brinquedo=ficha).update(brinquedo=base, variante=padrao, tipo=None)
+                VarianteAdesivo.objects.filter(brinquedo=ficha).delete()
+                _repontar(apps, ficha, base, "", avisar)
+                if not padrao.id_antigo:
+                    VarianteAdesivo.objects.filter(pk=padrao.pk).update(id_antigo=ficha.pk)
+                Brinquedos.objects.filter(pk=ficha.pk).delete()
+                avisar(f"{nome_da_que_sai} (id {ficha.pk}) era a mesma máquina de {nome_da_que_fica}: apagada.")
+            from decimal import Decimal
+
+            Brinquedos.objects.filter(pk=base.pk).update(nome_brinquedo=nome_final, valor_brinquedo=Decimal(preco))
+        feito.append((nome_final, "unida"))
+    return feito
+
+
+# ----------------------------------------------------------------------
 # A 0182: todo brinquedo com o adesivo padrão (as fotos das posições e o 3D)
 # ----------------------------------------------------------------------
 

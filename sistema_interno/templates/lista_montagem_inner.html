@@ -50,7 +50,7 @@
     <div class="lm-chips">
       {% for valor, rotulo, icone in filtros %}
         <a class="lm-chip{% if filtro_ativo == valor %} is-ativo{% endif %}"
-           href="?filtro={{ valor }}{% if linha_ativa %}&amp;linha={{ linha_ativa }}{% endif %}{% if brinquedo_ativo %}&amp;brinquedo={{ brinquedo_ativo }}{% endif %}"
+           href="?filtro={{ valor }}{% if linha_ativa %}&amp;linha={{ linha_ativa }}{% endif %}{% if brinquedo_ativo %}&amp;brinquedo={{ brinquedo_ativo }}{% endif %}{% if ordem_na_url %}&amp;ordem={{ ordem_na_url }}{% endif %}"
            {% if filtro_ativo == valor %}aria-current="true"{% endif %}><i class="bi {{ icone }}" aria-hidden="true"></i> {{ rotulo }}</a>
       {% endfor %}
     </div>
@@ -60,7 +60,7 @@
     <div class="lm-chips">
       {% for valor, rotulo, icone in linhas %}
         <a class="lm-chip{% if linha_ativa == valor %} is-ativo{% endif %}"
-           href="?filtro={{ filtro_ativo }}{% if valor %}&amp;linha={{ valor }}{% endif %}{% if brinquedo_ativo %}&amp;brinquedo={{ brinquedo_ativo }}{% endif %}"
+           href="?filtro={{ filtro_ativo }}{% if valor %}&amp;linha={{ valor }}{% endif %}{% if brinquedo_ativo %}&amp;brinquedo={{ brinquedo_ativo }}{% endif %}{% if ordem_na_url %}&amp;ordem={{ ordem_na_url }}{% endif %}"
            {% if linha_ativa == valor %}aria-current="true"{% endif %}><i class="bi {{ icone }}" aria-hidden="true"></i> {{ rotulo }}</a>
       {% endfor %}
     </div>
@@ -69,10 +69,10 @@
   <div class="lm-filtro">
     <span class="lm-filtro-rotulo">Brinquedo</span>
     <div class="lm-chips lm-chips-brinquedos">
-      <a class="lm-chip{% if not brinquedo_ativo %} is-ativo{% endif %}" href="?filtro={{ filtro_ativo }}{% if linha_ativa %}&amp;linha={{ linha_ativa }}{% endif %}">Todos</a>
+      <a class="lm-chip{% if not brinquedo_ativo %} is-ativo{% endif %}" href="?filtro={{ filtro_ativo }}{% if linha_ativa %}&amp;linha={{ linha_ativa }}{% endif %}{% if ordem_na_url %}&amp;ordem={{ ordem_na_url }}{% endif %}">Todos</a>
       {% for grupo in por_brinquedo %}
         <a class="lm-chip lm-chip-brinquedo{% if brinquedo_ativo == grupo.chave %} is-ativo{% endif %}"
-           href="?filtro={{ filtro_ativo }}{% if linha_ativa %}&amp;linha={{ linha_ativa }}{% endif %}&amp;brinquedo={{ grupo.chave }}"
+           href="?filtro={{ filtro_ativo }}{% if linha_ativa %}&amp;linha={{ linha_ativa }}{% endif %}&amp;brinquedo={{ grupo.chave }}{% if ordem_na_url %}&amp;ordem={{ ordem_na_url }}{% endif %}"
            title="{{ grupo.nome }}: {{ grupo.resumo }}"
            {% if brinquedo_ativo == grupo.chave %}aria-current="true"{% endif %}>
           <strong>{{ grupo.nome }}</strong><small>{{ grupo.resumo }}</small>
@@ -81,6 +81,28 @@
     </div>
   </div>
   {% endif %}
+  {% comment %}
+    A ORDEM DA FILA (seção 142; ordem_montagem.py). Chips, nunca select; o
+    critério vai na URL (?ordem=), para voltar e compartilhar. Só REORDENA
+    a visão: a fila oficial -- a que vale quando abre uma vaga -- é o chip
+    "Fila oficial", e é só nele que as setas aparecem.
+  {% endcomment %}
+  <div class="lm-filtro lm-ordem-filtro">
+    <span class="lm-filtro-rotulo">Ordenar a fila por</span>
+    <div class="lm-ordem-grupos">
+      {% for grupo in criterios %}
+        <div class="lm-ordem-grupo">
+          <span class="lm-ordem-grupo-nome">{{ grupo.nome }}</span>
+          <div class="lm-chips">
+            {% for chip in grupo.chips %}
+              <a class="lm-chip{% if chip.ativo %} is-ativo{% endif %}" href="{{ chip.url }}" title="{{ chip.explica }}" data-montagem-ordem="{{ chip.chave }}"{% if chip.ativo %} aria-current="true"{% endif %}><i class="bi {{ chip.icone }}" aria-hidden="true"></i> {{ chip.rotulo }}</a>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <p class="lm-ordem-explica"><i class="bi {{ criterio.icone }}" aria-hidden="true"></i> <span><strong>{{ criterio.rotulo }}.</strong> {{ criterio.explica }}{% if not fila_oficial %} <em>Isto só muda a ordem em que você vê a fila: quem entra em montagem continua sendo a fila oficial.</em>{% endif %}</span></p>
+  </div>
 </section>
 
 <section class="ls-data-panel">
@@ -114,14 +136,15 @@
         {% endfor %}
       {% endif %}
 
+      <span id="lmFila" class="lm-ancora" aria-hidden="true"></span>
       {% if fila_maquinas %}
         <h3 class="lm-secao"><i class="bi bi-list-ol" aria-hidden="true"></i> Na fila — máquinas <small>{{ config.fila_min_dias }} a {{ config.fila_max_dias }} dias úteis de espera + a montagem</small></h3>
-        {% include "partes/montagem_fila.html" with fila=fila_maquinas %}
+        {% include "partes/montagem_fila.html" with fila=fila_maquinas resumo=resumo_maquinas %}
       {% endif %}
 
       {% if fila_projetos %}
         <h3 class="lm-secao"><i class="bi bi-bricks" aria-hidden="true"></i> Na fila — brinquedões e espaços <small>um por vez, {{ config.dias_projeto }} dias úteis cada</small></h3>
-        {% include "partes/montagem_fila.html" with fila=fila_projetos %}
+        {% include "partes/montagem_fila.html" with fila=fila_projetos resumo=resumo_projetos %}
       {% endif %}
 
       {% if prontas %}

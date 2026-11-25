@@ -10640,3 +10640,456 @@ Dependência nova: rjsmin (requirements.txt).
        Também como Vendas e Produção (um atalho) em 768, 1024, 1150 e 1366.
    NÃO conferido: num celular de verdade (o :hover preso foi reproduzido
    no Chromium com toque emulado) e com os nomes reais da equipe.
+
+141) O CONTRATO IGUAL AO MODELO, O CLIENTE APAGADO COM TUDO, AS FOTOS INTEIRAS E O PEDIDO APROVADO QUE CONTINUA SAINDO
+   Quatro pedidos do dono na mesma leva.
+
+   A) OS DADOS DO REPRESENTANTE COMO NO CONTRATO MODELO
+     O PEDIDO: "nos documentos de assinatura os dados [do representante]
+     devem coincidir com estes [o print do contrato modelo] e não mais o
+     objeto cliente".
+     O QUE SE APUROU: o representante NUNCA veio de um cadastro de cliente.
+     Vem da tela "Dados do contrato" (Comercial > Dados do contrato;
+     `DadosContrato`), que o dono preenche. Os dados pessoais dele (nome,
+     RG, endereço) continuam só lá: não estão em código, teste, migração
+     nem neste arquivo (o repositório é público).
+     O QUE MUDOU NO TEXTO (contrato.preambulo), para ficar palavra por
+     palavra como o modelo -- com dados FICTÍCIOS:
+       antes:  "...comparecem aqui as partes: de um lado, na qualidade de
+               fornecedor, doravante denominado simplesmente VENDEDOR:
+               (...), neste ato representada por Fulano de Teste Ficticio,
+               portador da cédula de identidade RG 00.000.000-0, residente
+               e domiciliado na Rua Inventada, n. 1 (...); e, do outro lado,
+               na qualidade de comprador, doravante denominado..."
+       depois: "...comparecem aqui, as partes, de um lado, na qualidade de
+               fornecedor, aqui doravante denominado simplesmente VENDEDOR:
+               (...), neste ato representado por Fulano de Teste Ficticio,
+               portador da cédula de identidade RG: 00.000.000-0, residente
+               e domiciliado na Rua Inventada, n. 1 (...); e, do outro lado,
+               na qualidade de comprador, aqui doravante denominado..."
+     A ORDEM DE SERVIÇO (documento_servico.preambulo) ganhou o mesmo
+     ("comparecem aqui, as partes, de um lado", "aqui doravante", "RG:"),
+     mantendo a concordância dela: a CONTRATADA é "denominada" e
+     "representada".
+     SÓ VALE PARA O DOCUMENTO GERADO DEPOIS: o preâmbulo fica no retrato
+     congelado de cada documento (`conteudo`, com o SHA-256). O que já foi
+     gerado ou assinado não muda. Para um contrato que ainda espera
+     assinatura sair com o texto novo, use "Gerar de novo" na tela dele.
+     A TELA "DADOS DO CONTRATO": cada campo do representante diz o formato
+     em que sai (o exemplo dentro do campo e uma linha de ajuda): nome
+     completo; RG só o número ("00.000.000-0"); endereço "Rua ..., n. ...,
+     bairro, CEP: ..., cidade". Ao salvar, o sistema tira o "RG:" digitado a
+     mais e o ponto final do endereço (o texto já escreve "RG: " e "; e, do
+     outro lado"). A prévia ao lado mostra o texto do modelo.
+
+   B) APAGAR O CLIENTE COM OS PEDIDOS E TUDO O QUE É DELE (só o superusuário)
+     O PEDIDO: o cadastro "deve ser apagado inclusive, com seus pedidos e
+     também os outros objetos associados".
+     O QUE HAVIA: a exclusão de cliente apaga só o cadastro; os orçamentos
+     e as O.S. ficam "sem cliente vinculado". Ela CONTINUA existindo.
+     O QUE HÁ AGORA: na janela de excluir (Clientes > "⋮" da linha >
+     Excluir), o superusuário -- e só ele -- vê dois chips: "Só o cadastro"
+     e "O cliente e tudo o que é dele". Os chips só aparecem para cliente
+     que tem orçamento ou O.S. Antes de qualquer confirmação a janela
+     mostra a CONTA, vinda do servidor: o que vai junto, o que fica, e um
+     alerta se houver pagamento recebido ou documento já assinado. O motivo
+     e a palavra CONFIRMAR são os de sempre.
+     VAI JUNTO (sistema_interno/exclusao_cliente.py, levantado das
+     relações dos models):
+       * os orçamentos ligados ao cliente, em TODAS as versões (a corrente
+         orcamento_anterior, para trás e para a frente), com itens, envios,
+         revisão dos blocos e o histórico de atividades;
+       * o aceite eletrônico e os documentos de assinatura deles
+         (assinados ou não);
+       * a venda do pagamento 100% (sai da receita do Financeiro);
+       * a produção deles na lista de montagem, com as etapas;
+       * as ordens de serviço ligadas ao cliente OU nascidas desses
+         orçamentos, em todas as versões, com itens, envios, anexos (o
+         arquivo é apagado) e documentos de assinatura;
+       * os endereços do cadastro.
+     FICA (não é só dele):
+       * as movimentações de estoque em que ele é o destinatário: o
+         material saiu de verdade e o estoque NÃO volta; a linha fica, sem
+         o destinatário, com "Destinatário removido: <nome>" no motivo;
+       * os clientes que ele atende como buffet (ficam, sem o buffet);
+       * os envios de campanha e os descadastros de e-mail;
+       * a conta do site que acompanha um desses orçamentos, os pedidos da
+         loja dela e os pedidos de manutenção do site (são da conta; a
+         conta se apaga em Administração > Contas de clientes);
+       * produtos, peças, materiais, a equipe.
+     É TUDO OU NADA (uma transação) e fica o rastro: ExclusaoRegistrada
+     com tipo "Cliente (com tudo)", os números dos orçamentos e das O.S.,
+     quem tinha assinado, as vendas removidas e o que ficou.
+     QUEM NÃO É SUPERUSUÁRIO não recebe os chips nem a conta, e o POST
+     feito à mão volta 403 sem apagar nada (a regra é conferida de novo
+     dentro do serviço).
+     EFEITOS COLATERAIS CONFERIDOS: não há reserva de estoque por orçamento
+     ou O.S. (nada a devolver); o número dos documentos vem do id, que o
+     banco não reaproveita (o nº 12 apagado não volta em outro pedido); os
+     contadores do menu se refazem pelos sinais de exclusão. Somem também
+     as linhas da tela Assinaturas e os avisos desses objetos.
+     O aviso depois de excluir (em todas as telas que usam a janela comum)
+     passou a mostrar o recado do servidor -- o que saiu de verdade -- no
+     lugar de "Salvo".
+     DÚVIDAS PARA O DONO (ficou o caminho seguro):
+       1. "Pedidos": entendi os orçamentos/pedidos do painel. Os pedidos
+          feitos na LOJA do site pertencem à conta do site, e não ao
+          cadastro: não são apagados aqui.
+       2. A conta do site vinculada fica. Se for para apagar também, é em
+          Contas de clientes (não apaguei sozinho: pode ser a conta de
+          login de alguém).
+       3. As movimentações de estoque ficam (sem o destinatário). Apagar
+          deixaria o saldo do estoque sem explicação.
+       4. A exclusão ANTIGA ("Só o cadastro"), quando o cliente tem
+          movimentação de estoque, apaga a linha da movimentação sem
+          acertar o saldo (já era assim; não mexi).
+       5. Os envios de campanha ficam com o nome e o contato do
+          destinatário como texto.
+
+   C) AS FOTOS SEM ZOOM, COM O BRINQUEDO INTEIRO
+     O PEDIDO: "além das fotos não poderem ter zoom e mostrar totalmente o
+     brinquedo em questão" (dito sobre os documentos de assinatura e,
+     depois, sobre o orçamento enviado ao cliente).
+     O QUE SE MEDIU (Chromium, fotos sintéticas quadrada, 16:9 e 3:4, com
+     uma borda vermelha que some se a foto for cortada; 390 e 1366 px, na
+     tela e na impressão emulada):
+       * PROPOSTA PÚBLICA (orcamento_publico.html, e a prévia do painel,
+         que usa o mesmo modelo): a foto ALTA (3:4) era cortada em cima e
+         embaixo -- desenhada com 91 px de altura numa moldura de 76 (e 42
+         em 39 na folha impressa). A regra já dizia `contain`, mas a
+         moldura é uma grade e o `height:100%` da foto não tinha de onde
+         tirar a altura. Quadrada e larga saíam inteiras.
+       * MEUS PEDIDOS (as miniaturas dos itens, 56 e 72 px): o mesmo corte
+         na foto alta (70 em 54; 91 em 70).
+       * CONTRATO (página do cliente, via do painel e impressão): já saía
+         inteira nas três proporções, na moldura 4:3. Sem mudança.
+       * TERMO DE COMPRA e ORDEM DE SERVIÇO assinada: não têm foto de item.
+       * O.S. PÚBLICA: as "fotos do atendimento" já usam `contain`.
+     O QUE MUDOU: na proposta e em Meus pedidos a foto fica presa aos
+     quatro lados da moldura (position:absolute; inset:0) com `contain`: a
+     moldura tem a medida dela e o brinquedo aparece inteiro, seja a foto
+     quadrada, larga ou alta. É só CSS, então vale também para as propostas
+     e os documentos já enviados (o retrato guarda o endereço da foto, e
+     não o desenho).
+     NÃO MEXIDO, SÓ RELATADO: as fotos do catálogo e da loja do site
+     público (várias usam `cover` de propósito, nos cards). E a foto em si:
+     se a capa cadastrada de um produto for um close, o documento mostra o
+     close inteiro -- trocar a capa é no cadastro do brinquedo.
+     OBSERVADO: a proposta pública mostra o CPF/CNPJ do cliente inteiro (já
+     era assim; o contrato mostra mascarado). Não mexi.
+
+   D) O PEDIDO JÁ APROVADO CONTINUA SENDO ENVIADO E ABERTO SEM LOGIN
+     O PEDIDO: "mesmo com pedidos finalizados, o orçamento ainda pode ser
+     enviado e visualizado pelo cliente sem login, como nas fases antes da
+     aprovação."
+     O QUE HAVIA, POR SITUAÇÃO:
+       * página pública (pelo link, sem login): já abria em todas as
+         situações menos rascunho (404) -- aprovada mostra "Proposta
+         aprovada por ...", o pagamento registrado, os itens e as
+         condições, sem os botões de responder. Isso não mudou.
+       * enviar pelo painel: só rascunho, aguardando resposta e em
+         negociação. Aprovada era recusada com "O cliente já respondeu a
+         esta proposta" e o botão sumia da lista.
+     O QUE MUDOU:
+       * Orcamento.pode_enviar aceita a APROVADA (e tudo o que vem depois
+         dela: contrato assinado, pagamento, produção, entrega -- a
+         situação da proposta continua "aprovado"). O botão volta à lista
+         e a janela abre com "Enviar o pedido aprovado".
+       * É um envio PARA CONSULTA (Orcamento.envio_para_consulta): a
+         mensagem do WhatsApp e o e-mail dizem a situação real ("Segue o
+         seu pedido nº 9 (aprovado em 23/11/2026, pagamento registrado)") e
+         que o link abre sem login para consultar e imprimir; não falam em
+         aprovar, ajustar nem validade. O e-mail tem o assunto "Seu pedido
+         Lazer & Sport #N" e o botão "Abrir o pedido".
+       * O reenvio NÃO MEXE na proposta: situação, pagamento, venda,
+         validade e a data do primeiro envio ficam como estão (o envio
+         entra só no histórico de envios, como sempre).
+       * Recusada, expirada/vencida e substituída continuam SEM envio, com
+         o recado do caminho ("Nova proposta", ou "envie a versão que
+         está valendo").
+       * Os avisos (sino) de um aprovado continuam pedindo o passo
+         seguinte (o contrato), e não um reenvio.
+     NO CELULAR, A JANELA DE ENVIAR tinha os campos do WhatsApp, do e-mail
+     e do link com ~40 px de largura (não se via o número nem o endereço):
+     o Bootstrap dá 1% de largura ao campo e a janela usa uma grade. Corrigido
+     na proposta e na O.S.
+     DÚVIDAS PARA O DONO:
+       1. A página pública diz "aprovada" e "pagamento registrado"; produção
+          e entrega o cliente acompanha em Meus pedidos (pelo código). Se
+          quiser a fase de produção/entrega também na página sem login,
+          é um acréscimo.
+       2. Recusada e vencida continuam sem envio (o caminho é a versão
+          nova). Se quiser que também saiam "só para consulta", é mudar
+          Orcamento.pode_enviar.
+
+   ARQUIVOS NOVOS: sistema_interno/exclusao_cliente.py,
+   tests_exclusao_cliente.py e tests_envio_e_modelo.py.
+   ARQUIVOS MEXIDOS: sistema_interno/contrato.py, documento_servico.py,
+   models.py (pode_enviar, envio_para_consulta), views_gestao.py (o envio
+   para consulta e a mensagem), views_clientes.py, views_dados_contrato.py,
+   resolver_avisos.py; templates/dados_contrato_inner.html,
+   clientes_inner.html, orcamentos_inner.html, partes/orcamentos_lista.html,
+   includes/modal_confirmar_exclusao.html, emails/orcamento_enviado.html;
+   static/interno/interno_modern.css (duas seções novas no fim),
+   dados-contrato.css, painel.js; core/templates/emails/
+   orcamento_enviado.html; core/static/site/paginas/orcamento_publico.css
+   e meus_pedidos.css.
+   TESTES: tests_exclusao_cliente.py (17): a conta; leva tudo e não deixa
+   linha solta; não leva o outro cliente, o atendido, a conta do site nem
+   a equipe; o estoque não volta; o rastro; só o superusuário (tela e POST
+   direto); sem CONFIRMAR nada sai; tudo ou nada; a exclusão antiga
+   continua; a janela e as regras da casa. tests_envio_e_modelo.py (17): o
+   preâmbulo palavra por palavra; o documento já gerado não muda; a O.S.;
+   salvar tira o "RG:" e o ponto; a tela com o formato; as fotos com
+   `contain` e presas à moldura, sem `cover`; quem sai e quem não sai por
+   situação; o reenvio do aprovado não mexe em nada; a mensagem e o e-mail
+   de consulta; a página pública sem login e sem os botões. Ajustados:
+   tests_contrato.py, tests_situacao.py e tests_recusa_e_validade.py.
+   Comando da suíte: DJANGO_SETTINGS_MODULE=lazer.settings_test python
+   manage.py test core sistema_interno contas rh --parallel 1
+
+   CONFERIDO NO CHROMIUM (Playwright, servidor local, dados SINTÉTICOS),
+   em 390 e 1366 px:
+     * A: a tela Dados do contrato com a prévia no texto do modelo e as
+       ajudas; salvar "RG: 11.222.333-4" e o endereço com ponto final (só
+       em 1366).
+     * B: a janela de excluir aberta pelo "⋮" da linha, os dois chips, a
+       conta do que vai junto e do que fica, o alerta, o botão que só
+       libera com CONFIRMAR, a exclusão feita e o aviso com o que saiu
+       (quatro clientes sintéticos); como Vendas, sem os chips.
+     * C: a proposta (aguardando e aprovada) e o contrato com as três
+       proporções de foto, na tela e na impressão emulada, antes e depois;
+       as miniaturas de Meus pedidos numa página de ensaio com a folha de
+       estilo de verdade.
+     * D: a lista com o botão no aprovado, a janela "Enviar o pedido
+       aprovado" com a mensagem de consulta, e a do que aguarda resposta
+       como sempre; a página pública do aprovado sem login.
+   NÃO conferido: com dados reais; o PDF gerado de verdade pela impressão
+   do aparelho; o envio real por WhatsApp e por e-mail (a mensagem e o
+   e-mail foram conferidos nos testes); Meus pedidos logado com um pedido
+   de verdade; o site no ar (nada foi publicado).
+
+142) A LISTA DE MONTAGEM COM CRITÉRIOS DE ORDEM (O PADRÃO É A MEDIANA)
+   O PEDIDO: "na listagem de montagem, você pode pôr filtros para ter a
+   lista e visualizar qual melhor se enquadra, por metros cúbicos, que já
+   está, um que seria a média de todos, outro para soltar compras menores,
+   soltar compras maiores, soltar pedidos maiores e pedidos menores entre
+   outras boas de ciência de dados que você pode pôr, default é a mediana."
+
+   COMO ERA: a fila ("Na fila") tinha UMA ordem, a oficial -- a posição
+   gravada de cada máquina (a ordem de chegada, mudada pelas setas). O m³
+   já aparecia em cada linha e decide os dias de montagem (4 ou 5), mas
+   não ordenava nada.
+
+   COMO FICOU: uma fileira de chips "Ordenar a fila por" (nenhum select),
+   com o critério na URL (?ordem=...; sem ele, a mediana). Trocar o
+   critério SÓ REORDENA A VISÃO das duas filas (máquinas e brinquedões):
+   não grava nada. Quem entra em montagem quando abre uma vaga continua
+   sendo a FILA OFICIAL -- que é um dos chips, e é só nele que as setas de
+   subir e descer aparecem (e continuam gravando, como antes).
+   Em cada linha: a ordem pelo critério ("1º"), a posição oficial embaixo
+   ("fila oficial: 4º") e o NÚMERO que o critério usou. Em cima de cada
+   fila, o resumo: quantas, a média e a mediana do número (e a soma, no m³
+   e nos dias de montagem), e quantas ficaram sem o dado.
+
+   OS CRITÉRIOS (sistema_interno/ordem_montagem.py), só com o que o
+   sistema já sabe:
+     * Equilíbrio (mediana) -- O PADRÃO. Nota de 0 a 100, menor sai primeiro.
+     * Média de todos -- a mesma nota, feita com a média.
+     * Fila oficial -- a ordem gravada.
+     * Menor m³ / Maior m³ -- o volume do brinquedo (altura x largura x
+       profundidade do cadastro).
+     * Pedidos menores / Pedidos maiores -- o TAMANHO do pedido: quantas
+       máquinas dele ainda estão na lista de montagem.
+     * Compras menores / Compras maiores -- o VALOR da compra (o total do
+       pedido do site ou do orçamento).
+     * Mais valor por m³ -- o valor da compra dividido pelos m³ do pedido.
+     * Mais antigo -- os dias desde que chegou (o pagamento do pedido, a
+       aprovação do orçamento).
+     * Prazo mais próximo -- os dias até o fim da previsão ("prazo vencido
+       há 2 dias" vem antes de "faltam 5 dias").
+     * Montagem mais curta -- os dias úteis de montagem.
+
+   COMO ENTENDI "MÉDIA DE TODOS" E "MEDIANA" (para o dono confirmar):
+     Cada máquina ganha, em cada uma de seis medidas, a POSIÇÃO dela de 0
+     a 100 entre as máquinas da fila (0 = sairia primeiro por aquela
+     medida; empate divide a posição). As seis e quem sai primeiro: a mais
+     antiga; o prazo mais próximo; a montagem mais curta; o menor m³; o
+     pedido com menos máquinas; a compra de maior valor.
+       - "Média de todos" = a média dessas posições.
+       - "Mediana" = a posição DO MEIO dessas posições. Na prática: a
+         máquina sobe quando a MAIORIA dos critérios concorda que ela deve
+         sair cedo, e um único número fora da curva (um brinquedo gigante,
+         uma compra enorme) não decide sozinho -- na média ele puxa a nota.
+     O detalhe da nota (os seis números) aparece embaixo dela.
+   SEM O DADO (brinquedo sem medida, linha escrita à mão sem previsão): a
+   máquina vai para o FIM daquele critério, marcada ("sem medida no
+   cadastro"); nas notas combinadas a medida que falta fica fora da conta
+   daquela máquina. EMPATE: desempata sempre pela fila oficial.
+
+   POUCAS IDAS AO BANCO: a conta é feita no servidor com o que a tela já
+   lia; a única consulta a mais é a dos itens dos orçamentos (uma, para
+   todos), de onde sai o valor da compra. O número de consultas não cresce
+   com a fila.
+   No celular, trocar o critério desce a tela até a fila (a navegação do
+   painel sobe a página a cada troca).
+
+   DÚVIDAS PARA O DONO:
+     1. O padrão (mediana) NÃO é a fila oficial: quem abre a tela vê a
+        ordem sugerida, com a posição oficial escrita embaixo e as setas
+        só no chip "Fila oficial". Se a Produção preferir abrir já na fila
+        oficial, é trocar ordem_montagem.PADRAO.
+     2. O lado de cada medida nas notas combinadas (acima) foi escolha
+        minha -- em especial "compra de MAIOR valor sai primeiro" e
+        "pedido com MENOS máquinas sai primeiro". Diga se inverte algum.
+     3. Não existe (de propósito) o botão "aplicar esta ordem à fila
+        oficial". Se quiser, é um passo a mais, com confirmação.
+     4. "Pedido maior/menor" conta as máquinas do pedido que ainda estão
+        na lista de montagem. Se preferir pelos m³ somados do pedido, o
+        dado existe.
+
+   ARQUIVOS: sistema_interno/ordem_montagem.py (novo), views_montagem.py,
+   templates/lista_montagem_inner.html, templates/partes/montagem_fila.html,
+   static/interno/lista-montagem.css (seção nova no fim) e
+   lista-montagem.js; tests_ordem_montagem.py (novo).
+   TESTES: tests_ordem_montagem.py (22): a posição de 0 a 100 e o empate; a
+   média e a mediana com quantidade par e ímpar; o número fora da curva; a
+   ordem esperada de cada critério e o número escrito; quem não tem o dado
+   no fim; o resumo (média, mediana, soma); o desempate pela fila oficial;
+   o critério desconhecido cai na mediana; a tela (o padrão, a URL, os
+   chips guardando os outros filtros, as setas só na fila oficial, abrir a
+   tela com qualquer critério não grava nada, as consultas não crescem,
+   quem só vê não mexe) e o CSS sem cor escrita à mão.
+   Comando da suíte: DJANGO_SETTINGS_MODULE=lazer.settings_test python
+   manage.py test core sistema_interno contas rh --parallel 1
+
+   CONFERIDO NO CHROMIUM (Playwright, servidor local, dados SINTÉTICOS:
+   14 máquinas e 3 brinquedões na fila, com e sem medida), em 390 e 1366
+   px, como Produção: os 13 chips clicados um a um, a ordem e o número de
+   cada linha, o resumo, a tela descendo até a fila, a tabela sem rolar de
+   lado (também em 1024), as setas só na fila oficial e a seta movendo a
+   máquina de verdade. NÃO conferido: com os pedidos reais; como Vendas e
+   Financeiro na tela (só nos testes); o modo "Cards" da lista com a
+   coluna nova; os temas Sol e Eclipse.
+
+143) AS FICHAS QUE ERAM ADESIVOS ("CANDY", O BALDE) E A PRIMEIRA FATIA DO MOEDEIRO
+   PARTE 1 -- O PEDIDO: "foi salvo uns brinquedos que na verdade eram para
+   ser adesivos, air game kids adesivo cand, balde e xícara também... apaga
+   os objetos e adicione como adesivo." Decidido pelo dono: o adesivo se
+   chama "Candy" e NÃO tem preço próprio (vale o preço da máquina).
+
+   O QUE A MIGRAÇÃO core/0218 FAZ (só dados; a regra em core/variantes.py:
+   FICHAS_QUE_SAO_ADESIVOS, FICHAS_REPETIDAS, juntar_as_fichas_que_sao_
+   adesivos, unir_as_fichas_repetidas):
+     * "Air Game Kids cand" -> vira o adesivo "Candy" do Air Game Kids. O
+       preço, o nome e o adesivo padrão do Air Game Kids não mudam; o preço
+       da ficha (5.680,00) é descartado.
+     * "Multijogos 32"" (aceita as aspas retas, curvas, duas simples, ou sem
+       aspas) -> vira o adesivo "Candy" do Multi Jogos (o preço do Multi
+       Jogos não muda).
+     * "Balde giratório" + "Balde Giratório Manual" -> UM produto. Fica a
+       ficha "Manual" (com as fotos, as medidas 1,1 x 1,5 x 1,5, a voltagem
+       e a categoria dela), que passa a se chamar "Balde Giratório" e a
+       custar R$ 8.500,00; o adesivo padrão dela (com as fotos) ganha o
+       nome "Candy" se ainda se chama "Padrão". A outra ficha (a de R$
+       850.000,00, sem foto) é apagada.
+     Em todos: as fotos, o 3D e TODAS as referências (orçamento, carrinho
+     -- com o adesivo --, pedido, favorito, lista de desejos, promoção,
+     combo, cliques) passam para o produto que fica; a ficha à parte é
+     apagada; o endereço antigo (/brinquedo/<id antigo>/) redireciona.
+   SE O NOME NO AR FOR OUTRO: a ficha é achada pelo nome, exatamente (sem
+   "parecido com": "Air Game Premium", "Multijogos 42"" e "Balde Giratório
+   Elétrico" não são tocados). Com outro nome, AQUELE par não muda e o log
+   da migração diz "ficha não encontrada" -- aí é acertar o nome em
+   core/variantes.py e rodar de novo (python manage.py shell, as duas
+   funções com django.apps.apps), ou renomear a ficha no painel antes do
+   deploy. Sem o produto que fica, a ficha também fica. Rodar de novo não
+   muda nada.
+   A XÍCARA: não entrou (falta o nome da ficha e a máquina). É uma linha a
+   mais em FICHAS_QUE_SAO_ADESIVOS e uma migração de dados igual à 0218.
+   NÃO FEITO: a ação "Transformar em adesivo de..." no cadastro do
+   brinquedo do painel. A regra já é reutilizável (`_juntar_ficha` com
+   django.apps.apps), mas a tela do cadastro (a seção "Adesivos") é grande
+   e a ação apaga uma ficha: fica para uma entrega própria, com a folha de
+   confirmação e os testes dela.
+
+   PARTE 2 -- O PEDIDO: "entenda também que os moedeiros nas máquinas, que
+   não são brinquedões, arenas esportivas nem esses brinquedões grandes,
+   têm dois preços com moedeiro ou sem." Decidido pelo dono: o preço do
+   cadastro é o SEM moedeiro; o COM moedeiro é ele + um acréscimo fixo, o
+   mesmo para todas as máquinas; a escolha deve aparecer no orçamento do
+   painel, no site (produto, carrinho, pedido) e nos documentos.
+
+   O QUE ENTROU (a primeira fatia: a regra, a configuração e a conta):
+     * DadosContrato.acrescimo_moedeiro (sistema_interno/0083, só esquema):
+       a Gestão digita em Comercial > Dados do contrato, no bloco
+       "Moedeiro" ("350", "350,00", "1.250,50"). VAZIO OU ZERO = a opção
+       não aparece em lugar nenhum.
+     * Brinquedos.moedeiro (core/0219, só esquema): vazio = a regra decide;
+       "sim"/"nao" = a palavra da Gestão para aquela máquina.
+     * sistema_interno/moedeiro.py -- o único lugar da conta: ativo(),
+       aceita(brinquedo), oferece(brinquedo), preco(brinquedo,
+       com_moedeiro) e opcoes(brinquedo) (os dois chips com o preço de cada
+       um). A REGRA de quem aceita é a mesma da lista de montagem
+       (montagem.Regras.e_projeto: a categoria marcada nas regras da
+       produção, ou a palavra no nome): brinquedão, espaço, trampolim,
+       quadra... NÃO; kit eletrônico NÃO; o resto (as máquinas) SIM. O
+       preço é sempre calculado no servidor: pedir "com moedeiro" de quem
+       não oferece devolve o preço do cadastro.
+   O QUE FICOU PARA AS PRÓXIMAS FATIAS (nada disso existe ainda; com o
+   acréscimo digitado, a opção AINDA não aparece para ninguém):
+     1. O liga/desliga por máquina no cadastro do brinquedo (o campo
+        existe; falta o controle na tela do cadastro).
+     2. O orçamento do painel: ItemOrcamento.com_moedeiro, os chips "Sem
+        moedeiro / Com moedeiro" ao pôr a máquina na proposta (o editor de
+        itens e a busca de itens), o preço entrando pelo moedeiro.preco.
+     3. Os documentos: a linha do item na proposta pública, no retrato do
+        contrato e da ordem de serviço, na O.S., na lista de montagem e nas
+        etiquetas ("com moedeiro"), para a fábrica saber montar.
+     4. O site: os chips na página do produto (ao lado do adesivo, mudando
+        o preço), ItemCarrinho.moedeiro e ItemPedido (o preço validado no
+        servidor no carrinho e no pagamento), promoções e combos.
+     5. A ficha "Air Game Premium com Sistema de Ficheiro" -> a opção "com
+        moedeiro" do Air Game Premium: depende do item 2 e do 4 (é preciso
+        ter onde marcar a opção nas referências repontadas).
+   DÚVIDAS PARA O DONO:
+     1. O VALOR do acréscimo (é só digitar na tela).
+     2. A ficha "com Sistema de Ficheiro" custa R$ 14.990,00. Com o
+        acréscimo fixo, o preço dela passa a ser Air Game Premium +
+        acréscimo, que pode não dar 14.990: qual vale?
+     3. Promoções e combos: a máquina em promoção com moedeiro soma o
+        mesmo acréscimo ao preço da promoção?
+     4. A XÍCARA: qual é a ficha e de qual máquina ela é adesivo?
+     5. A regra "máquina aceita, brinquedão não" usa a marcação de
+        brinquedão das regras da produção. Há máquina comum que NÃO leva
+        moedeiro (mesas, pebolim)? Se sim, são desligadas uma a uma (item 1).
+
+   ARQUIVOS NOVOS: core/migrations/0218_fichas_que_sao_adesivos.py,
+   0219_moedeiro_por_maquina.py; sistema_interno/migrations/
+   0083_acrescimo_do_moedeiro.py; sistema_interno/moedeiro.py;
+   core/tests_fichas_que_sao_adesivos.py; sistema_interno/tests_moedeiro.py.
+   ARQUIVOS MEXIDOS: core/variantes.py, core/models.py,
+   sistema_interno/models.py, views_dados_contrato.py,
+   templates/dados_contrato_inner.html.
+   TESTES: core/tests_fichas_que_sao_adesivos.py (10): cada ficha vira o
+   adesivo certo, os preços dos produtos não mudam, o Balde vira um só a
+   8.500 com as medidas e a foto, as referências vão junto, o endereço
+   antigo redireciona, os vizinhos de nome parecido não são tocados, rodar
+   de novo não muda nada, com outro nome nada acontece, sem o produto a
+   ficha fica, a xícara não está. sistema_interno/tests_moedeiro.py (11):
+   sem o acréscimo a opção não existe; máquina aceita e brinquedão/kit não;
+   a Gestão liga e desliga por máquina; o preço com moedeiro; a tela (os
+   formatos em reais, vazio e zero desligam, o valor inválido volta com o
+   campo, só a Gestão muda); as migrações de esquema sem RunPython.
+   Comando da suíte: DJANGO_SETTINGS_MODULE=lazer.settings_test python
+   manage.py test core sistema_interno contas rh --parallel 1
+
+   CONFERIDO NO CHROMIUM (servidor local, catálogo SINTÉTICO com os nomes
+   e os preços do que está no ar), em 390 e 1366 px: a página do Air Game
+   Kids com ?adesivo=candy (a foto do Candy, o preço do Air Game Kids), o
+   endereço da ficha apagada indo para o produto, o Balde Giratório a
+   8.500 e o endereço do balde apagado; a tela Dados do contrato com o
+   bloco Moedeiro vazio, o valor inválido (a folha de erro) e o valor
+   salvo. NÃO conferido: o Multi Jogos na tela (só nos testes) e, sobretudo,
+   O BANCO NO AR -- a migração roda no deploy; os nomes das fichas no ar
+   podem diferir dos que o dono descreveu.

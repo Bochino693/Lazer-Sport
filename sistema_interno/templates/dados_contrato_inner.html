@@ -83,16 +83,31 @@
       <p class="ls-dc-nota"><i class="bi bi-shield-lock" aria-hidden="true"></i> Dados pessoais: ficam só aqui e no contrato que o cliente assina.</p>
       <div class="ls-dc-grade">
         <label class="ls-dc-campo largo{% if not dados.representante_nome %} vazio{% endif %}">
-          <span>Nome completo</span>
-          <input class="form-control" type="text" name="representante_nome" maxlength="160" autocapitalize="words" value="{{ dados.representante_nome }}" data-dc-campo="representante_nome" data-rotulo="Nome do representante">
+          <span>Nome completo <small>(“neste ato representado por …”)</small></span>
+          <input class="form-control" type="text" name="representante_nome" maxlength="160" autocapitalize="words" placeholder="Nome e sobrenomes, sem abreviar" aria-describedby="dcAjudaNome" value="{{ dados.representante_nome }}" data-dc-campo="representante_nome" data-rotulo="Nome do representante">
+          <em class="ls-dc-ajuda" id="dcAjudaNome">Como está no documento dele, com iniciais maiúsculas.</em>
         </label>
         <label class="ls-dc-campo{% if not dados.representante_rg %} vazio{% endif %}">
-          <span>RG</span>
-          <input class="form-control" type="text" name="representante_rg" maxlength="30" value="{{ dados.representante_rg }}" data-dc-campo="representante_rg" data-rotulo="RG do representante">
+          <span>RG <small>(“RG: …”)</small></span>
+          <input class="form-control" type="text" name="representante_rg" maxlength="30" placeholder="00.000.000-0" aria-describedby="dcAjudaRg" value="{{ dados.representante_rg }}" data-dc-campo="representante_rg" data-rotulo="RG do representante">
+          <em class="ls-dc-ajuda" id="dcAjudaRg">Só o número, com os pontos e o dígito. O “RG:” o contrato já escreve.</em>
         </label>
         <label class="ls-dc-campo largo{% if not dados.representante_endereco %} vazio{% endif %}">
           <span>Endereço residencial <small>(“residente e domiciliado na …”)</small></span>
-          <input class="form-control" type="text" name="representante_endereco" maxlength="240" value="{{ dados.representante_endereco }}" data-dc-campo="representante_endereco" data-rotulo="Endereço do representante">
+          <input class="form-control" type="text" name="representante_endereco" maxlength="240" placeholder="Rua …, n. …, bairro, CEP: …, cidade" aria-describedby="dcAjudaEndereco" value="{{ dados.representante_endereco }}" data-dc-campo="representante_endereco" data-rotulo="Endereço do representante">
+          <em class="ls-dc-ajuda" id="dcAjudaEndereco">Nesta ordem: rua, “n.” e o número, bairro, “CEP:” e a cidade, separados por vírgula. Comece pelo tipo da via (Rua, Avenida…) e não ponha ponto no fim.</em>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend><i class="bi bi-coin" aria-hidden="true"></i> Moedeiro <small>(o preço com moedeiro das máquinas)</small></legend>
+      <p class="ls-dc-nota">O preço do cadastro é o da máquina SEM moedeiro. Com moedeiro, o sistema soma este valor — o mesmo para todas as máquinas (brinquedões, espaços e kits não têm a opção).</p>
+      <div class="ls-dc-grade">
+        <label class="ls-dc-campo">
+          <span>Acréscimo do moedeiro <small>(R$)</small></span>
+          <input class="form-control" type="text" name="acrescimo_moedeiro" maxlength="12" inputmode="decimal" autocomplete="off" placeholder="Ex.: 350,00" aria-describedby="dcAjudaMoedeiro" value="{% if dados.acrescimo_moedeiro %}{{ dados.acrescimo_moedeiro|moeda }}{% endif %}" data-rotulo="Acréscimo do moedeiro">
+          <em class="ls-dc-ajuda" id="dcAjudaMoedeiro">{% if dados.acrescimo_moedeiro %}Hoje: máquina com moedeiro = preço do cadastro + R$ {{ dados.acrescimo_moedeiro|moeda }}.{% else %}Vazio: a opção “com moedeiro” não aparece em lugar nenhum.{% endif %}</em>
         </label>
       </div>
     </fieldset>

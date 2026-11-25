@@ -285,7 +285,8 @@ class EnviarSoDentroDaValidadeTests(TestCase):
         resposta = self.enviar_orcamento(recusada)
 
         self.assertEqual(resposta.status_code, 400)
-        self.assertIn("já respondeu", resposta.json()["msg"])
+        self.assertIn("recusou esta proposta", resposta.json()["msg"])
+        self.assertIn("Nova proposta", resposta.json()["msg"])
 
     def test_versao_substituida_manda_enviar_a_que_vale(self):
         substituida = self.criar_proposta(status=Orcamento.Status.SUBSTITUIDO)

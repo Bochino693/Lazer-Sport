@@ -49,6 +49,33 @@
           </div>
         </div>
 
+        {% if exclusao_com_tudo %}
+        {% comment %}
+          O ALCANCE DA EXCLUSÃO (seção 141) -- só na tela de Clientes e só
+          para o superusuário (a tela passa `exclusao_com_tudo`). Dois
+          chips (rádios, nunca uma caixa de seleção): apagar só o cadastro, como sempre
+          foi, ou o cliente com tudo o que é dele. A lista do que vai junto
+          e do que fica vem do servidor ao abrir a janela
+          (`acao_previa_exclusao`), antes de qualquer confirmação. O bloco
+          nasce escondido: só aparece para cliente que tem o que levar.
+        {% endcomment %}
+        <div class="ls-excluir-alcance" id="excluirAlcance" hidden>
+          <fieldset class="ls-situacao-chips">
+            <legend class="form-label">O que apagar</legend>
+            <label class="ls-situacao-chip"><input type="radio" name="alcance" value="cadastro" checked><span>Só o cadastro</span></label>
+            <label class="ls-situacao-chip recusado"><input type="radio" name="alcance" value="tudo"><span>O cliente e tudo o que é dele</span></label>
+          </fieldset>
+          <p class="ls-excluir-alcance-nota" id="excluirAlcanceNota">Os orçamentos e as ordens de serviço continuam no sistema, sem cliente vinculado.</p>
+          <div class="ls-excluir-tudo" id="excluirTudo" hidden aria-live="polite">
+            <strong class="ls-excluir-tudo-titulo"><i class="bi bi-trash3-fill" aria-hidden="true"></i> Vai junto, para sempre</strong>
+            <ul class="ls-excluir-lista" id="excluirVaiJunto"></ul>
+            <p class="ls-excluir-alerta" id="excluirAlerta" hidden></p>
+            <strong class="ls-excluir-tudo-titulo fica" id="excluirFicaTitulo" hidden><i class="bi bi-shield-check" aria-hidden="true"></i> Fica no sistema</strong>
+            <ul class="ls-excluir-lista fica" id="excluirFica" hidden></ul>
+          </div>
+        </div>
+        {% endif %}
+
         {% comment %}
           O motivo é opcional de propósito. Campo obrigatório em janela de
           confirmação vira "asdf" -- e "asdf" no registro é pior do que

@@ -318,15 +318,20 @@ def _propostas(user, acesso, chave, request):
                 # Reenviar é o "Enviar → WhatsApp" da lista de Orçamentos,
                 # com a mesma trava de `pode_enviar` (vencida não gera link).
                 "whatsapp": bool(
-                    editar and orcamento.pode_enviar and itens_da_proposta
-                    and len(whatsapp) >= 10
+                    editar and orcamento.pode_enviar and not orcamento.envio_para_consulta
+                    and itens_da_proposta and len(whatsapp) >= 10
                 ),
                 "whatsapp_rotulo": (
                     "Enviar no WhatsApp"
                     if orcamento.status == Orcamento.Status.RASCUNHO
                     else "Reenviar no WhatsApp"
                 ),
-                "sem_whatsapp": bool(editar and orcamento.pode_enviar and len(whatsapp) < 10),
+                # (o aviso de uma proposta já aprovada pede o passo seguinte,
+                # o contrato, e não um reenvio: `envio_para_consulta`)
+                "sem_whatsapp": bool(
+                    editar and orcamento.pode_enviar and not orcamento.envio_para_consulta
+                    and len(whatsapp) < 10
+                ),
                 # O lembrete por e-mail é o atalho da Home (LembrarClienteView).
                 "email": bool(
                     editar and email_ligado

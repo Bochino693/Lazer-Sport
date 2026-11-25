@@ -7220,3 +7220,53 @@ body.modal-open .ls-folha-veu{display:none!important}
 @media (hover:none){
   .ls-abas .ls-aba:not(.ativa):hover{color:var(--muted)}
 }
+
+/* ======================================================================
+   A JANELA DE EXCLUIR O CLIENTE COM TUDO O QUE É DELE (LEIA-ME-V10, seção
+   141; só o superusuário, na tela de Clientes). Os dois chips do alcance
+   são os `.ls-situacao-chip` de sempre; aqui fica a conta do que vai
+   junto e do que fica. Só variáveis do tema. (Seção nova, fora da "LISTA
+   OU CARDS, SEGUNDA PARTE".)
+   ====================================================================== */
+.ls-excluir-alcance{margin-top:16px;display:grid;gap:10px;min-width:0}
+.ls-excluir-alcance[hidden],.ls-excluir-tudo[hidden]{display:none}
+.ls-excluir-alcance-nota{margin:0;color:var(--muted);font-size:.82rem;line-height:1.45}
+.ls-excluir-tudo{
+  display:grid;gap:8px;min-width:0;padding:12px 14px;border-radius:var(--radius-md);
+  border:1px solid rgba(var(--red-rgb),.38);background:rgba(var(--red-rgb),.08);
+}
+.ls-excluir-tudo-titulo{display:flex;align-items:center;gap:7px;color:var(--red-claro);font-size:.84rem;font-weight:900}
+.ls-excluir-tudo-titulo.fica{margin-top:6px;color:var(--green-texto)}
+.ls-excluir-tudo-titulo[hidden],.ls-excluir-lista[hidden],.ls-excluir-alerta[hidden]{display:none}
+.ls-excluir-lista{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.ls-excluir-lista li{
+  display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:9px;row-gap:1px;align-items:baseline;min-width:0;
+}
+.ls-excluir-lista b{
+  grid-row:1 / span 2;min-width:30px;padding:3px 7px;border-radius:999px;text-align:center;
+  color:var(--red-claro);background:rgba(var(--red-rgb),.16);font-size:.8rem;font-weight:900;
+}
+.ls-excluir-lista.fica b{color:var(--green-texto);background:rgba(var(--green-rgb),.14)}
+.ls-excluir-lista span{color:var(--text);font-size:.88rem;font-weight:800;overflow-wrap:anywhere}
+.ls-excluir-lista small{grid-column:2;color:var(--muted);font-size:.76rem;line-height:1.35;overflow-wrap:anywhere}
+.ls-excluir-alerta{
+  margin:2px 0 0;padding:8px 10px;border-radius:10px;font-size:.8rem;font-weight:800;line-height:1.4;
+  color:var(--yellow-texto);background:rgba(var(--yellow-rgb),.12);border:1px solid rgba(var(--yellow-rgb),.34);
+}
+
+/* ======================================================================
+   A JANELA DE ENVIAR, NO CELULAR, COM O CAMPO INTEIRO (LEIA-ME-V10, seção
+   141). No celular o WhatsApp, o e-mail e o link ficam numa grade (ícone |
+   campo, e o botão embaixo). Só que o Bootstrap dá ao campo de um
+   `.input-group` a largura de 1% (ele conta com o flex para esticar), e
+   numa grade 1% é 1% mesmo: o campo ficava com uns 40px, sem mostrar o
+   número nem o endereço. Vale para a proposta e para a O.S. (Seção nova,
+   fora da "LISTA OU CARDS, SEGUNDA PARTE".)
+   ====================================================================== */
+#modalLink .input-group>.form-control,
+#modalEnviarOS .input-group>.form-control{width:100%;min-width:0}
+/* o campo do link não tem ícone na frente: no celular ele ocupa a linha inteira */
+@media (max-width:560px){
+  #modalLink .input-group>.form-control:first-child,
+  #modalEnviarOS .input-group>.form-control:first-child{grid-column:1/-1;border-radius:11px!important}
+}

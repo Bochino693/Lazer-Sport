@@ -1948,10 +1948,21 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     "Esta versão foi substituída por outra. Envie a versão "
                     "que está valendo."
                 )
+            if orcamento.status == Orcamento.Status.RECUSADO:
+                raise ErroDeFormulario(
+                    "O cliente recusou esta proposta. Use ‘Nova proposta’ para "
+                    "mandar uma versão nova."
+                )
             raise ErroDeFormulario(
-                "O cliente já respondeu a esta proposta. Reenviá-la pediria "
-                "de novo uma decisão que já foi tomada."
+                f"A proposta #{orcamento.pk} está {orcamento.get_status_display().lower()} "
+                "e não sai mais por aqui. Use ‘Nova proposta’ para criar a versão que vale."
             )
+
+        # JÁ APROVADA: o envio é PARA CONSULTA (seção 141). O link é o
+        # mesmo e continua abrindo sem login; a mensagem diz a situação
+        # real em vez de pedir decisão, e nada na proposta muda (nem a
+        # situação, nem a data do primeiro envio).
+        consulta = orcamento.envio_para_consulta
 
         link = f"{endereco_do_site(request)}{orcamento.caminho_publico}"
         canal = (request.POST.get("canal") or "link").strip().lower()
@@ -1965,7 +1976,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         # proposta do rascunho sem inventar um envio por WhatsApp/e-mail; o
         # histórico de canal continua sendo registrado somente quando a
         # pessoa realmente escolhe um deles.
-        if canal == "preparar":
+        if canal == "preparar" and not consulta:
             orcamento.marcar_enviado()
 
         link_visivel = link
@@ -2014,7 +2025,11 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             extras["email_diagnostico"] = diagnostico_smtp()
             return self.sucesso(
                 request,
-                f"Proposta #{orcamento.pk} pronta para compartilhar.",
+                (
+                    f"Pedido #{orcamento.pk} já aprovado: o link vai para o cliente consultar e imprimir."
+                    if consulta else f"Proposta #{orcamento.pk} pronta para compartilhar."
+                ),
+                consulta=consulta,
                 id=orcamento.pk,
                 situacao=orcamento.status,
                 **extras,
@@ -2053,6 +2068,9 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 # resumo automático. Vazio quando ninguém mexeu no texto,
                 # e aí o modelo segue como sempre foi.
                 "recado": escrita if personalizada else "",
+                # já aprovada: o e-mail não pede resposta (seção 141)
+                "consulta": consulta,
+                "situacao_do_pedido": self.situacao_para_o_cliente(orcamento) if consulta else "",
             }
             html = render(request, "emails/orcamento_enviado.html", contexto).content.decode()
             if personalizada:
@@ -2062,6 +2080,19 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 texto_email = escrita
                 if link not in texto_email:
                     texto_email += f"\n\n{link}"
+            elif consulta:
+                texto_email = (
+                    f"Olá, {orcamento.destinatario}.\n\n"
+                    f"Segue o seu pedido Lazer & Sport nº {orcamento.pk} "
+                    f"({self.situacao_para_o_cliente(orcamento)}), no total de "
+                    f"R$ {moeda_br(orcamento.total)}.\n\n"
+                    "Abra o endereço abaixo para consultar e imprimir os itens, "
+                    "as fotos e as condições (não precisa de login):\n"
+                    f"{link}\n\n"
+                    f"Código do orçamento: {orcamento.codigo}\n\n"
+                    "Se precisar, basta responder a este e-mail.\n\n"
+                    f"{nome_empresa()}\nCNPJ {cnpj_empresa()}"
+                )
             else:
                 texto_email = (
                     f"Olá, {orcamento.destinatario}.\n\n"
@@ -2094,7 +2125,10 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             # nenhum deixa assinar com outro endereço. Quem recebe a
             # resposta do cliente é quem está enviando agora.
             mensagem = EmailMultiAlternatives(
-                subject=f"Sua proposta Lazer & Sport #{orcamento.pk}",
+                subject=(
+                    f"Seu pedido Lazer & Sport #{orcamento.pk}" if consulta
+                    else f"Sua proposta Lazer & Sport #{orcamento.pk}"
+                ),
                 body=texto_email,
                 from_email=remetente(),
                 to=[email],
@@ -2135,7 +2169,8 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
             extras["email"] = email
 
-        orcamento.marcar_enviado()
+        if not consulta:
+            orcamento.marcar_enviado()
 
         self.registrar_envio(
             request,
@@ -2286,17 +2321,43 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
     # ----------------------------------------- a mensagem e o link prontos
     @staticmethod
+    def situacao_para_o_cliente(orcamento) -> str:
+        """A situação real do pedido já aprovado, em palavras de cliente.
+
+        Só o que a proposta sabe sozinha (aprovação e pagamento): produção
+        e entrega o cliente acompanha em Meus pedidos, pelo código.
+        """
+        partes = ["aprovado"]
+        if orcamento.respondido_em:
+            partes[0] += f" em {timezone.localtime(orcamento.respondido_em).strftime('%d/%m/%Y')}"
+        if orcamento.status_pagamento == Orcamento.StatusPagamento.PAGO:
+            partes.append("pagamento registrado")
+        elif orcamento.valor_pago and orcamento.valor_pago > 0:
+            partes.append(f"R$ {moeda_br(orcamento.valor_pago)} já recebidos")
+        return ", ".join(partes)
+
+    @staticmethod
     def mensagem_da_proposta(orcamento, link):
         """O texto que vai no WhatsApp: curto, com o essencial e o link.
 
         É mensagem de gente, não de robô: quem recebe precisa entender em
         três linhas o que é, quanto custa e onde clica.
+
+        JÁ APROVADA (seção 141), a mensagem muda de assunto: é o pedido
+        dele para consultar e imprimir, com a situação real, e não um
+        convite a decidir de novo.
         """
         itens = list(orcamento.itens.all())
+        consulta = orcamento.envio_para_consulta
         linhas = [
             f"Olá, {orcamento.destinatario}! 👋",
             "",
-            f"Aqui é da Lazer & Sport. Preparamos sua *proposta nº {orcamento.pk}*.",
+            (
+                f"Aqui é da Lazer & Sport. Segue o seu *pedido nº {orcamento.pk}* "
+                f"({OrcamentosInnerView.situacao_para_o_cliente(orcamento)})."
+                if consulta else
+                f"Aqui é da Lazer & Sport. Preparamos sua *proposta nº {orcamento.pk}*."
+            ),
             "",
             "*Resumo*",
         ]
@@ -2318,7 +2379,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
 
         if orcamento.forma_pagamento:
             linhas.append(f"Pagamento: {orcamento.forma_pagamento}")
-        if orcamento.validade:
+        if orcamento.validade and not consulta:
             linhas.append(
                 f"Válida até {orcamento.validade.strftime('%d/%m/%Y')}"
             )
@@ -2343,6 +2404,18 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 "Crie sua conta em lazersport.com.br e informe este código em "
                 "*Meus pedidos* para acompanhar tudo pela internet.",
             ])
+
+        if consulta:
+            linhas.extend([
+                "",
+                "Abra a página do pedido para consultar e imprimir os itens, as "
+                "fotos e as condições (não precisa de login):",
+                link,
+                "",
+                "Se tiver qualquer dúvida, responda esta mensagem. 😊",
+                f"{nome_empresa()} · CNPJ {cnpj_empresa()}",
+            ])
+            return "\n".join(linhas)
 
         linhas.extend([
             "",

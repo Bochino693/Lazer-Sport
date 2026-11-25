@@ -69,3 +69,7 @@
   .ls-dc-cartao{padding:16px;border-radius:22px}
   .ls-dc-preambulo{text-align:left}
 }
+
+/* A ajuda de cada campo do representante (seção 141): o formato em que o
+   dado sai no contrato modelo, logo abaixo do campo. */
+.ls-dc-ajuda{display:block;margin-top:5px;color:var(--muted);font-size:.76rem;font-style:normal;line-height:1.4}

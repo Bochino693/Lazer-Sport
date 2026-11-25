@@ -170,7 +170,14 @@ body{
    "piscina de bolinhas" e via uma mancha azul. `contain` mostra o
    brinquedo ou a peça por completo, que é o que a foto está ali para
    fazer. */
-.item-foto img{width:100%;height:100%;object-fit:contain;padding:3px}
+/* PRESA À MOLDURA (LEIA-ME-V10, seção 141). O `contain` sozinho não
+   bastava: a moldura é uma grade, e nela o `height:100%` da foto não tinha
+   de onde tirar a altura -- a foto ALTA (3:4) ficava com a altura dela
+   (91 px numa moldura de 76), e a moldura cortava em cima e embaixo. Era
+   o "zoom" que o dono via. Presa aos quatro lados da moldura, a foto tem
+   a medida da moldura e o `contain` mostra o brinquedo inteiro, seja a
+   foto quadrada, larga ou alta -- na tela e na folha impressa. */
+.item-foto img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;padding:3px}
 .item-foto .sem-foto{font-size:1.4rem;color:#93A2C4}
 .item-nome{font-weight:700;font-size:.99rem;letter-spacing:-.2px}
 .item-texto{display:block;min-width:0}.item-conta{font-size:.8rem;color:var(--tinta-2);margin-top:3px}

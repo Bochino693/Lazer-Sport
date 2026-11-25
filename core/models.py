@@ -342,6 +342,19 @@ class Brinquedos(Prime):
     # busca), a mesma página, o mesmo carrinho e a mesma tela do painel. O que
     # ele tem a mais: a máquina em que é instalado (a página dela chama para
     # ele) e a lista do que vem dentro (`ComponenteKit`).
+    # COM OU SEM MOEDEIRO (LEIA-ME-V10, seção 143). O dono: "os moedeiros nas
+    # máquinas, que não são brinquedões, arenas esportivas nem esses
+    # brinquedões grandes, têm dois preços com moedeiro ou sem". O preço do
+    # cadastro é o SEM moedeiro; o com moedeiro é ele + um acréscimo único
+    # (sistema_interno.DadosContrato.acrescimo_moedeiro). Vazio = a regra
+    # decide (máquina aceita; brinquedão, kit e peça não --
+    # sistema_interno/moedeiro.py); "sim" e "nao" são a palavra da Gestão
+    # para ESTA máquina.
+    MOEDEIRO_OPCOES = (("", "Pela regra (máquina aceita, brinquedão não)"), ("sim", "Aceita moedeiro"), ("nao", "Não aceita moedeiro"))
+    moedeiro = models.CharField(
+        "Moedeiro", max_length=3, blank=True, default="", choices=MOEDEIRO_OPCOES,
+        help_text="Vazio: a regra decide. O preço com moedeiro é o do cadastro mais o acréscimo único.",
+    )
     eh_kit = models.BooleanField(
         "É um kit eletrônico",
         default=False,

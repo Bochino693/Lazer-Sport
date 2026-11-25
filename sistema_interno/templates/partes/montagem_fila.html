@@ -1,28 +1,51 @@
 {% comment %}
-  A FILA DE UMA LINHA (máquinas ou brinquedões), na ordem em que entram.
-  As setas mudam a ordem (Produção e Gestão) e as previsões se recalculam.
+  A FILA DE UMA LINHA (máquinas ou brinquedões).
+  No critério "Fila oficial" é a ordem em que entram, e as setas mudam essa
+  ordem (só a Produção) e as previsões se recalculam. Nos outros critérios
+  (seção 142) a tabela mostra a fila REORDENADA só para comparar: a posição
+  é a do critério, a oficial vai embaixo, e o número que o critério usou
+  tem a coluna dele. Nada é gravado.
 {% endcomment %}
+{% if not fila_oficial %}
+<p class="lm-resumo" data-montagem-resumo>
+  <span class="lm-resumo-medida">{{ resumo.criterio.rotulo }} · {{ resumo.medida }}</span>
+  <span><b>{{ resumo.total }}</b> na fila</span>
+  {% if resumo.media %}<span>média <b>{{ resumo.media }}</b></span><span>mediana <b>{{ resumo.mediana }}</b></span>{% endif %}
+  {% if resumo.soma %}<span>soma <b>{{ resumo.soma }}</b></span>{% endif %}
+  {% if resumo.sem_dado %}<span class="lm-resumo-aviso"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {{ resumo.sem_dado }} sem o dado: {% if resumo.sem_dado == 1 %}fica{% else %}ficam{% endif %} no fim</span>{% endif %}
+</p>
+{% endif %}
 <div class="table-responsive">
-  <table class="ls-table ls-visao-tabela lm-tabela lm-tabela-fila">
+  <table class="ls-table ls-visao-tabela lm-tabela lm-tabela-fila{% if not fila_oficial %} com-criterio{% endif %}">
     <thead>
-      <tr><th>Posição</th><th>Máquina</th><th>Origem</th><th>Chegou</th><th>Previsão de pronta</th>{% if pode_mexer %}<th class="text-end">Ordem</th>{% endif %}</tr>
+      <tr><th>{% if fila_oficial %}Posição{% else %}Ordem{% endif %}</th><th>Máquina</th>{% if not fila_oficial %}<th>{{ resumo.criterio.rotulo }}</th>{% endif %}<th>Origem</th><th>Chegou</th><th>Previsão de pronta</th>{% if pode_mexer and fila_oficial %}<th class="text-end">Ordem</th>{% endif %}</tr>
     </thead>
     <tbody>
       {% for u in fila %}
         <tr data-montagem-unidade="{{ u.pk }}" data-visao-nome="{{ u.nome }}">
+          {% if fila_oficial %}
           <td data-rotulo="Posição"><span class="lm-posicao">{{ u.posicao|default:forloop.counter }}º</span></td>
+          {% else %}
+          <td data-rotulo="Ordem"><span class="lm-posicao">{{ u.criterio_ordem }}º</span><span class="ls-sub lm-oficial">{% if u.posicao %}fila oficial: {{ u.posicao }}º{% endif %}</span></td>
+          {% endif %}
           <td data-rotulo="Máquina">
             <strong class="lm-nome">{{ u.nome }}</strong>
             {% if u.variante %}<span class="lm-variante"><i class="bi bi-palette" aria-hidden="true"></i> adesivo {{ u.variante }}</span>{% endif %}
             <span class="ls-sub">{% if u.de > 1 %}Unidade {{ u.numero }} de {{ u.de }} · {% endif %}{{ u.dias_texto }} de montagem{% if u.volume_texto %} ({{ u.volume_texto }}){% endif %}</span>
           </td>
+          {% if not fila_oficial %}
+          <td data-rotulo="{{ resumo.criterio.rotulo }}" class="lm-criterio-celula">
+            <span class="lm-criterio{% if u.criterio_sem_dado %} sem-dado{% endif %}"{% if u.criterio_detalhe %} title="{{ u.criterio_detalhe }}"{% endif %}>{% if u.criterio_sem_dado %}<i class="bi bi-exclamation-triangle" aria-hidden="true"></i> {% endif %}{{ u.criterio_texto }}</span>
+            {% if u.criterio_detalhe %}<span class="ls-sub lm-criterio-detalhe">{{ u.criterio_detalhe }}</span>{% endif %}
+          </td>
+          {% endif %}
           <td data-rotulo="Origem">
             <a class="lm-origem" href="{{ u.origem.url }}"><i class="bi {{ u.origem.icone }}" aria-hidden="true"></i> {{ u.origem.rotulo }}</a>
             <span class="ls-sub">{{ u.origem.cliente }}</span>
           </td>
           <td data-rotulo="Chegou"><time datetime="{{ u.chegada|date:'c' }}">{{ u.chegada|date:"d/m/Y" }}</time></td>
           <td data-rotulo="Previsão de pronta"><span class="lm-prazo fila"><i class="bi bi-calendar-range" aria-hidden="true"></i> {{ u.previsao_texto|default:"—" }}</span></td>
-          {% if pode_mexer %}
+          {% if pode_mexer and fila_oficial %}
           <td data-rotulo="Ordem" class="text-end">
             <div class="lm-ordem">
               <button type="button" class="lm-seta" data-montagem-fila="subir" data-montagem-id="{{ u.pk }}"{% if u.posicao == 1 %} disabled{% endif %} aria-label="Subir {{ u.nome }} na fila"><i class="bi bi-arrow-up" aria-hidden="true"></i></button>
