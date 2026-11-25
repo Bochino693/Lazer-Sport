@@ -174,3 +174,56 @@
   .lm-chip{min-height:42px}
   .lm-regras details{padding:4px 12px}
 }
+
+/* ======================================================================
+   OS CRITÉRIOS DE ORDEM DA FILA (LEIA-ME-V10, seção 142; ordem_montagem.py)
+   Os chips "Ordenar a fila por", a frase do critério, o resumo (total,
+   média e mediana) e o número que o critério usou, ao lado de cada
+   máquina. Só variáveis do tema. (Seção nova, no fim da folha.)
+   ====================================================================== */
+.lm-ordem-grupos{display:flex;flex-wrap:wrap;gap:10px 18px;min-width:0}
+.lm-ordem-grupo{display:flex;flex-direction:column;gap:5px;min-width:0}
+.lm-ordem-grupo-nome{color:var(--muted);font-size:.66rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase}
+.lm-ordem-explica{
+  grid-column:1/-1;display:flex;align-items:flex-start;gap:8px;margin:10px 0 0;padding:9px 12px;border-radius:12px;
+  border:1px solid var(--acento-linha);background:var(--acento-fundo);color:var(--text-2);font-size:.82rem;line-height:1.45;
+}
+.lm-ordem-explica>i{color:var(--acento-texto);font-size:1rem;line-height:1.35}
+.lm-ordem-explica strong{color:var(--text)}
+.lm-ordem-explica em{font-style:normal;color:var(--muted)}
+.lm-ancora{display:block;height:0;scroll-margin-top:90px}
+.lm-resumo{
+  display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:0 0 10px;padding:8px 12px;border-radius:12px;
+  background:var(--panel-2);color:var(--text-2);font-size:.8rem;
+}
+.lm-resumo b{color:var(--text);font-weight:900}
+.lm-resumo-medida{color:var(--muted);font-size:.74rem}
+.lm-resumo-aviso{display:inline-flex;align-items:center;gap:5px;color:var(--yellow-texto);font-weight:800}
+.lm-oficial{display:block;white-space:nowrap}
+.lm-criterio{
+  display:inline-flex;align-items:center;gap:5px;max-width:100%;padding:4px 10px;border-radius:999px;
+  border:1px solid var(--acento-linha);background:var(--acento-fundo);color:var(--acento-texto);
+  font-size:.8rem;font-weight:900;line-height:1.3;overflow-wrap:anywhere;
+}
+.lm-criterio.sem-dado{border-color:rgba(var(--yellow-rgb),.4);background:rgba(var(--yellow-rgb),.1);color:var(--yellow-texto)}
+.lm-criterio-detalhe{display:block;margin-top:4px;overflow-wrap:anywhere}
+/* Com a coluna do critério a tabela da fila tem seis colunas: largura fixa
+   para cada uma, para caber no painel sem rolar de lado (só onde ela ainda
+   é tabela; no celular cada linha é uma ficha). */
+@media (min-width:901px){
+  .lm-tabela-fila.com-criterio{table-layout:fixed;width:100%}
+  .lm-tabela-fila.com-criterio th:nth-child(1){width:10%}
+  .lm-tabela-fila.com-criterio th:nth-child(2){width:23%}
+  .lm-tabela-fila.com-criterio th:nth-child(3){width:25%}
+  .lm-tabela-fila.com-criterio th:nth-child(4){width:17%}
+  .lm-tabela-fila.com-criterio th:nth-child(5){width:10%}
+  .lm-tabela-fila.com-criterio th:nth-child(6){width:15%}
+  .lm-tabela-fila.com-criterio th{white-space:normal!important}
+  .lm-tabela-fila.com-criterio td{overflow-wrap:anywhere}
+}
+@media (max-width:760px){
+  .lm-ordem-grupos{flex-direction:column;gap:10px;max-width:100%;overflow:hidden}
+  .lm-ordem-grupo{width:100%}
+  .lm-ordem-grupo .lm-chips{flex-wrap:nowrap;max-width:100%;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+  .lm-ordem-grupo .lm-chip{flex:0 0 auto}
+}

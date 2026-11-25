@@ -64,6 +64,33 @@
     return Promise.resolve(true);
   }
 
+  /* ---------------- o critério de ordem (seção 142) ----------------
+     Trocar o critério troca a tela inteira, e a navegação do painel sobe a
+     página. Quem tocou num chip de ordem quer ver a FILA reordenada: a tela
+     nova desce até ela. O recado atravessa a troca no sessionStorage (serve
+     à navegação suave e à página carregada inteira). */
+  var CHAVE_DA_FILA = "ls-montagem-ir-para-a-fila";
+  function lembrarDaFila() {
+    try { window.sessionStorage.setItem(CHAVE_DA_FILA, "1"); } catch (erro) { /* sem armazenamento: fica no alto */ }
+  }
+  function irParaAFila() {
+    var pedido = false;
+    try {
+      pedido = window.sessionStorage.getItem(CHAVE_DA_FILA) === "1";
+      if (pedido) window.sessionStorage.removeItem(CHAVE_DA_FILA);
+    } catch (erro) { pedido = false; }
+    if (!pedido) return;
+    window.setTimeout(function () {
+      var fila = document.getElementById("lmFila");
+      if (fila) fila.scrollIntoView({ block: "start" });
+    }, 80);
+  }
+  document.addEventListener("click", function (evento) {
+    if (evento.target && evento.target.closest && evento.target.closest("[data-montagem-ordem]")) lembrarDaFila();
+  }, true);
+  document.addEventListener("ls:tela", irParaAFila);
+  irParaAFila();
+
   /* ---------------- as etapas ---------------- */
   function marcarOrdem(grupo, ordem) {
     var radio = grupo.querySelector('input[data-ordem="' + ordem + '"]');

@@ -10868,3 +10868,106 @@ Dependência nova: rjsmin (requirements.txt).
    do aparelho; o envio real por WhatsApp e por e-mail (a mensagem e o
    e-mail foram conferidos nos testes); Meus pedidos logado com um pedido
    de verdade; o site no ar (nada foi publicado).
+
+142) A LISTA DE MONTAGEM COM CRITÉRIOS DE ORDEM (O PADRÃO É A MEDIANA)
+   O PEDIDO: "na listagem de montagem, você pode pôr filtros para ter a
+   lista e visualizar qual melhor se enquadra, por metros cúbicos, que já
+   está, um que seria a média de todos, outro para soltar compras menores,
+   soltar compras maiores, soltar pedidos maiores e pedidos menores entre
+   outras boas de ciência de dados que você pode pôr, default é a mediana."
+
+   COMO ERA: a fila ("Na fila") tinha UMA ordem, a oficial -- a posição
+   gravada de cada máquina (a ordem de chegada, mudada pelas setas). O m³
+   já aparecia em cada linha e decide os dias de montagem (4 ou 5), mas
+   não ordenava nada.
+
+   COMO FICOU: uma fileira de chips "Ordenar a fila por" (nenhum select),
+   com o critério na URL (?ordem=...; sem ele, a mediana). Trocar o
+   critério SÓ REORDENA A VISÃO das duas filas (máquinas e brinquedões):
+   não grava nada. Quem entra em montagem quando abre uma vaga continua
+   sendo a FILA OFICIAL -- que é um dos chips, e é só nele que as setas de
+   subir e descer aparecem (e continuam gravando, como antes).
+   Em cada linha: a ordem pelo critério ("1º"), a posição oficial embaixo
+   ("fila oficial: 4º") e o NÚMERO que o critério usou. Em cima de cada
+   fila, o resumo: quantas, a média e a mediana do número (e a soma, no m³
+   e nos dias de montagem), e quantas ficaram sem o dado.
+
+   OS CRITÉRIOS (sistema_interno/ordem_montagem.py), só com o que o
+   sistema já sabe:
+     * Equilíbrio (mediana) -- O PADRÃO. Nota de 0 a 100, menor sai primeiro.
+     * Média de todos -- a mesma nota, feita com a média.
+     * Fila oficial -- a ordem gravada.
+     * Menor m³ / Maior m³ -- o volume do brinquedo (altura x largura x
+       profundidade do cadastro).
+     * Pedidos menores / Pedidos maiores -- o TAMANHO do pedido: quantas
+       máquinas dele ainda estão na lista de montagem.
+     * Compras menores / Compras maiores -- o VALOR da compra (o total do
+       pedido do site ou do orçamento).
+     * Mais valor por m³ -- o valor da compra dividido pelos m³ do pedido.
+     * Mais antigo -- os dias desde que chegou (o pagamento do pedido, a
+       aprovação do orçamento).
+     * Prazo mais próximo -- os dias até o fim da previsão ("prazo vencido
+       há 2 dias" vem antes de "faltam 5 dias").
+     * Montagem mais curta -- os dias úteis de montagem.
+
+   COMO ENTENDI "MÉDIA DE TODOS" E "MEDIANA" (para o dono confirmar):
+     Cada máquina ganha, em cada uma de seis medidas, a POSIÇÃO dela de 0
+     a 100 entre as máquinas da fila (0 = sairia primeiro por aquela
+     medida; empate divide a posição). As seis e quem sai primeiro: a mais
+     antiga; o prazo mais próximo; a montagem mais curta; o menor m³; o
+     pedido com menos máquinas; a compra de maior valor.
+       - "Média de todos" = a média dessas posições.
+       - "Mediana" = a posição DO MEIO dessas posições. Na prática: a
+         máquina sobe quando a MAIORIA dos critérios concorda que ela deve
+         sair cedo, e um único número fora da curva (um brinquedo gigante,
+         uma compra enorme) não decide sozinho -- na média ele puxa a nota.
+     O detalhe da nota (os seis números) aparece embaixo dela.
+   SEM O DADO (brinquedo sem medida, linha escrita à mão sem previsão): a
+   máquina vai para o FIM daquele critério, marcada ("sem medida no
+   cadastro"); nas notas combinadas a medida que falta fica fora da conta
+   daquela máquina. EMPATE: desempata sempre pela fila oficial.
+
+   POUCAS IDAS AO BANCO: a conta é feita no servidor com o que a tela já
+   lia; a única consulta a mais é a dos itens dos orçamentos (uma, para
+   todos), de onde sai o valor da compra. O número de consultas não cresce
+   com a fila.
+   No celular, trocar o critério desce a tela até a fila (a navegação do
+   painel sobe a página a cada troca).
+
+   DÚVIDAS PARA O DONO:
+     1. O padrão (mediana) NÃO é a fila oficial: quem abre a tela vê a
+        ordem sugerida, com a posição oficial escrita embaixo e as setas
+        só no chip "Fila oficial". Se a Produção preferir abrir já na fila
+        oficial, é trocar ordem_montagem.PADRAO.
+     2. O lado de cada medida nas notas combinadas (acima) foi escolha
+        minha -- em especial "compra de MAIOR valor sai primeiro" e
+        "pedido com MENOS máquinas sai primeiro". Diga se inverte algum.
+     3. Não existe (de propósito) o botão "aplicar esta ordem à fila
+        oficial". Se quiser, é um passo a mais, com confirmação.
+     4. "Pedido maior/menor" conta as máquinas do pedido que ainda estão
+        na lista de montagem. Se preferir pelos m³ somados do pedido, o
+        dado existe.
+
+   ARQUIVOS: sistema_interno/ordem_montagem.py (novo), views_montagem.py,
+   templates/lista_montagem_inner.html, templates/partes/montagem_fila.html,
+   static/interno/lista-montagem.css (seção nova no fim) e
+   lista-montagem.js; tests_ordem_montagem.py (novo).
+   TESTES: tests_ordem_montagem.py (22): a posição de 0 a 100 e o empate; a
+   média e a mediana com quantidade par e ímpar; o número fora da curva; a
+   ordem esperada de cada critério e o número escrito; quem não tem o dado
+   no fim; o resumo (média, mediana, soma); o desempate pela fila oficial;
+   o critério desconhecido cai na mediana; a tela (o padrão, a URL, os
+   chips guardando os outros filtros, as setas só na fila oficial, abrir a
+   tela com qualquer critério não grava nada, as consultas não crescem,
+   quem só vê não mexe) e o CSS sem cor escrita à mão.
+   Comando da suíte: DJANGO_SETTINGS_MODULE=lazer.settings_test python
+   manage.py test core sistema_interno contas rh --parallel 1
+
+   CONFERIDO NO CHROMIUM (Playwright, servidor local, dados SINTÉTICOS:
+   14 máquinas e 3 brinquedões na fila, com e sem medida), em 390 e 1366
+   px, como Produção: os 13 chips clicados um a um, a ordem e o número de
+   cada linha, o resumo, a tela descendo até a fila, a tabela sem rolar de
+   lado (também em 1024), as setas só na fila oficial e a seta movendo a
+   máquina de verdade. NÃO conferido: com os pedidos reais; como Vendas e
+   Financeiro na tela (só nos testes); o modo "Cards" da lista com a
+   coluna nova; os temas Sol e Eclipse.

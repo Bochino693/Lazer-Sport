@@ -38,6 +38,7 @@ from django.utils import timezone
 from django.views.generic import View
 
 from . import montagem
+from . import ordem_montagem
 from .models import ConfiguracaoProducao, UnidadeMontagem
 from .permissoes import AMBULANTE, FINANCEIRO, GESTAO, PRODUCAO, VENDAS, capacidades
 from .views import InternoRequiredMixin
@@ -192,12 +193,17 @@ class ListaMontagemView(InternoRequiredMixin, View):
         if linha not in dict((v, r) for v, r, _ in LINHAS):
             linha = ""
         brinquedo = (request.GET.get("brinquedo") or "").strip()
+        # O CRITÉRIO DE ORDEM DA FILA (seção 142): só reordena a visão. O
+        # padrão é a mediana; a fila oficial (a que vale) é o critério "fila".
+        criterio = ordem_montagem.criterio(request.GET.get("ordem"))
 
         base = unidades_que_ve(request.user, (
             UnidadeMontagem.objects.exclude(situacao=S.CANCELADA)
             .select_related(
                 "producao__pedido__cliente__user", "producao__orcamento__cliente", "brinquedo",
             )
+            # o valor da compra do orçamento soma os itens: vêm de uma vez
+            .prefetch_related("producao__orcamento__itens")
         ))
         todas = [preparar(u) for u in base.exclude(situacao=S.ENTREGUE).order_by("chegada", "id")]
         if filtro == "entregues":
@@ -247,10 +253,15 @@ class ListaMontagemView(InternoRequiredMixin, View):
                 "unidades": [],
             })
             grupo["unidades"].append(unidade)
-        fila_maquinas = sorted((u for u in visiveis if u.situacao == S.FILA and u.trilha == "maquina"),
-                               key=lambda u: (u.posicao or 10 ** 6, u.chegada))
-        fila_projetos = sorted((u for u in visiveis if u.situacao == S.FILA and u.trilha == "projeto"),
-                               key=lambda u: (u.posicao or 10 ** 6, u.chegada))
+        ativas_da_lista = [u for u in todas if u.situacao in (S.FILA, S.PRODUCAO, S.PRONTA)]
+        fila_maquinas, resumo_maquinas = ordem_montagem.ordenar(
+            (u for u in visiveis if u.situacao == S.FILA and u.trilha == "maquina"),
+            criterio.chave, todas=ativas_da_lista,
+        )
+        fila_projetos, resumo_projetos = ordem_montagem.ordenar(
+            (u for u in visiveis if u.situacao == S.FILA and u.trilha == "projeto"),
+            criterio.chave, todas=ativas_da_lista,
+        )
         prontas = [u for u in visiveis if u.situacao == S.PRONTA]
         entregues = [u for u in visiveis if u.situacao == S.ENTREGUE]
 
@@ -291,6 +302,12 @@ class ListaMontagemView(InternoRequiredMixin, View):
             "grupos": list(grupos.values()),
             "fila_maquinas": fila_maquinas,
             "fila_projetos": fila_projetos,
+            "resumo_maquinas": resumo_maquinas,
+            "resumo_projetos": resumo_projetos,
+            "criterio": criterio,
+            "criterios": self.chips_do_criterio(criterio, filtro, linha, brinquedo),
+            "ordem_na_url": "" if criterio.chave == ordem_montagem.PADRAO else criterio.chave,
+            "fila_oficial": criterio.chave == "fila",
             "prontas": prontas,
             "entregues": entregues,
             "nada": not (grupos or fila_maquinas or fila_projetos or prontas or entregues),
@@ -304,6 +321,26 @@ class ListaMontagemView(InternoRequiredMixin, View):
             "ve_tudo": ve_tudo(request.user),
             "limite_texto": f"{config.limite_m3:.2f}".replace(".", ","),
         })
+
+    @staticmethod
+    def chips_do_criterio(criterio, filtro, linha, brinquedo):
+        """Os chips "Ordenar a fila por", agrupados, com o endereço de cada um."""
+        from urllib.parse import urlencode
+
+        grupos = OrderedDict()
+        for opcao in ordem_montagem.CRITERIOS:
+            consulta = {"filtro": filtro}
+            if linha:
+                consulta["linha"] = linha
+            if brinquedo:
+                consulta["brinquedo"] = brinquedo
+            if opcao.chave != ordem_montagem.PADRAO:
+                consulta["ordem"] = opcao.chave
+            grupos.setdefault(opcao.grupo, []).append({
+                "chave": opcao.chave, "rotulo": opcao.rotulo, "icone": opcao.icone, "explica": opcao.explica,
+                "ativo": opcao.chave == criterio.chave, "url": "?" + urlencode(consulta),
+            })
+        return [{"nome": nome, "chips": chips} for nome, chips in grupos.items()]
 
     # ------------------------------------------------------------------ POST
     def post(self, request):
