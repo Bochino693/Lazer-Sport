@@ -1,0 +1,118 @@
+/* ======================================================================
+   AVALIAÇÃO DOS SETORES -- os cards do mês e a tabela do histórico
+   (LEIA-ME-V10, seção 139; views_acessos.AvaliacaoSetoresInnerView).
+
+   O pedido do dono: "as tabelas estão mal formatadas no campo das
+   avaliações, você deve deixar em qualquer resolução do mesmo tamanho
+   para nunca quebrar."
+
+   A REGRA DESTA FOLHA: o TEXTO NUNCA DECIDE O TAMANHO. As colunas da
+   tabela têm largura fixa (colgroup + table-layout:fixed), as linhas têm
+   a mesma altura, os cards do mês têm a mesma altura e o botão no mesmo
+   lugar; o texto comprido (um parecer longo, uma palavra sem espaço, um
+   nome grande) encurta com reticências DENTRO da célula -- o texto
+   inteiro fica no balão (title) e na janela de revisar. No celular cada
+   linha da tabela vira um cartão, como nas outras listas do painel.
+   SÓ PAPÉIS DE COR DO TEMA (nenhuma cor escrita à mão).
+   ====================================================================== */
+
+/* ------------------------------------------------- os cards dos setores */
+.ls-sector-grid{align-items:stretch;margin:0 0 18px}
+.ls-sector-card{display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.ls-sector-card-head{grid-template-columns:46px minmax(0,1fr) 52px}
+.ls-sector-nome{min-width:0}
+.ls-sector-card h2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-sector-card-head p{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* A nota: um círculo de tamanho fixo, com o número e o "/5" na mesma linha. */
+.ls-sector-score{
+  flex:0 0 auto;width:52px;min-width:52px;height:52px;
+  display:inline-flex;align-items:baseline;justify-content:center;gap:1px;
+  padding-top:17px;line-height:1;white-space:nowrap;
+}
+.ls-sector-score b{font-weight:950}
+.ls-sector-score small{font-size:.58rem;font-weight:800;opacity:.8}
+.ls-sector-score.pequeno{width:40px;min-width:40px;height:40px;padding-top:13px;font-size:.84rem}
+.ls-sector-score.vazio{color:var(--muted);background:rgba(var(--muted-rgb),.14);border:1px dashed var(--line-forte)}
+
+/* O parecer ocupa sempre quatro linhas: mais que isso encurta, menos deixa o espaço. */
+.ls-sector-comment{
+  height:6em;min-height:0;margin:15px 0 6px;overflow:hidden;overflow-wrap:anywhere;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;
+}
+.ls-sector-quando{display:block;color:var(--muted);font-size:.72rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-sector-acao{width:100%;min-height:44px;margin-top:14px}
+
+/* ------------------------------------------------ a tabela do histórico
+   (com o prefixo .ls-av-historico: as regras gerais de célula do painel
+   usam !important, e é o prefixo que desempata) */
+.ls-av-historico{margin-top:18px}
+.ls-av-historico .ls-data-body{overflow:hidden}
+.ls-av-historico .ls-av-tabela{width:100%;table-layout:fixed}
+.ls-av-col-periodo{width:104px}
+.ls-av-col-setor{width:24%}
+.ls-av-col-nota{width:84px}
+.ls-av-col-parecer{width:auto}
+.ls-av-col-avaliador{width:22%}
+
+.ls-av-historico .ls-av-tabela thead th,
+.ls-av-historico .ls-av-tabela tbody td{overflow:hidden}
+.ls-av-historico .ls-av-tabela thead th{text-overflow:ellipsis}
+/* todas as linhas da mesma altura: a nota (40px) e duas linhas de parecer cabem nela */
+.ls-av-historico .ls-av-tabela tbody td{height:72px;padding-top:10px!important;padding-bottom:10px!important}
+.ls-av-historico .ls-av-tabela thead th:nth-child(3),
+.ls-av-historico .ls-av-tabela td.ls-av-nota{text-align:center;line-height:0}
+.ls-av-historico .ls-av-tabela td.ls-av-periodo{white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--text)!important;font-weight:800}
+
+.ls-av-corta{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ls-av-duas-linhas{
+  max-height:3em;overflow:hidden;overflow-wrap:anywhere;line-height:1.5;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;
+}
+.ls-av-sem{color:var(--muted)}
+
+/* Tablet: as mesmas cinco colunas, só mais justas. */
+@media (max-width:1100px){
+  .ls-av-col-periodo{width:88px}
+  .ls-av-col-nota{width:68px}
+  .ls-av-col-setor{width:23%}
+  .ls-av-col-avaliador{width:21%}
+  .ls-av-historico .ls-av-tabela thead th,
+  .ls-av-historico .ls-av-tabela tbody td{padding-left:10px!important;padding-right:10px!important}
+}
+
+/* Celular: cada linha vira um cartão de formato fixo --
+   período e setor em cima, a nota à direita, o parecer (duas linhas) e o avaliador. */
+@media (max-width:700px){
+  .ls-av-historico .ls-data-body{padding:12px}
+  .ls-av-historico .ls-av-tabela,
+  .ls-av-historico .ls-av-tabela tbody{display:block;width:100%}
+  .ls-av-historico .ls-av-tabela colgroup,
+  .ls-av-historico .ls-av-tabela thead{display:none}
+  .ls-av-historico .ls-av-tabela tbody tr{
+    display:grid;grid-template-columns:auto minmax(0,1fr) 40px;
+    grid-template-areas:"periodo setor nota" "parecer parecer nota" "avaliador avaliador avaliador";
+    column-gap:10px;row-gap:6px;align-items:center;
+    margin:0 0 10px;padding:12px 14px;
+    border:1px solid var(--line);border-radius:var(--radius-lg);background:var(--panel-2);
+  }
+  .ls-av-historico .ls-av-tabela tbody tr:last-child{margin-bottom:0}
+  .ls-av-historico .ls-av-tabela tbody td{
+    display:block;height:auto;min-width:0;padding:0!important;border:0!important;background:transparent!important;
+  }
+  .ls-av-historico .ls-av-tabela tbody tr:hover td{background:transparent!important}
+  .ls-av-historico .ls-av-tabela td.ls-av-periodo{grid-area:periodo}
+  .ls-av-historico .ls-av-tabela td.ls-av-setor{grid-area:setor}
+  .ls-av-historico .ls-av-tabela td.ls-av-nota{grid-area:nota;align-self:start;height:40px;line-height:0;overflow:visible}
+  .ls-av-historico .ls-av-tabela td.ls-av-parecer{grid-area:parecer;height:3em;font-size:.86rem!important}
+  .ls-av-historico .ls-av-tabela td.ls-av-avaliador{
+    grid-area:avaliador;display:flex;align-items:center;gap:6px;padding-top:8px!important;
+    border-top:1px solid var(--line-soft)!important;font-size:.78rem!important;color:var(--muted)!important;
+  }
+  .ls-av-historico .ls-av-tabela td.ls-av-avaliador::before{
+    content:attr(data-rotulo);flex:0 0 auto;
+    font-size:.66rem;font-weight:900;letter-spacing:.07em;text-transform:uppercase;color:var(--muted-2);
+  }
+  .ls-av-historico .ls-av-tabela td.ls-av-avaliador .ls-av-corta,
+  .ls-av-historico .ls-av-tabela td.ls-av-avaliador .ls-av-sem{flex:1 1 auto;min-width:0;text-align:right}
+}

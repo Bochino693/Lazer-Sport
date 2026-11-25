@@ -1,9 +1,22 @@
 {% extends "base_inner.html" %}
+{% load interno_extras %}
 
 {% block title %}Avaliação dos setores | Lazer & Sport{% endblock %}
 {% block top_title %}Avaliação dos setores{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="avaliacao-setores" href="{% estatico 'interno/avaliacao-setores.css' %}">
+{% endblock %}
+
 {% block content %}
+{% comment %}
+  AVALIAÇÃO DOS SETORES (views_acessos.AvaliacaoSetoresInnerView; LEIA-ME-V10,
+  seção 139). Os cards dos setores e a tabela do histórico têm o MESMO
+  formato em qualquer largura: a tabela é de colunas fixas (colgroup +
+  table-layout:fixed em interno/avaliacao-setores.css) e o texto comprido
+  encurta dentro da célula, sem empurrar as colunas. No celular cada linha
+  vira um cartão, como nas outras listas do painel.
+{% endcomment %}
 <section class="ls-page-hero">
   <div class="ls-page-hero-copy">
     <span class="ls-page-kicker">Governança interna</span>
@@ -37,19 +50,20 @@
   <article class="ls-sector-card {% if linha.avaliacao %}avaliado{% endif %}">
     <div class="ls-sector-card-head">
       <span class="ls-sector-icon"><i class="bi {{ linha.icone }}"></i></span>
-      <div>
-        <h2>{{ linha.rotulo }}</h2>
-        <p>{{ linha.integrantes }} integrante(s) ativo(s)</p>
+      <div class="ls-sector-nome">
+        <h2 title="{{ linha.rotulo }}">{{ linha.rotulo }}</h2>
+        <p>{{ linha.integrantes }} integrante{{ linha.integrantes|pluralize }} ativo{{ linha.integrantes|pluralize }}</p>
       </div>
-      {% if linha.avaliacao %}<span class="ls-sector-score" aria-label="Nota {{ linha.avaliacao.nota }} de 5">{{ linha.avaliacao.nota }}<small>/5</small></span>{% endif %}
+      {% if linha.avaliacao %}<span class="ls-sector-score" aria-label="Nota {{ linha.avaliacao.nota }} de 5"><b>{{ linha.avaliacao.nota }}</b><small>/5</small></span>{% else %}<span class="ls-sector-score vazio" aria-label="Sem nota neste mês"><b>–</b></span>{% endif %}
     </div>
     {% if linha.avaliacao %}
-      <p class="ls-sector-comment">{{ linha.avaliacao.observacao|default:"Sem observação registrada." }}</p>
-      <small class="text-muted">Atualizado em {{ linha.avaliacao.atualizado|date:"d/m/Y H:i" }}</small>
+      <p class="ls-sector-comment"{% if linha.avaliacao.observacao %} title="{{ linha.avaliacao.observacao }}"{% endif %}>{{ linha.avaliacao.observacao|default:"Sem observação registrada." }}</p>
+      <small class="ls-sector-quando">Atualizado em {{ linha.avaliacao.atualizado|date:"d/m/Y H:i" }}</small>
     {% else %}
       <p class="ls-sector-comment vazio">Este setor ainda não foi avaliado no período.</p>
+      <small class="ls-sector-quando">Sem registro neste mês</small>
     {% endif %}
-    <button type="button" class="btn {% if linha.avaliacao %}btn-outline-primary{% else %}btn-primary{% endif %} w-100 mt-3"
+    <button type="button" class="btn {% if linha.avaliacao %}btn-outline-primary{% else %}btn-primary{% endif %} ls-sector-acao"
             data-avaliar-setor="{{ linha.codigo }}" data-rotulo="{{ linha.rotulo }}"
             data-nota="{{ linha.avaliacao.nota|default:'' }}"
             data-observacao="{{ linha.avaliacao.observacao|default:'' }}">
@@ -61,18 +75,23 @@
 </section>
 
 {% if historico %}
-<section class="ls-data-panel mt-4">
+<section class="ls-data-panel ls-av-historico">
   <div class="ls-data-header"><div><h2>Histórico recente</h2><p>Comparação dos últimos registros, sem apagar avaliações anteriores.</p></div></div>
-  <div class="ls-data-body"><div class="table-responsive"><table class="ls-table">
-    <thead><tr><th>Período</th><th>Setor</th><th>Nota</th><th>Parecer</th><th>Avaliador</th></tr></thead>
-    <tbody>{% for avaliacao in historico %}<tr>
-      <td data-rotulo="Período">{{ avaliacao.periodo|date:"m/Y" }}</td>
-      <td data-rotulo="Setor"><strong>{{ avaliacao.get_setor_display }}</strong></td>
-      <td data-rotulo="Nota"><span class="ls-sector-score pequeno">{{ avaliacao.nota }}<small>/5</small></span></td>
-      <td data-rotulo="Parecer">{{ avaliacao.observacao|default:"—"|truncatechars:100 }}</td>
-      <td data-rotulo="Avaliador">{{ avaliacao.avaliador.get_full_name|default:avaliacao.avaliador.username|default:"—" }}</td>
-    </tr>{% endfor %}</tbody>
-  </table></div></div>
+  <div class="ls-data-body">
+    {# Colunas de largura fixa (colgroup): o texto nunca decide a largura da coluna. #}
+    <table class="ls-table ls-av-tabela">
+      <colgroup><col class="ls-av-col-periodo"><col class="ls-av-col-setor"><col class="ls-av-col-nota"><col class="ls-av-col-parecer"><col class="ls-av-col-avaliador"></colgroup>
+      <thead><tr><th scope="col">Período</th><th scope="col">Setor</th><th scope="col">Nota</th><th scope="col">Parecer</th><th scope="col">Avaliador</th></tr></thead>
+      <tbody>{% for avaliacao in historico %}<tr>
+        <td data-rotulo="Período" class="ls-av-periodo">{{ avaliacao.periodo|date:"m/Y" }}</td>
+        <td data-rotulo="Setor" class="ls-av-setor"><strong class="ls-av-corta" title="{{ avaliacao.get_setor_display }}">{{ avaliacao.get_setor_display }}</strong></td>
+        <td data-rotulo="Nota" class="ls-av-nota"><span class="ls-sector-score pequeno" aria-label="Nota {{ avaliacao.nota }} de 5"><b>{{ avaliacao.nota }}</b><small>/5</small></span></td>
+        <td data-rotulo="Parecer" class="ls-av-parecer">{% if avaliacao.observacao %}<span class="ls-av-duas-linhas" title="{{ avaliacao.observacao }}">{{ avaliacao.observacao }}</span>{% else %}<span class="ls-av-sem">Sem parecer</span>{% endif %}</td>
+        {# O avaliador pode ter sido removido da equipe (SET_NULL): a linha continua, sem nome. #}
+        <td data-rotulo="Avaliador" class="ls-av-avaliador">{% if avaliacao.avaliador %}{% firstof avaliacao.avaliador.get_full_name avaliacao.avaliador.username as nome_avaliador %}<span class="ls-av-corta" title="{{ nome_avaliador }}">{{ nome_avaliador }}</span>{% else %}<span class="ls-av-sem">Conta removida</span>{% endif %}</td>
+      </tr>{% endfor %}</tbody>
+    </table>
+  </div>
 </section>
 {% endif %}
 

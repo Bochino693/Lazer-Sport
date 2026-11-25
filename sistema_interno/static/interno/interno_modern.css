@@ -7132,3 +7132,33 @@ body.modal-open .ls-folha-veu{display:none!important}
 .ls-os-doc-faixa.ok .ls-janela-trava-acao{background:var(--green);color:var(--acento-tinta)}
 .ls-os-doc-faixa.alerta{--nota-cor:var(--yellow-texto);--nota-rgb:var(--yellow-rgb)}
 #osFrete[readonly],#osDesconto[readonly]{opacity:.72;cursor:not-allowed}
+
+/* ======================================================================
+   A REVISÃO DOS BLOCOS NA LISTA DE ORÇAMENTOS, SEM PALAVRA PARTIDA
+   (LEIA-ME-V10, seção 139). O pedido do dono: "as tabelas estão mal
+   formatadas no campo das avaliações (...) em qualquer resolução do mesmo
+   tamanho para nunca quebrar."
+   Os dois selos (Comercial e Financeiro) ficavam lado a lado numa coluna
+   de ~150 px: "Pendente" quebrava em "Pendent / e", "Requer ajustes" em
+   três linhas, e "Comercial" e "Financeiro" saíam cortados. Na LISTA do
+   computador os selos passam a ficar um em cima do outro, numa coluna de
+   largura fixa; em qualquer modo, o rótulo e a situação ficam numa
+   linha só e encurtam com reticências em vez de partir a palavra. (Seção
+   nova, fora da "LISTA OU CARDS, SEGUNDA PARTE".)
+   ====================================================================== */
+.ls-review-item{overflow:hidden}
+.ls-review-label,
+.ls-review-item strong{
+  display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal;
+}
+.ls-review-label i{margin-right:4px}
+/* Só onde a lista ainda é tabela (a partir de 1200px; abaixo disso cada
+   proposta é uma ficha e os dois selos cabem lado a lado). A coluna tem
+   largura FIXA: é ela, e não o texto, que decide o tamanho do selo. */
+@media (min-width:1200px){
+  .ls-content .ls-visao-alvo[data-visao="lista"] .ls-orcamentos-table :is(th[data-coluna="Revisão dos blocos"],td[data-rotulo="Revisão dos blocos"]){
+    width:148px!important;min-width:148px!important;max-width:148px;
+  }
+  .ls-visao-alvo[data-visao="lista"] .ls-orcamentos-table .ls-block-review{grid-template-columns:minmax(0,1fr)}
+  .ls-visao-alvo[data-visao="lista"] .ls-orcamentos-table .ls-review-item{min-height:44px;padding:6px 9px}
+}

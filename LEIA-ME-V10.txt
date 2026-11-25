@@ -10462,8 +10462,13 @@ Dependência nova: rjsmin (requirements.txt).
        relógios do cartão e da página do termo mostram "23h59" (rh.js,
        rh-assinar.js). A página do termo do colaborador CONTINUA com o
        relógio (o pedido de tirar foi para o contrato do cliente).
-     * NÃO conferido no navegador: as telas do termo do RH com as 24 horas
-       (só pelos testes).
+     * CONFERIDO NO NAVEGADOR depois (seção 139), no celular 390 e no PC
+       1366, com dados sintéticos: o cartão do QR do termo do colaborador
+       ("link de 24 horas, renovado sozinho", "Vale por mais 23h59") e a
+       página do termo com o relógio "23h59" cabendo na pílula dele; e a
+       tela Assinaturas como Financeiro (os contratos dos orçamentos e as
+       O.S., nenhum QR; "Ver" e "Imprimir ou PDF" de um contrato abrem; o
+       "Voltar" da via leva a /assinaturas/; o cartão do documento, 403).
 
    ARQUIVOS: sistema_interno/permissoes.py, menu.py, views_assinaturas.py,
    views_documento_assinatura.py; rh/termo.py, rh/views_termo.py,
@@ -10472,3 +10477,85 @@ Dependência nova: rjsmin (requirements.txt).
    TESTES: tests_assinaturas.py (o Financeiro vê as dos orçamentos e das
    O.S. só para ler; um item no menu), tests_documento_assinatura.py (a via
    abre, o resto 403; o RH com 24 horas). Suíte completa: 3545 testes, OK.
+
+139) AS TABELAS DAS AVALIAÇÕES COM O MESMO FORMATO EM QUALQUER RESOLUÇÃO
+   O PEDIDO: "as tabelas estão mal formatadas no campo das avaliações, você
+   deve deixar em qualquer resolução do mesmo tamanho para nunca quebrar."
+
+   O painel tem DUAS áreas de avaliação com tabela, e as duas quebravam
+   (medido no Chromium em 390, 768, 1024, 1366 e 1920 px, dados sintéticos):
+
+   A) "AVALIAÇÃO DOS SETORES" (/equipe/avaliacoes/, só o superusuário)
+     O QUE ESTAVA ERRADO
+     * A tabela "Histórico recente" era de largura automática: a coluna
+       Parecer pedia 790 px numa linha só e a tabela precisava de ~1200 px.
+       Até 1024 px ela rolava de lado dentro do painel (834 px escondidos
+       no celular, 556 no tablet de 768, 327 em 1024); em 1366 o nome do
+       avaliador quebrava em 4 linhas e cada linha ficava com 118 px de
+       altura; em 1920 as colunas mudavam todas de largura.
+     * Nos cards do mês, um parecer com palavra comprida sem espaço saía do
+       card e ALARGAVA A PÁGINA (rolagem lateral de 419 px no celular, 114
+       em 768, 351 em 1366 e 150 em 1920); os cards tinham alturas
+       diferentes e o botão em alturas diferentes.
+     * O círculo da nota mostrava o número desalinhado, com o "/5" fora.
+     * ERRO 500: se o avaliador de um registro antigo tivesse sido removido
+       da equipe (o campo é SET_NULL), a tela inteira não abria -- o
+       template pedia o nome de usuário de "ninguém".
+     O QUE MUDOU
+     * A tabela tem COLUNAS FIXAS: <colgroup> com uma largura por coluna e
+       table-layout:fixed (Período 104 px, Setor 24%, Nota 84 px, Avaliador
+       22%, Parecer com o resto; um pouco mais justas até 1100 px). O texto
+       não decide mais a largura: o setor e o avaliador encurtam com
+       reticências numa linha, o parecer em duas linhas, e o texto inteiro
+       fica no balão (title). Todas as linhas têm 72 px, em qualquer largura.
+       Sem rolagem lateral, nem da página nem por dentro.
+     * No celular (até 700 px) cada linha vira um cartão de formato fixo
+       (130 px): período e setor em cima, a nota à direita, o parecer em
+       duas linhas e o avaliador no pé -- como as outras listas do painel.
+     * Os cards do mês têm todos a mesma altura, o parecer ocupa sempre
+       quatro linhas (o resto encurta; inteiro no balão e na janela de
+       revisar), o botão fica no mesmo lugar e o setor sem nota também tem
+       o círculo (vazio). "1 integrante ativo" no lugar de "integrante(s)".
+     * Sem avaliador, a linha diz "Conta removida" e a tela abre.
+     ARQUIVOS: sistema_interno/templates/avaliacao_setores.html e a folha
+     nova static/interno/avaliacao-setores.css (só variáveis do tema; as
+     regras da tabela levam o prefixo .ls-av-historico porque as regras
+     gerais de célula do painel usam !important).
+
+   B) "REVISÃO DOS BLOCOS" NA LISTA DE ORÇAMENTOS (a coluna "Revisão")
+     O QUE ESTAVA ERRADO: os dois selos (Comercial e Financeiro) ficavam
+     lado a lado numa coluna de ~118 px. De 1200 px para cima "Pendente"
+     quebrava em "Pendent / e", e "Comercial" e "Financeiro" saíam cortados.
+     O QUE MUDOU (seção nova no fim de interno_modern.css): onde a lista é
+     tabela (a partir de 1200 px, modo Lista) a coluna tem 148 px fixos e
+     os selos ficam um em cima do outro; em qualquer modo o rótulo e a
+     situação ficam numa linha e encurtam com reticências, nunca partem a
+     palavra. Abaixo de 1200 px (ficha) e no modo Cards os dois continuam
+     lado a lado, onde cabem ("Requer ajustes" inteiro em todos).
+
+   NÃO MEXIDO: a "Avaliação" (estrelas) do cadastro de brinquedos do site é
+   um campo de formulário, sem tabela.
+
+   TESTES: sistema_interno/tests_avaliacoes_tabelas.py (10): a tela abre
+   sem o avaliador; o nome ou o usuário do avaliador; o colgroup, o parecer
+   inteiro no balão e nenhuma rolagem por dentro; o card com palavra sem
+   espaço; salvar continua funcionando; table-layout:fixed e a largura de
+   cada coluna; o cartão do celular; o CSS sem cor escrita à mão; a tela
+   sem <select>, alert nem confirm; os selos da revisão sem palavra partida
+   e a seção nova depois da "LISTA OU CARDS, SEGUNDA PARTE".
+   Comando da suíte: DJANGO_SETTINGS_MODULE=lazer.settings_test python
+   manage.py test core sistema_interno contas rh --parallel 1
+
+   CONFERIDO NO CHROMIUM (Playwright, servidor local, banco SQLite com
+   dados SINTÉTICOS -- pareceres curtos, longos, vazios e uma palavra de
+   mais de 100 letras sem espaço; avaliador com nome de mais de 40 letras e sem avaliador):
+   a Avaliação dos setores em 390, 768, 1024, 1366 e 1920 px, antes e
+   depois (rolagem lateral da página e da tabela zeradas; linhas de 72 px;
+   cards de mesma altura), nos temas Lua, Sol e Eclipse (estes em 390 e
+   1366); a janela de avaliar aberta, a nota escolhida e o "Salvo" (390 e
+   1366); a lista de orçamentos com os selos Pendente, Aprovado e Requer
+   ajustes nas mesmas cinco larguras, em Lista e em Cards. Sem erro de
+   JavaScript. NÃO conferido: com os dados de verdade da empresa e no site
+   no ar antes do deploy. OBSERVADO E NÃO MEXIDO: com um nome de usuário
+   muito comprido (mais de 40 letras, inventado para o teste) o botão do nome na
+   barra do topo espreme o título da tela.
