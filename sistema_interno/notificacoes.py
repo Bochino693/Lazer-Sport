@@ -199,6 +199,8 @@ def avisar_documento_assinado(documento):
     cliente fora da tela de bloqueio. Não vibra -- é um fecho, não uma
     urgência.
     """
+    if documento.pedido_id:
+        return avisar_contrato_do_pedido_assinado(documento)
     if documento.ordem_servico_id and not documento.orcamento_id:
         return avisar_ordem_servico_assinada(documento)
     orcamento = documento.orcamento
@@ -208,6 +210,28 @@ def avisar_documento_assinado(documento):
             "titulo": f"Orçamento #{orcamento.pk}: termo assinado",
             "corpo": "O cliente assinou o termo de compra. O PDF está no cartão do documento.",
             "url": f"/orcamentos/{orcamento.pk}/documento/",
+            "marca": _marca(f"documento-assinatura:{documento.pk}"),
+            "urgente": False,
+        },
+    )
+
+
+def avisar_contrato_do_pedido_assinado(documento):
+    """O cliente assinou em Meus pedidos o contrato do pedido do site (seção 145).
+
+    Vai para quem cuida dos pedidos do site (Financeiro e Gestão). O número
+    no título, o nome do cliente do outro lado do login. Não vibra.
+    """
+    pessoas = [
+        usuario for usuario in User.objects.filter(is_active=True)
+        if tem_funcao(usuario, FINANCEIRO) or tem_funcao(usuario, GESTAO)
+    ]
+    return _entregar(
+        pessoas,
+        {
+            "titulo": f"Pedido do site #{documento.pedido_id}: contrato assinado",
+            "corpo": "O cliente assinou o contrato em Meus pedidos. O PDF está em Assinaturas.",
+            "url": "/assinaturas/?objeto=pedidos",
             "marca": _marca(f"documento-assinatura:{documento.pk}"),
             "urgente": False,
         },

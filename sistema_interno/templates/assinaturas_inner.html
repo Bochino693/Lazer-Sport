@@ -20,7 +20,7 @@
   <div class="ls-page-hero-copy">
     <span class="ls-page-kicker">Documentos · assinados no celular</span>
     <h1>Assinaturas</h1>
-    <p>{% if so_os %}As ordens de serviço que o cliente assina no celular, num lugar só.{% elif so_orcamentos %}Os contratos e termos dos {% if carteira_propria %}seus orçamentos{% else %}orçamentos{% endif %} que o cliente assina no celular, num lugar só.{% else %}Os contratos dos orçamentos e as ordens de serviço que o cliente assina no celular, num lugar só.{% endif %} {% if pode_algum_qr %}Imprima ou baixe o PDF assinado com um toque, ou abra o QR de quem ainda não assinou.{% else %}Imprima ou baixe o PDF assinado com um toque e acompanhe quem ainda não assinou.{% endif %}</p>
+    <p>{% if so_os %}As ordens de serviço que o cliente assina no celular, num lugar só.{% elif so_orcamentos %}Os contratos e termos dos {% if carteira_propria %}seus orçamentos{% else %}orçamentos{% endif %} que o cliente assina no celular, num lugar só.{% else %}Os contratos dos orçamentos{% if ve_pedidos %}, dos pedidos do site{% endif %} e as ordens de serviço que o cliente assina no celular, num lugar só.{% endif %} {% if pode_algum_qr %}Imprima ou baixe o PDF assinado com um toque, ou abra o QR de quem ainda não assinou.{% else %}Imprima ou baixe o PDF assinado com um toque e acompanhe quem ainda não assinou.{% endif %}</p>
   </div>
 </section>
 
@@ -105,7 +105,7 @@
         <dl class="ls-as-dados">
           <div><dt>Gerado em</dt><dd>{{ c.documento.criacao|date:"d/m/Y" }} às {{ c.documento.criacao|date:"H:i" }}</dd></div>
           <div><dt>{% if c.situacao == "suspenso" %}Por quê{% else %}Link{% endif %}</dt>
-            <dd>{% if c.situacao == "suspenso" %}{% if c.objeto.tipo == "os" %}A O.S. foi cancelada ou refeita{% else %}O orçamento não está mais aprovado{% endif %}{% elif c.documento.links_gerados %}{{ c.documento.links_gerados }} gerado{{ c.documento.links_gerados|pluralize }} · vale {{ validade_texto }}{% else %}Ainda não enviado{% endif %}</dd></div>
+            <dd>{% if c.situacao == "suspenso" %}{% if c.objeto.tipo == "os" %}A O.S. foi cancelada ou refeita{% elif c.objeto.tipo == "pedido" %}O pedido foi cancelado{% else %}O orçamento não está mais aprovado{% endif %}{% elif c.objeto.tipo == "pedido" %}O cliente assina em Meus pedidos{% elif c.documento.links_gerados %}{{ c.documento.links_gerados }} gerado{{ c.documento.links_gerados|pluralize }} · vale {{ validade_texto }}{% else %}Ainda não enviado{% endif %}</dd></div>
         </dl>
       {% endif %}
     </div>

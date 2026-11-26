@@ -22,7 +22,7 @@ from .views_painel import painel_ao_vivo
 from .views_orcamento import orcamento_publico
 from .views_ordem_servico import ordem_servico_publica
 from .views_assinatura import assinar_documento, documento_assinado
-from .views_codigo_orcamento import AssinarTermoView, VincularOrcamentoView
+from .views_codigo_orcamento import AssinarContratoDoPedidoView, AssinarTermoView, VincularOrcamentoView
 from sistema_interno.views_campanhas import (
     CampanhaPublicaDestinoView,
     CampanhaPublicaView,
@@ -388,6 +388,12 @@ urlpatterns = [
         "meus-pedidos/orcamento/assinar/",
         AssinarTermoView.as_view(),
         name="assinar_termo_orcamento",
+    ),
+    # O contrato do pedido do site pago, assinado em Meus pedidos (seção 145).
+    path(
+        "meus-pedidos/<int:pk>/contrato/assinar/",
+        AssinarContratoDoPedidoView.as_view(),
+        name="assinar_contrato_do_pedido",
     ),
     path("pedido/pix/criar/", criar_pedido_pix, name="criar_pedido_pix"),
     path("pesquisa/", SearchView.as_view(), name="search"),

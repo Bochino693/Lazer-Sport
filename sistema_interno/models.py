@@ -3068,6 +3068,16 @@ class DocumentoAssinatura(Prime):
         null=True,
         blank=True,
     )
+    # A TERCEIRA ORIGEM (LEIA-ME-V10, seção 145): o PEDIDO DO SITE, depois de
+    # totalmente pago. O cliente gera e assina em Meus pedidos; o retrato,
+    # a página, a assinatura e o PDF são os mesmos (`documento_pedido.py`).
+    pedido = models.ForeignKey(
+        Pedido,
+        on_delete=models.PROTECT,
+        related_name="documentos_assinatura",
+        null=True,
+        blank=True,
+    )
     #: A chave da cópia assinada que o cliente baixa depois. Aleatória,
     #: como o token da proposta: não se chega a um documento chutando outro.
     codigo_publico = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
@@ -3133,11 +3143,13 @@ class DocumentoAssinatura(Prime):
         verbose_name_plural = "Documentos para assinatura"
         ordering = ("-criacao", "-id")
         constraints = [
-            # Ou do orçamento, ou da O.S. -- nunca dos dois, nunca de nenhum.
+            # Do orçamento, da O.S. ou do pedido do site (seção 145) -- de
+            # um só, nunca de dois, nunca de nenhum.
             models.CheckConstraint(
                 condition=(
-                    models.Q(orcamento__isnull=False, ordem_servico__isnull=True)
-                    | models.Q(orcamento__isnull=True, ordem_servico__isnull=False)
+                    models.Q(orcamento__isnull=False, ordem_servico__isnull=True, pedido__isnull=True)
+                    | models.Q(orcamento__isnull=True, ordem_servico__isnull=False, pedido__isnull=True)
+                    | models.Q(orcamento__isnull=True, ordem_servico__isnull=True, pedido__isnull=False)
                 ),
                 name="documento_assinatura_uma_origem",
             ),

@@ -8536,6 +8536,13 @@ class MeusPedidosView(LoginRequiredMixin, View):
             # etapas aparecem embaixo da linha do tempo.
             pedido.producao_vista = producao_vista_do_pedido(pedido)
 
+        # O CONTRATO DE CADA PEDIDO (LEIA-ME-V10, seção 145): o que pede
+        # contrato, o que já foi assinado e o passo de assinar -- uma
+        # consulta para todos os pedidos da tela.
+        from sistema_interno import documento_pedido
+
+        documento_pedido.anotar_nos_pedidos(pedidos)
+
         # o quadro do lado: quantos pedidos em cada momento da compra
         resumo = {'aguardando': 0, 'andamento': 0, 'finalizados': 0}
         for pedido in pedidos:

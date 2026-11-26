@@ -249,3 +249,45 @@ class AssinarTermoView(LoginRequiredMixin, View):
             orcamento.pk, documento.links_gerados,
         )
         return redirect("documento_assinatura_publico", token=token)
+
+
+class AssinarContratoDoPedidoView(LoginRequiredMixin, View):
+    """"Assinar o contrato" de um PEDIDO DO SITE pago (LEIA-ME-V10, seção 145).
+
+    O cliente, logado em Meus pedidos, confere ou digita o CPF/CNPJ e toca
+    em "Assinar o contrato". O contrato nasce AGORA (nunca no webhook do
+    pagamento), do pedido dele e só com o pedido pago, e ele vai direto
+    para a mesma página de assinar do orçamento -- com um link emitido
+    para ele, sem depender da equipe. Só POST; o pedido é sempre o da
+    conta da sessão (o de outra pessoa é "não encontrado").
+    """
+
+    login_url = "login"
+    http_method_names = ["post"]
+
+    def post(self, request, pk):
+        from core.models import Pedido
+        from sistema_interno import documento_pedido
+        from sistema_interno.utils import ErroDeFormulario
+
+        perfil = getattr(request.user, "perfil", None)
+        pedido = Pedido.objects.filter(pk=pk, cliente=perfil).first() if perfil else None
+        ancora = f"pedido-{pk}"
+        if pedido is None:
+            avisar(request, "Este pedido não está na sua conta.", nivel=messages.ERROR, titulo="Pedido não encontrado")
+            return _de_volta("content")
+        try:
+            documento = documento_pedido.gerar_do_pedido(pedido, request.POST.get("cpf_cnpj"), request.user)
+        except ErroDeFormulario as erro:
+            avisar(request, str(erro), nivel=messages.WARNING, titulo="Ainda não deu para assinar")
+            return _de_volta(ancora)
+        except Exception as erro:  # noqa: BLE001 -- o cliente recebe uma frase, o log o resto
+            log.warning("Pedido %s: contrato não gerado pelo cliente: %s", pk, erro)
+            avisar(request, "Não deu para preparar o contrato agora. Tente de novo em instantes.",
+                   nivel=messages.ERROR, titulo="Assinatura indisponível")
+            return _de_volta(ancora)
+        if documento.assinado:
+            return redirect("documento_assinado_publico", codigo=documento.codigo_publico)
+        token, _expira = svc_doc.emitir_link(documento, canal="cliente")
+        log.info("Pedido %s: contrato pedido pelo cliente em Meus pedidos (link %s)", pk, documento.links_gerados)
+        return redirect("documento_assinatura_publico", token=token)

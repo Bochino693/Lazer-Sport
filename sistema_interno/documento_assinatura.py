@@ -422,6 +422,11 @@ def motivo_da_suspensao(documento, orcamento=None) -> str:
     entrar dinheiro (ou corrigir o valor) depois de gerar ou de assinar não
     mexe no documento, que conta o recebido até a emissão.
     """
+    if documento.pedido_id:
+        # o contrato do pedido do site (seção 145): cancelado suspende
+        from .documento_pedido import motivo_da_suspensao_do_pedido
+
+        return motivo_da_suspensao_do_pedido(documento)
     if documento.ordem_servico_id and not documento.orcamento_id:
         # o documento da O.S. (seção 124): cancelada ou substituída suspende
         from .documento_servico import motivo_da_suspensao_da_ordem
@@ -815,7 +820,7 @@ def ler_link(token, *, bloquear=False) -> LeituraDoLink:
 
     pk, _, pedaco = carga.partition(".")
     consulta = DocumentoAssinatura.objects.select_related(
-        "orcamento", "orcamento__cliente", "ordem_servico",
+        "orcamento", "orcamento__cliente", "ordem_servico", "pedido",
     )
     if bloquear:
         consulta = consulta.select_for_update(of=("self",))
@@ -1022,6 +1027,10 @@ def assinar(documento, *, nome, cpf_cnpj, png, ip, navegador):
         "assinatura_png", "assinatura_ip", "assinatura_navegador",
         "hash_assinado", "atualizado",
     ])
+    if documento.pedido_id:
+        # o contrato do pedido do site (seção 145): não há histórico de
+        # orçamento; a equipe é avisada por quem chama (a página de assinar)
+        return documento
     if documento.ordem_servico_id and not documento.orcamento_id:
         # a ordem de serviço da O.S. (seção 124): assinar é a ciência dela
         from .documento_servico import depois_de_assinar

@@ -350,7 +350,8 @@ class FiltrosDasAssinaturasTests(BaseAssinaturas):
         situacao = {c["valor"]: c["quantos"] for c in resposta.context["chips_situacao"]}
         objeto = {c["valor"]: c["quantos"] for c in resposta.context["chips_objeto"]}
         self.assertEqual(situacao, {"todas": 2, "assinadas": 1, "aguardando": 1})
-        self.assertEqual(objeto, {"todos": 4, "orcamentos": 2, "os": 2})
+        # a Gestão vê também os pedidos do site (seção 145): o chip existe, zerado aqui
+        self.assertEqual(objeto, {"todos": 4, "orcamentos": 2, "os": 2, "pedidos": 0})
         ativo = [c["valor"] for c in resposta.context["chips_objeto"] if c["ativo"]]
         self.assertEqual(ativo, ["os"])
 

@@ -11145,3 +11145,84 @@ Dependência nova: rjsmin (requirements.txt).
    de situação guardando o cliente, "Abrir o cadastro", o ✕ e o atalho do
    card; como Vendas, Ambulante, Produção e Financeiro (só em 1366). NÃO
    conferido: o modo Cards da lista de clientes e os temas Sol e Eclipse.
+
+145) O CONTRATO DO PEDIDO DO SITE, ASSINADO EM MEUS PEDIDOS
+   O PEDIDO: "se ele comprar pelo site, devemos também fazer o esquema de
+   assinaturas após tudo pago certinho, isso em meus pedidos, para
+   centralizar os dados dos orçamentos, O.S. e pedidos do site, afunilando
+   tudo para métricas de estatísticas de vendas." (Esta é a primeira de
+   três fatias; as outras são as seções 146 e 147.)
+   DECIDIDO PELO DONO: o CPF/CNPJ é pedido ao assinar (vem preenchido se o
+   checkout já trouxe), sem mexer no cadastro da conta nem no checkout; só
+   as compras com máquina ou brinquedo (também dentro de combo e promoção)
+   pedem contrato -- pedido só de peças e kits não; no cartão, o total e o
+   valor cobrado saem discriminados; o contrato nasce no toque do cliente,
+   com o pedido totalmente pago; a assinatura não trava nada.
+
+   COMO FUNCIONA PARA O CLIENTE (Meus pedidos, logado):
+     * no pedido que leva máquina ou brinquedo aparece o bloco do contrato:
+       antes do pagamento, "fica disponível assim que o pagamento for
+       confirmado"; pago, "Falta assinar o contrato", com o campo do CPF ou
+       CNPJ e o botão "Assinar o contrato";
+     * o toque confere o CPF/CNPJ pelos dígitos, gera o contrato NAQUELA
+       HORA e leva direto à página de assinar -- a mesma do orçamento (sem
+       relógio, o contrato com as fotos, nome, CPF, "Li e concordo", o
+       traço, o comprovante). Não depende de link da equipe; por baixo é o
+       mesmo link de 24 horas, emitido para ele;
+     * na página o CPF/CNPJ tem de ser o que ele conferiu (outro é
+       recusado); assinado, Meus pedidos mostra "Contrato assinado" com
+       "Ver e baixar o contrato";
+     * tocar duas vezes não cria dois contratos; conferir OUTRO CPF/CNPJ
+       antes de assinar troca o que esperava (o anterior vira substituído).
+   O QUE VAI NO CONTRATO (sistema_interno/documento_pedido.py): o texto do
+   modelo da empresa (seção 141), o número "P0012/2026" (o "P" o separa do
+   contrato do orçamento), o comprador da conta do site (nome, telefone,
+   e-mail), o CPF/CNPJ conferido, o endereço de entrega do pedido (na
+   retirada, sem endereço), os itens do pedido com a foto inteira, o prazo
+   (o do pedido, ou o da lista de montagem) e a condição de pagamento:
+   "pagamento pelo site, por cartão de crédito, em 6 parcelas, total dos
+   itens e da entrega de R$ 4.990,00, mais R$ 598,80 de acréscimo do
+   cartão: valor cobrado de R$ 5.588,80, quitado em 26/11/2026". O valor do
+   contrato (Cláusula 2ª) é o total do pedido.
+   NÃO TRAVA NADA: a produção e a entrega seguem como seguiam; assinar não
+   muda o pedido. Pedido CANCELADO: o contrato que esperava fica suspenso
+   (o link não assina) e o passo some de Meus pedidos.
+
+   NO PAINEL: o contrato do pedido é o TERCEIRO objeto da tela Assinaturas
+   ("Pedido do site nº 12", chip "Pedidos do site", busca pelo nome do
+   comprador e pelo número). A equipe só lê e imprime (não há QR: quem
+   assina é o cliente, logado). Vê quem já vê os pedidos do site
+   (`assinaturas_pedidos`: Financeiro e Gestão) -- a via
+   (/pedidos/<n>/contrato/via/) dá 403 para os demais. Quando o cliente
+   assina, o Financeiro e a Gestão são avisados.
+   O PEDIDO DO SITE NÃO SE LIGA AO CADASTRO DE CLIENTES do painel (é da
+   CONTA do site): por isso não entra no atalho "Assinaturas" da tela
+   Clientes (seção 144) nem na exclusão completa de cliente (seção 141).
+
+   COMO FOI FEITO: `DocumentoAssinatura.pedido` (sistema_interno/0084, só
+   esquema: o campo e a restrição "uma origem só", agora de três). O
+   retrato congelado, o hash, o link, a página, a assinatura e o PDF são
+   os de `documento_assinatura.py`; o texto, o de `contrato.py`
+   (`contrato.partes`, que o orçamento também usa). Revisado o que supunha
+   orçamento ou O.S.: a suspensão, o pós-assinatura, o aviso, a tela
+   Assinaturas e a contagem por cliente.
+   ARQUIVOS NOVOS: sistema_interno/documento_pedido.py,
+   migrations/0084_documento_do_pedido_do_site.py, tests_documento_pedido.py.
+   MEXIDOS: sistema_interno/models.py, contrato.py, documento_assinatura.py,
+   notificacoes.py, permissoes.py, views_assinaturas.py, urls.py,
+   templates/assinaturas_inner.html; core/views.py,
+   views_codigo_orcamento.py, urls.py, templates/meus_pedidos.html,
+   static/site/paginas/meus_pedidos.css.
+   TESTES: tests_documento_pedido.py (17).
+   DÚVIDAS PARA O DONO: (1) no contrato entram TODOS os itens do pedido
+   (as peças compradas junto com a máquina também); (2) o item do pedido do
+   site não guarda o adesivo escolhido (ItemPedido não tem o campo): o
+   contrato do pedido sai sem o adesivo; (3) a equipe não tem como mandar
+   o link do contrato do pedido pelo painel (o cliente assina logado).
+   CONFERIDO NO CHROMIUM (dados SINTÉTICOS): em 390 px o fluxo inteiro --
+   o bloco em Meus pedidos, o CPF inválido (o aviso), o válido, a página
+   de assinar, a assinatura, o comprovante, o bloco "Contrato assinado" e
+   a cópia; em 1366 px o bloco assinado e a cópia; no painel (390 e 1366)
+   o chip "Pedidos do site", o card e a via. NÃO conferido: o fluxo de
+   assinar em 1366 px; um pedido com combo ou promoção na tela (a regra é
+   a da lista de montagem, testada lá); o pagamento de verdade.

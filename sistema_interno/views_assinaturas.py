@@ -68,9 +68,16 @@ OBJETOS = (
     ("todos", "Todos os objetos", "bi-grid"),
     ("orcamentos", "Orçamentos", "bi-file-earmark-text-fill"),
     ("os", "Ordens de serviço", "bi-clipboard2-check-fill"),
+    ("pedidos", "Pedidos do site", "bi-bag-check-fill"),
 )
+#: A capacidade que abre cada objeto (o chip só aparece para quem vê o objeto).
+CAPACIDADE_DO_OBJETO = {
+    "orcamentos": "assinaturas_orcamentos", "os": "assinaturas_os", "pedidos": "assinaturas_pedidos",
+}
 
 _DA_ORDEM = Q(orcamento__isnull=True, ordem_servico__isnull=False)
+#: O contrato do pedido do site (seção 145): a terceira origem.
+_DO_PEDIDO = Q(pedido__isnull=False)
 _DO_ORCAMENTO = Q(orcamento__isnull=False)
 
 
@@ -86,6 +93,8 @@ def documentos_visiveis(user):
         visiveis |= do_orcamento
     if acesso["assinaturas_os"]:
         visiveis |= _DA_ORDEM
+    if acesso["assinaturas_pedidos"]:
+        visiveis |= _DO_PEDIDO
     return (
         DocumentoAssinatura.objects
         .filter(visiveis)
@@ -153,6 +162,8 @@ def _numero_buscado(busca: str):
 def _cartao(documento, acesso) -> dict:
     """O que um card mostra e para onde cada botão leva."""
     conteudo = documento.conteudo or {}
+    if documento.pedido_id:
+        return _cartao_do_pedido(documento, conteudo)
     orcamento = documento.orcamento if documento.orcamento_id else None
     ordem = None if orcamento is not None else documento.ordem_servico
     if orcamento is not None:
@@ -199,6 +210,65 @@ def _cartao(documento, acesso) -> dict:
     }
 
 
+def _cartao_do_pedido(documento, conteudo) -> dict:
+    """O card do contrato de um pedido do site: a equipe só lê e imprime."""
+    pedido = documento.pedido
+    via = reverse("assinatura_pedido_via", args=[pedido.pk], urlconf=URLCONF) + f"?documento={documento.pk}"
+    suspenso = not documento.assinado and pedido.status == "cancelado"
+    return {
+        "documento": documento,
+        "objeto": {
+            "tipo": "pedido",
+            "rotulo": f"Pedido do site nº {pedido.pk}",
+            "icone": "bi-bag-check-fill",
+            "url": reverse("pedidos_inner", urlconf=URLCONF) + "?filtro=todos",
+        },
+        "cliente": (conteudo.get("cliente") or {}).get("nome") or "Cliente do site",
+        # o pedido do site é da CONTA do site, e não de um cadastro de Clientes
+        "cliente_id": None,
+        "papel": papel_curto(conteudo),
+        "situacao": "assinado" if documento.assinado else ("suspenso" if suspenso else "aguardando"),
+        "url_via": via,
+        "url_imprimir": f"{via}&imprimir=1",
+        "url_pagina": "",
+        "pode_qr": False,
+    }
+
+
+class ViaDoContratoDoPedidoView(InternoRequiredMixin, View):
+    """A via (para ver, imprimir ou salvar em PDF) do contrato de um pedido do site.
+
+    Só leitura, para quem vê os pedidos do site (`assinaturas_pedidos`:
+    Financeiro e Gestão) -- também por URL direta (403).
+    """
+
+    funcoes_necessarias = (FINANCEIRO, GESTAO)
+
+    def get(self, request, pk):
+        from django.core.exceptions import PermissionDenied
+        from django.shortcuts import get_object_or_404
+
+        from core.views_assinatura import contexto_da_folha
+
+        if not capacidades(request.user)["assinaturas_pedidos"]:
+            raise PermissionDenied("O contrato do pedido do site é de quem vê os pedidos do site.")
+        documentos = DocumentoAssinatura.objects.filter(pedido_id=pk).exclude(
+            situacao=DocumentoAssinatura.Situacao.SUBSTITUIDO,
+        )
+        escolhido = request.GET.get("documento", "")
+        if escolhido.isdigit():
+            documento = get_object_or_404(DocumentoAssinatura, pk=int(escolhido), pedido_id=pk)
+        else:
+            documento = get_object_or_404(documentos.order_by("-id")[:1])
+        contexto = contexto_da_folha(documento, painel=True)
+        contexto["voltar_url"] = reverse("assinaturas_inner", urlconf=URLCONF) + "?objeto=pedidos"
+        contexto["imprimir_ao_abrir"] = request.GET.get("imprimir") == "1"
+        resposta = render(request, "assinatura_via.html", contexto)
+        resposta["Cache-Control"] = "no-store"
+        resposta["X-LS-No-Store"] = "1"
+        return resposta
+
+
 class AssinaturasInnerView(InternoRequiredMixin, View):
     """A lista das assinaturas, em cards, por objeto."""
 
@@ -214,13 +284,15 @@ class AssinaturasInnerView(InternoRequiredMixin, View):
             return redirect(self.destino_do_usuario(request.user))
 
         visiveis = documentos_visiveis(request.user)
-        ve_os_dois = acesso["assinaturas_orcamentos"] and acesso["assinaturas_os"]
+        # os objetos que ESTA pessoa vê: o chip de objeto só existe com mais de um
+        objetos_que_ve = [chave for chave, capacidade in CAPACIDADE_DO_OBJETO.items() if acesso[capacidade]]
+        ve_os_dois = len(objetos_que_ve) > 1
 
         situacao = (request.GET.get("situacao") or "todas").strip()
         if situacao not in {valor for valor, _, _ in SITUACOES}:
             situacao = "todas"
         objeto = (request.GET.get("objeto") or "todos").strip()
-        if not ve_os_dois or objeto not in {valor for valor, _, _ in OBJETOS}:
+        if not ve_os_dois or objeto not in objetos_que_ve:
             objeto = "todos"
         busca = (request.GET.get("q") or "").strip()[:80]
 
@@ -233,7 +305,7 @@ class AssinaturasInnerView(InternoRequiredMixin, View):
         if cliente_id:
             visiveis = visiveis.filter(do_cliente(cliente_id))
 
-        do_objeto = {"orcamentos": _DO_ORCAMENTO, "os": _DA_ORDEM}.get(objeto, Q())
+        do_objeto = {"orcamentos": _DO_ORCAMENTO, "os": _DA_ORDEM, "pedidos": _DO_PEDIDO}.get(objeto, Q())
         da_situacao = {
             "assinadas": Q(situacao=ASSINADO), "aguardando": Q(situacao=AGUARDANDO),
         }.get(situacao, Q())
@@ -243,10 +315,11 @@ class AssinaturasInnerView(InternoRequiredMixin, View):
                 Q(orcamento__nome_cliente__icontains=busca)
                 | Q(ordem_servico__nome_cliente__icontains=busca)
                 | Q(assinante_nome__icontains=busca)
+                | (_DO_PEDIDO & Q(conteudo__cliente__nome__icontains=busca))
             )
             numero = _numero_buscado(busca)
             if numero:
-                da_busca |= Q(orcamento_id=numero) | (_DA_ORDEM & Q(ordem_servico_id=numero))
+                da_busca |= Q(orcamento_id=numero) | (_DA_ORDEM & Q(ordem_servico_id=numero)) | Q(pedido_id=numero)
 
         # Os números dos chips, numa consulta só: cada chip conta o que ele
         # mostraria com a busca e com o OUTRO filtro como estão.
@@ -258,11 +331,12 @@ class AssinaturasInnerView(InternoRequiredMixin, View):
             todos=Count("pk", filter=da_situacao),
             orcamentos=Count("pk", filter=da_situacao & _DO_ORCAMENTO),
             os=Count("pk", filter=da_situacao & _DA_ORDEM),
+            pedidos=Count("pk", filter=da_situacao & _DO_PEDIDO),
         )
 
         lista = (
             com_busca.filter(do_objeto, da_situacao)
-            .select_related("orcamento", "ordem_servico")
+            .select_related("orcamento", "ordem_servico", "pedido")
             # o traço (PNG) e o diário não aparecem no card: não viajam
             .defer("assinatura_png", "diario", "assinatura_navegador")
             .annotate(quando=Coalesce("assinado_em", "criacao"))
@@ -307,8 +381,9 @@ class AssinaturasInnerView(InternoRequiredMixin, View):
                 (acesso["assinaturas_orcamentos"] and acesso["orcamentos_editar_comercial"])
                 or (acesso["assinaturas_os"] and acesso["ordens_servico_editar"])
             ),
-            "so_orcamentos": acesso["assinaturas_orcamentos"] and not acesso["assinaturas_os"],
-            "so_os": acesso["assinaturas_os"] and not acesso["assinaturas_orcamentos"],
+            "so_orcamentos": objetos_que_ve == ["orcamentos"],
+            "so_os": objetos_que_ve == ["os"],
+            "ve_pedidos": acesso["assinaturas_pedidos"],
             "carteira_propria": acesso["assinaturas_orcamentos"] and acesso["orcamentos_proprios"],
             "chips_situacao": [
                 {"valor": valor, "rotulo": rotulo, "icone": icone, "ativo": valor == situacao,
@@ -319,6 +394,7 @@ class AssinaturasInnerView(InternoRequiredMixin, View):
                 {"valor": valor, "rotulo": rotulo, "icone": icone, "ativo": valor == objeto,
                  "quantos": numeros[valor], "url": endereco(objeto=valor)}
                 for valor, rotulo, icone in OBJETOS
+                if valor == "todos" or valor in objetos_que_ve
             ] if ve_os_dois else [],
             "url_limpar": endereco(q=""),
             "url_pagina": endereco() + ("&" if "?" in endereco() else "?"),

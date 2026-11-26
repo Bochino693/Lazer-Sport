@@ -655,12 +655,27 @@ def partes_do_contrato(orcamento, dados, *, quando) -> dict:
     `quando` é o instante de gerar (a data do fecho). Tudo já escrito: o
     retrato é o papel, e a folha só o desenha.
     """
+    condicao, _origem = condicao_de_pagamento(orcamento)
+    return partes(dados, total=orcamento.total, condicao=condicao, prazo=_prazo(orcamento), quando=quando)
+
+
+def prazo_em_dias(dias, *, padrao=False) -> dict:
+    """O prazo da Cláusula 3ª, escrito ("45", "quarenta e cinco", "dias úteis")."""
+    dias = max(int(dias), 0)
+    return {
+        "dias": dias,
+        "numero": f"{dias:02d}",
+        "extenso": numero_por_extenso(dias),
+        "unidade": "dia útil" if dias == 1 else "dias úteis",
+        "padrao": padrao,
+    }
+
+
+def partes(dados, *, total, condicao, prazo, quando) -> dict:
+    """O texto do contrato para QUALQUER origem (orçamento ou pedido do site, seção 145)."""
     from core.formatos import dinheiro
 
     vendedor = dados_do_vendedor(dados)
-    total = orcamento.total
-    condicao, _origem = condicao_de_pagamento(orcamento)
-    prazo = _prazo(orcamento)
     return {
         "tipo": TIPO,
         "titulo": TITULO,

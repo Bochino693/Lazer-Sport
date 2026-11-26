@@ -104,6 +104,7 @@ SO_DE_UM_REGISTRO = {
     "rh_termo_publico": "token de 10 minutos inventado",
     "rh_cartao_arquivo": "o PDF original de um cartão de ponto recebido",
     "midia_no_banco": "um arquivo guardado no banco (seção 130)",
+    "assinatura_pedido_via": "o contrato de um pedido do site (tests_documento_pedido.py abre um de verdade)",
 }
 
 

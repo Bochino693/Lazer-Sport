@@ -88,7 +88,7 @@
     {% endif %}
     {% for pedido in pedidos %}
     {% with itens=pedido.itens.all status=pedido.status %}
-    <article class="ck-card pd-pedido pd-pedido--{{ status }}" aria-labelledby="pd-titulo-{{ pedido.id }}">
+    <article class="ck-card pd-pedido pd-pedido--{{ status }}" id="pedido-{{ pedido.id }}" aria-labelledby="pd-titulo-{{ pedido.id }}">
 
         {# CABEÇA: o número, a data e a situação #}
         <div class="pd-topo">
@@ -205,6 +205,50 @@
                 <strong class="money total" data-valor="{{ pedido.total_cobrado }}">{{ pedido.total_cobrado|reais }}</strong>
             </div>
         </div>
+
+        {% comment %}
+            O CONTRATO DO PEDIDO (LEIA-ME-V10, seção 145). Só nos pedidos que
+            levam máquina ou brinquedo; pedido de peças e kits não tem este
+            passo. Pago, o cliente confere ou digita o CPF/CNPJ e assina
+            aqui mesmo (o contrato nasce no toque). A assinatura não segura
+            a produção nem a entrega.
+        {% endcomment %}
+        {% if pedido.contrato %}
+        <section class="pd-contrato pd-contrato--{{ pedido.contrato.situacao }}" aria-label="Contrato de compra e venda">
+            <span class="pd-contrato-icone" aria-hidden="true"><i class="fa-solid {% if pedido.contrato.situacao == 'assinado' %}fa-circle-check{% else %}fa-signature{% endif %}"></i></span>
+            {% if pedido.contrato.situacao == "assinado" %}
+                <div class="pd-contrato-texto">
+                    <strong>Contrato assinado</strong>
+                    <span>{{ pedido.contrato.assinante }}{% if pedido.contrato.assinado_em %} · {{ pedido.contrato.assinado_em|date:"d/m/Y \à\s H:i" }}{% endif %}</span>
+                </div>
+                <a class="ck-botao ck-botao--fantasma pd-contrato-botao" href="{{ pedido.contrato.url }}">
+                    <i class="fa-solid fa-file-lines" aria-hidden="true"></i> Ver e baixar o contrato
+                </a>
+            {% elif pedido.contrato.situacao == "aguardando_pagamento" %}
+                <div class="pd-contrato-texto">
+                    <strong>Contrato de compra e venda</strong>
+                    <span>Fica disponível para assinar aqui assim que o pagamento for confirmado.</span>
+                </div>
+            {% else %}
+                <div class="pd-contrato-texto">
+                    <strong>Falta assinar o contrato</strong>
+                    <span>Confira o seu CPF ou CNPJ e assine com o dedo, aqui pelo site. Sua produção segue normalmente enquanto isso.</span>
+                </div>
+                <form class="pd-contrato-form" method="post" action="{{ pedido.contrato.url }}">
+                    {% csrf_token %}
+                    <label class="ck-campo">
+                        <span class="ck-rotulo">CPF ou CNPJ do comprador</span>
+                        <span class="ck-entrada ck-entrada--sem-icone">
+                            <input type="text" name="cpf_cnpj" value="{{ pedido.contrato.cpf }}" inputmode="numeric" autocomplete="off" maxlength="20" placeholder="000.000.000-00" required aria-label="CPF ou CNPJ do comprador do pedido {{ pedido.id }}">
+                        </span>
+                    </label>
+                    <button type="submit" class="ck-botao ck-botao--primario pd-contrato-botao">
+                        <i class="fa-solid fa-signature" aria-hidden="true"></i> Assinar o contrato
+                    </button>
+                </form>
+            {% endif %}
+        </section>
+        {% endif %}
 
         <button type="button"
                 class="pd-alternar toggle-itens"

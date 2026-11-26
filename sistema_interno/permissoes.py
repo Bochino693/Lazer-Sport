@@ -333,6 +333,10 @@ def capacidades(user) -> dict[str, bool]:
         # o link continuam com o Comercial (`orcamentos_editar_comercial`).
         "assinaturas_orcamentos": comercial or acesso_financeiro,
         "assinaturas_os": producao or acesso_financeiro or gestao,
+        # os contratos dos PEDIDOS DO SITE (seção 145): quem já vê os pedidos
+        # do site (`pedidos`: Financeiro e Gestão). Só leitura: quem gera e
+        # assina é o cliente, em Meus pedidos.
+        "assinaturas_pedidos": acesso_financeiro,
         # o item no bloco Comercial do menu: só para quem é do Comercial (o
         # Financeiro, que agora também vê as dos orçamentos, fica no Operação)
         "assinaturas_menu_comercial": comercial,

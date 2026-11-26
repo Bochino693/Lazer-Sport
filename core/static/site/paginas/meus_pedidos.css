@@ -1653,3 +1653,58 @@
     .pp-etapa { grid-template-columns: auto minmax(0, 1fr); justify-items: start; text-align: left; column-gap: 8px; }
     .pp-etapa-bola { grid-row: span 2; }
 }
+
+/* =========================================================
+   O CONTRATO DO PEDIDO (LEIA-ME-V10, seção 145): o passo de
+   assinar, em Meus pedidos, e o contrato já assinado.
+========================================================= */
+.pd-contrato {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px 14px;
+    margin: 16px 0 0;
+    padding: 14px;
+    border: 1px solid rgba(127, 200, 255, .24);
+    border-radius: 16px;
+    background: rgba(4, 10, 28, .5);
+    color: var(--ck-texto);
+}
+
+.pd-contrato--assinar { border-color: rgba(255, 196, 61, .5); background: rgba(255, 196, 61, .07); }
+.pd-contrato--assinado { border-color: rgba(52, 211, 153, .45); background: rgba(52, 211, 153, .07); }
+
+.pd-contrato-icone {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    background: rgba(127, 200, 255, .12);
+    color: #cfe3ff;
+    font-size: 1.1rem;
+}
+
+.pd-contrato--assinar .pd-contrato-icone { background: rgba(255, 196, 61, .16); color: #ffd166; }
+.pd-contrato--assinado .pd-contrato-icone { background: rgba(52, 211, 153, .16); color: #6ee7b7; }
+
+.pd-contrato-texto { display: grid; gap: 3px; min-width: 0; }
+.pd-contrato-texto strong { font-size: .98rem; overflow-wrap: anywhere; }
+.pd-contrato-texto span { color: var(--ck-fraco); font-size: .84rem; line-height: 1.45; overflow-wrap: anywhere; }
+
+.pd-contrato-form {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 280px) auto;
+    align-items: end;
+    gap: 12px;
+}
+
+.pd-contrato-botao { min-height: 50px; white-space: nowrap; }
+
+@media (max-width: 640px) {
+    .pd-contrato { grid-template-columns: 44px minmax(0, 1fr); }
+    .pd-contrato > .pd-contrato-botao { grid-column: 1 / -1; width: 100%; }
+    .pd-contrato-form { grid-template-columns: minmax(0, 1fr); }
+    .pd-contrato-form .pd-contrato-botao { width: 100%; }
+}
