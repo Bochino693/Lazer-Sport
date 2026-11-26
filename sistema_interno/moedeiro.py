@@ -52,14 +52,43 @@ MARCA = "com sistema de ficha"
 SUFIXO = " — " + MARCA
 
 
+#: O acréscimo fica um minuto no cache: toda tela pergunta por ele, e o
+#: banco fica longe (~170 ms por consulta). Salvar em Dados do contrato
+#: limpa o cache na hora (`esquecer`); a outra máquina do servidor vê a
+#: mudança em até um minuto.
+CHAVE_DO_ACRESCIMO = "sistema-de-ficha:acrescimo:v1"
+VIDA_DO_ACRESCIMO = 60
+
+
+def esquecer() -> None:
+    """Joga fora o acréscimo guardado (quem muda o valor chama)."""
+    from django.core.cache import cache
+
+    try:
+        cache.delete(CHAVE_DO_ACRESCIMO)
+    except Exception:  # noqa: BLE001 -- sem cache, nada a esquecer
+        pass
+
+
 def acrescimo() -> Decimal:
-    """O acréscimo único do moedeiro; R$ 0,00 quando a Gestão ainda não digitou."""
+    """O acréscimo único do sistema de ficha; R$ 0,00 quando não está definido."""
+    from django.core.cache import cache
+
     from .models import DadosContrato
 
-    valor = DadosContrato.atual().acrescimo_moedeiro
-    if valor is None or valor <= 0:
-        return ZERO
-    return Decimal(valor).quantize(Decimal("0.01"))
+    try:
+        guardado = cache.get(CHAVE_DO_ACRESCIMO)
+    except Exception:  # noqa: BLE001
+        guardado = None
+    if guardado is not None:
+        return Decimal(guardado)
+    valor = DadosContrato.objects.order_by("id").values_list("acrescimo_moedeiro", flat=True).first()
+    valor = ZERO if (valor is None or valor <= 0) else Decimal(valor).quantize(Decimal("0.01"))
+    try:
+        cache.set(CHAVE_DO_ACRESCIMO, str(valor), VIDA_DO_ACRESCIMO)
+    except Exception:  # noqa: BLE001
+        pass
+    return valor
 
 
 def ativo() -> bool:
@@ -142,3 +171,76 @@ def nome_com_a_escolha(nome, com_ficha, limite=None) -> str:
     if limite:
         nome = nome[: max(limite - len(SUFIXO), 0)].rstrip()
     return nome + SUFIXO
+
+
+class Tabela:
+    """A conta do sistema de ficha para MUITAS máquinas de uma vez.
+
+    Quem monta uma tela inteira (a lista de orçamentos, a busca de itens, o
+    carrinho) cria uma tabela por pedido: o acréscimo é lido uma vez, as
+    regras vêm do cache e as categorias de todas as máquinas numa consulta
+    só (`carregar`). As funções do módulo continuam valendo para uma máquina.
+    """
+
+    def __init__(self, acrescimo_=None, regras=None):
+        self.acrescimo = acrescimo() if acrescimo_ is None else acrescimo_
+        self._regras = regras
+
+    @property
+    def regras(self):
+        if self._regras is None:
+            from . import montagem
+
+            self._regras = montagem.Regras.agora()
+        return self._regras
+
+    @property
+    def ativo(self) -> bool:
+        return self.acrescimo > ZERO
+
+    def carregar(self, brinquedos) -> None:
+        """As categorias destas máquinas numa consulta (antes de perguntar uma a uma).
+
+        Só interessa a categoria MARCADA como brinquedão nas regras da
+        produção: sem nenhuma marcada, a regra é só a palavra no nome e não
+        há o que perguntar ao banco. Máquina com a palavra da Gestão ("sim"
+        ou "nao") e kit também não precisam.
+        """
+        if not self.ativo:
+            return
+        regras = self.regras
+        faltam = [
+            b for b in brinquedos
+            if b is not None and b.pk not in regras._categorias
+            and not (getattr(b, "moedeiro", "") or "").strip() and not getattr(b, "eh_kit", False)
+        ]
+        if not faltam:
+            return
+        if not regras.categorias_projeto:
+            for brinquedo in faltam:
+                regras._categorias[brinquedo.pk] = []
+            return
+        regras.carregar_categorias(faltam)
+
+    def oferece(self, brinquedo) -> bool:
+        return self.ativo and aceita(brinquedo, self.regras if self.ativo else None)
+
+    def preco(self, brinquedo, com_ficha=False):
+        base = getattr(brinquedo, "valor_brinquedo", None)
+        if base is None:
+            return None
+        base = Decimal(base).quantize(Decimal("0.01"))
+        return base + self.acrescimo if (com_ficha and self.oferece(brinquedo)) else base
+
+    def para_a_opcao(self, brinquedo):
+        """O que a busca de itens do orçamento manda junto da máquina; None sem a opção."""
+        if not self.oferece(brinquedo):
+            return None
+        com = self.preco(brinquedo, True)
+        return {
+            "acrescimo": f"{self.acrescimo:.2f}".replace(".", ","),
+            "preco_com": f"{com:.2f}".replace(".", ",") if com is not None else "",
+            "rotulo_sem": ROTULO_SEM,
+            "rotulo_com": ROTULO_COM,
+            "sufixo": SUFIXO,
+        }

@@ -3238,6 +3238,21 @@ class DadosContrato(Prime):
             dados = cls.objects.create()
         return dados
 
+    def save(self, *args, **kwargs):
+        resultado = super().save(*args, **kwargs)
+        # o acréscimo do sistema de ficha fica um minuto no cache (moedeiro.py)
+        from . import moedeiro
+
+        moedeiro.esquecer()
+        return resultado
+
+    def delete(self, *args, **kwargs):
+        resultado = super().delete(*args, **kwargs)
+        from . import moedeiro
+
+        moedeiro.esquecer()
+        return resultado
+
     @property
     def faltando(self):
         """Os rótulos do que ainda está vazio, na ordem do formulário."""
@@ -3533,6 +3548,12 @@ class ItemOrcamento(Prime):
     )
     quantidade = models.PositiveIntegerField(default=1)
     valor_unitario = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    # A MÁQUINA SAI COM O SISTEMA DE FICHA (LEIA-ME-V10, seção 149)? Só vale
+    # com `brinquedo` que oferece a opção (`moedeiro.py`); o servidor
+    # desmarca o que a tela não podia ter oferecido. O nome do item diz a
+    # mesma coisa (" — com sistema de ficha"), e é por ele que os
+    # documentos e a fábrica leem; este campo é a resposta para o código.
+    com_moedeiro = models.BooleanField("Com sistema de ficha", default=False)
 
     @property
     def subtotal(self):

@@ -207,6 +207,7 @@ class NomeEValorTests(TestCase):
                 definir_acrescimo(antes)
                 modulo.preencher(apps, None)
                 modulo.preencher(apps, None)
+                moedeiro.esquecer()
                 self.assertEqual(DadosContrato.atual().acrescimo_moedeiro, Decimal(depois))
         # sem a linha de Dados do contrato, nada quebra e nada é criado
         DadosContrato.objects.all().delete()

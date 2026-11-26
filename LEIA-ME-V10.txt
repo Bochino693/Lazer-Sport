@@ -11475,3 +11475,78 @@ TESTES
 
 CONFERIDO NO NAVEGADOR (390 px e 1366 px): o bloco em Dados do contrato e
 os chips no cadastro do brinquedo.
+
+
+==========================================================================
+149. SISTEMA DE FICHA NO ORÇAMENTO DO PAINEL E NOS DOCUMENTOS
+==========================================================================
+
+O PEDIDO (seção 148, itens 2 e 3 da lista da 143)
+Ao pôr a máquina na proposta, a equipe escolhe com ou sem sistema de ficha
+(chips, sem select); o preço entra certo, calculado no servidor; a escolha
+aparece na linha do item e nos documentos, para a fábrica saber montar.
+
+COMO FICOU
+  1. A BUSCA DE ITENS (/orcamentos/itens/buscar/). A máquina que oferece a
+     opção vem com `ficha`: o acréscimo ("999,00") e o preço COM
+     ("cadastro + 999"), calculados em `moedeiro.Tabela`. Brinquedão,
+     espaço, kit, máquina desligada pela Gestão, peça e produto de fábrica
+     não levam; sem o acréscimo definido, ninguém leva.
+  2. A LINHA DO ITEM. Embaixo da descrição aparecem dois chips -- "Sem
+     sistema de ficha" e "Com sistema de ficha + R$ 999,00" --, só na
+     máquina que oferece. Tocar em "Com": a descrição ganha " — com sistema
+     de ficha" e o valor vira o preço COM que o servidor mandou (se a
+     equipe já tinha ajustado o valor à mão, soma só o acréscimo). Tocar em
+     "Sem" desfaz. Trocar a máquina da linha volta para "Sem".
+  3. O VALOR CONTINUA EDITÁVEL, como todo preço de proposta (o desconto
+     combinado com o cliente vale mais que a tabela). O que o servidor
+     garante: o preço COM sugerido é dele, e a ESCOLHA só é gravada em
+     máquina do catálogo que oferece a opção -- a escolha forçada num
+     brinquedão, num kit, numa máquina desligada ou num item escrito à mão
+     é desmarcada, e a marca sai do nome.
+  4. O QUE É GRAVADO. `ItemOrcamento.com_moedeiro` (sistema_interno/0087,
+     só esquema) e a marca no nome do item (`moedeiro.nome_com_a_escolha`,
+     sem repetir; no limite de 180 letras quem encurta é o nome). Reabrir o
+     orçamento devolve a escolha; refazer (versão nova) a leva junto.
+  5. OS DOCUMENTOS. Como a marca vai NO NOME do item (o mesmo caminho do
+     adesivo), todo documento que mostra o item mostra a escolha, sem cada
+     tela depender de um campo: a proposta pública (e o PDF, o e-mail e o
+     WhatsApp dela), o contrato/termo e a via dele, a lista de montagem (a
+     marca fica na VARIANTE da unidade: "Air Game Kids · com sistema de
+     ficha") e as etiquetas. O RETRATO JÁ GERADO NÃO MUDA: o contrato
+     guarda o item como era no dia.
+  6. A ORDEM DE SERVIÇO não nasce mais do orçamento e a busca dela não
+     oferece máquina do catálogo (só peça, item de manutenção e mão de
+     obra): não há o que marcar. Quem escrever "com sistema de ficha" na
+     linha da O.S. vê o texto no documento, como qualquer descrição.
+  7. A IMPORTAÇÃO de proposta em Word/PDF não marca a escolha (não há como
+     saber pelo texto); a equipe marca na janela depois.
+
+AS CONSULTAS (o teto de sistema_interno/tests_velocidade.py não subiu)
+  * A lista de orçamentos e a busca criam UMA `moedeiro.Tabela` por pedido.
+  * O acréscimo fica 60 segundos no cache (`moedeiro.acrescimo`); salvar em
+    Dados do contrato limpa na hora (`DadosContrato.save` -> `esquecer`).
+    Em outra máquina do servidor a mudança do valor vale em até um minuto.
+  * As categorias das máquinas só são lidas (numa consulta) quando há
+    categoria marcada como brinquedão nas regras da produção.
+  * Salvar a proposta só lê o acréscimo quando alguma linha pede a escolha.
+  Custo real no ar: no pior caso (cache frio e categoria marcada), duas
+  consultas a mais na lista e na busca; no caso comum, uma ou nenhuma.
+
+ARQUIVOS
+  sistema_interno/moedeiro.py                 (Tabela, para_a_opcao)
+  sistema_interno/models.py                   (ItemOrcamento.com_moedeiro)
+  sistema_interno/migrations/0087_item_do_orcamento_com_sistema_de_ficha.py
+  sistema_interno/views_gestao.py             (busca, gravar, serializar, refazer)
+  sistema_interno/templates/orcamentos_inner.html   (os chips da linha)
+  sistema_interno/static/interno/interno_modern.css (seção nova no fim)
+  sistema_interno/tests_ficha_no_orcamento.py (novo, 13 testes)
+
+TESTES
+  DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test \
+      sistema_interno.tests_ficha_no_orcamento --parallel 1
+
+CONFERIDO NO NAVEGADOR (390 px e 1366 px): os chips na linha do item (com,
+sem, com de novo), o valor e a descrição mudando, salvar; a proposta
+pública e o contrato dizendo "com sistema de ficha"; a unidade da lista de
+montagem com a variante.

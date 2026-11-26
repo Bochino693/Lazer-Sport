@@ -607,7 +607,9 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             "quantidade_ambulante": resumo["quantidade_ambulante"],
             "total_recebido": resumo_cards["total_recebido"],
             "total_a_receber": resumo_cards["total_a_receber"],
-            "orcamentos_dados": [self.serializar(o) for o in orcamentos],
+            "orcamentos_dados": (lambda tabela: [self.serializar(o, tabela) for o in orcamentos])(
+                self.tabela_da_ficha(orcamentos)
+            ),
             # A busca de item vem por endpoint e nunca despeja o catálogo
             # inteiro nesta página. b:/p:/r: identificam brinquedo,
             # produção e reposição quando a linha é enviada.
@@ -689,8 +691,23 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         return svc_clientes.opcao_de_busca(cliente) if cliente else None
 
     @staticmethod
-    def serializar(orcamento):
+    def tabela_da_ficha(orcamentos):
+        """A conta do sistema de ficha para todos os itens destes orçamentos (seção 149)."""
+        from . import moedeiro
+
+        tabela = moedeiro.Tabela()
+        tabela.carregar([
+            item.brinquedo
+            for orcamento in orcamentos
+            for item in orcamento.itens.all()
+            if item.brinquedo_id and item.brinquedo is not None
+        ])
+        return tabela
+
+    @staticmethod
+    def serializar(orcamento, tabela=None):
         """Payload que o modal usa para reabrir um orçamento já salvo."""
+        tabela = tabela or OrcamentosInnerView.tabela_da_ficha([orcamento])
         documento_janela = OrcamentosInnerView.documento_da_janela(orcamento)
         trava = edicao_orcamento.trava(orcamento)
         return {
@@ -819,7 +836,8 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     "brinquedo": item.brinquedo_id or "",
                     "produto": item.produto_id or "",
                     "peca": item.peca_id or "",
-                    "opcao": OrcamentosInnerView.opcao_do_item(item),
+                    "opcao": OrcamentosInnerView.opcao_do_item(item, tabela),
+                    "com_ficha": bool(item.com_moedeiro),
                     "quantidade": item.quantidade,
                     "valor_unitario": f"{item.valor_unitario:.2f}".replace(".", ","),
                 }
@@ -908,8 +926,14 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
             return ""
 
     @classmethod
-    def opcao_brinquedo(cls, brinquedo):
+    def opcao_brinquedo(cls, brinquedo, tabela=None):
+        # o sistema de ficha (seção 149): só a máquina que oferece leva a
+        # chave "ficha", com o acréscimo e o preço COM, calculados aqui
+        from . import moedeiro
+
+        ficha = (tabela or moedeiro.Tabela()).para_a_opcao(brinquedo)
         return {
+            **({"ficha": ficha} if ficha else {}),
             "valor": f"b:{brinquedo.id}",
             "rotulo": brinquedo.nome_brinquedo,
             "grupo": "Brinquedos",
@@ -980,9 +1004,9 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         }
 
     @classmethod
-    def opcao_do_item(cls, item):
+    def opcao_do_item(cls, item, tabela=None):
         if item.brinquedo_id and item.brinquedo:
-            return cls.opcao_brinquedo(item.brinquedo)
+            return cls.opcao_brinquedo(item.brinquedo, tabela)
         if item.produto_id and item.produto:
             return cls.opcao_produto(item.produto)
         if item.peca_id and item.peca:
@@ -1367,6 +1391,17 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
         brinquedos = Brinquedos.objects.in_bulk(ids_brinquedos)
         produtos = ProdutoInterno.objects.in_bulk(ids_produtos)
         pecas = PecasReposicao.objects.in_bulk(ids_pecas)
+        # O SISTEMA DE FICHA (seção 149): a conta para todas as máquinas da
+        # lista, de uma vez. Só o que a máquina OFERECE fica marcado.
+        from . import moedeiro
+
+        # (só quando alguma linha PEDE a escolha: a proposta sem sistema de
+        # ficha não paga a consulta do acréscimo)
+        SIM = (True, 1, "1", "true", "on", "sim")
+        tabela_ficha = None
+        if any(isinstance(linha, dict) and linha.get("com_ficha") in SIM for linha in linhas):
+            tabela_ficha = moedeiro.Tabela()
+            tabela_ficha.carregar(brinquedos.values())
 
         novos = []
         for posicao, linha in enumerate(linhas, start=1):
@@ -1413,6 +1448,18 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 peca_id = str(linha.get("peca") or "").strip()
                 peca = pecas.get(int(peca_id)) if peca_id.isdigit() else None
 
+            # COM OU SEM SISTEMA DE FICHA. A tela manda a escolha; quem
+            # decide se ela vale é o servidor: só máquina do catálogo que
+            # oferece a opção. O nome do item ganha (ou perde) a marca, para
+            # a proposta, o contrato, a O.S., a lista de montagem e a
+            # etiqueta dizerem o mesmo que o campo.
+            pediu_ficha = tabela_ficha is not None and linha.get("com_ficha") in SIM
+            com_ficha = bool(pediu_ficha and brinquedo is not None and tabela_ficha.oferece(brinquedo))
+            # (o item escrito à mão, sem máquina do catálogo, fica como a
+            # equipe escreveu)
+            if brinquedo is not None:
+                descricao = moedeiro.nome_com_a_escolha(descricao, com_ficha, limite=180)
+
             novos.append(ItemOrcamento(
                 orcamento=orcamento,
                 descricao=descricao[:180],
@@ -1421,6 +1468,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                 peca=peca,
                 quantidade=quantidade,
                 valor_unitario=valor,
+                com_moedeiro=com_ficha,
             ))
 
         orcamento.itens.all().delete()
@@ -1633,6 +1681,7 @@ class OrcamentosInnerView(RespostaJSONMixin, OrcamentoInternoRequiredMixin, View
                     peca=item.peca,
                     quantidade=item.quantidade,
                     valor_unitario=item.valor_unitario,
+                    com_moedeiro=item.com_moedeiro,
                 )
                 for item in anterior.itens.select_related(
                     "brinquedo", "produto", "peca"
@@ -2682,10 +2731,21 @@ class BuscaItensOrcamentoView(OrcamentoInternoRequiredMixin, View):
             "pecas": (pecas, OrcamentosInnerView.opcao_peca),
             "produtos": (produtos, OrcamentosInnerView.opcao_produto),
         }
+        # o sistema de ficha das máquinas achadas (seção 149): uma tabela
+        # para a lista inteira, as categorias numa consulta
+        achados = {origem: list(monta[origem][0][:limite]) for origem in self.ORIGENS}
+        if "brinquedos" in achados:
+            from . import moedeiro
+
+            tabela = moedeiro.Tabela()
+            tabela.carregar(achados["brinquedos"])
+            monta["brinquedos"] = (
+                brinquedos, lambda b: OrcamentosInnerView.opcao_brinquedo(b, tabela),
+            )
         opcoes = [
             opcao(obj)
             for origem in self.ORIGENS
-            for obj in monta[origem][0][:limite]
+            for obj in achados[origem]
             for opcao in (monta[origem][1],)
         ]
 
