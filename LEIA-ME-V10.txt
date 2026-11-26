@@ -11307,3 +11307,103 @@ CONFERIDO NO NAVEGADOR (390 px e 1366 px, dados sintéticos)
   esperando assinatura e a assinada; "Ver a O.S.", "Ver a O.S. assinada" e
   "Assinar a O.S." (que abre a página de assinar, sem relógio); sem rolagem
   de lado.
+
+
+==========================================================================
+147. MÉTRICAS DE VENDA UNIFICADAS: SITE, ORÇAMENTO E SERVIÇOS NA MESMA CONTA
+==========================================================================
+
+O PEDIDO DO DONO
+"tudo deve ir para a mesma métrica": toda venda -- o orçamento, a O.S. e o
+pedido do site -- nas mesmas métricas (quantidade, valor, ticket, tempo
+entre as fases, taxa de assinatura, tempo para assinar, por canal de
+origem), sem contar a mesma venda duas vezes. Fatia (c) do pedido das
+assinaturas (as fatias (a) e (b) são as seções 145 e 146).
+
+AS DECISÕES DELE
+  * A O.S. entra como SERVIÇO, num canal próprio ("Serviços"), separado da
+    venda de máquina.
+  * A O.S. nascida de um orçamento que já virou venda NÃO conta de novo.
+
+O LEVANTAMENTO (o que havia)
+  * O pedido do site pago e o orçamento pago 100% já viram a mesma
+    `core.Venda`, uma por origem (seção 89). A tela Vendas lista as duas.
+  * A O.S. tem pagamento próprio (`valor_pago`, `status_pagamento`,
+    `pago_em`) e nunca virou `Venda`: ficava fora de qualquer conta de venda.
+  * Não havia métrica de assinatura (taxa, tempo) nem de tempo entre fases
+    juntando as três origens. `sistema_interno.CentralVendas` (com um campo
+    de origem) é uma tabela antiga e vazia; não foi usada.
+
+O QUE MUDOU: A TELA "MÉTRICAS DE VENDA"
+  Painel -> Vendas -> "Métricas de venda" (/vendas/metricas/inner/). Só
+  leitura; Financeiro e Gestão (a mesma porta da tela Vendas).
+  * O período é um chip: 30 dias, 90 dias (o padrão), 12 meses, Tudo. Corta
+    pela data do pagamento.
+  * O resumo: valor vendido, vendas, ticket médio e % assinadas (com o
+    tempo para assinar).
+  * Por canal -- Site, Orçamento, Serviços: vendas, valor, ticket, a parte
+    do canal no valor, assinadas e tempo para assinar.
+  * Tempo entre as fases (a MEDIANA de quem passou pelas duas -- uma venda
+    parada não distorce): no site, do pedido ao pagamento, do pagamento à
+    saída e à entrega; no orçamento, da proposta à aprovação e da aprovação
+    ao pagamento completo; no serviço, da abertura da O.S. ao pagamento e à
+    conclusão.
+
+O QUE É VENDA EM CADA CANAL (sistema_interno/metricas_vendas.py)
+  * Site: a `Venda` de pedido que não foi cancelado. Valor: o `valor_pago`.
+  * Orçamento: a `Venda` do orçamento (só existe com ele 100% pago).
+  * Serviços: a O.S. com pagamento "Pago", que não foi cancelada nem
+    trocada por outra versão -- e FORA a O.S. cujo orçamento tem venda
+    (`orcamento__venda`): o dinheiro dela já está na venda do orçamento. A
+    O.S. de orçamento que não virou venda (pagamento parcial) conta.
+  * Venda antiga sem pedido nem orçamento fica fora dos canais; a tela diz
+    quantas são.
+
+A ASSINATURA
+  * Site: só o pedido com máquina ou brinquedo pede contrato (seção 145);
+    o tempo conta do pagamento (quando o cliente já podia assinar).
+  * Orçamento: toda venda pede o contrato; o tempo conta da aprovação.
+  * Serviços: conta a O.S. assinada (seção 124) sobre as O.S. pagas; o
+    tempo conta de quando o documento saiu. ATENÇÃO: a equipe nem sempre
+    gera o documento da O.S., então esta taxa mede "quantas O.S. pagas têm
+    a O.S. assinada", e não uma obrigação descumprida.
+
+AS CONSULTAS
+  Conta fixa (o banco fica longe): as vendas com o pedido e o orçamento, as
+  O.S., os documentos assinados das três origens (uma consulta), os itens
+  dos pedidos (um `prefetch`) e as categorias (uma). Um teste compara a
+  conta com poucas e com muitas vendas. `documento_pedido.quais_pedem_contrato`
+  é a regra da seção 145 em lote.
+
+O QUE FICOU PARA DEPOIS (esta é a primeira visão)
+  * A evolução mês a mês (gráfico) e a comparação com o período anterior.
+  * O recorte por vendedor (interno x ambulante) dentro do canal Orçamento.
+  * O pagamento PARCIAL: hoje só entra a venda paga por inteiro (é assim
+    que a `Venda` do orçamento nasce); o que entrou de sinal não aparece.
+  * O tempo "do pagamento à entrega" do orçamento (a entrega está na O.S.
+    ou na lista de montagem, não num campo só).
+  * Exportar (planilha/PDF) e trazer estes números para Análises.
+  * As outras telas (Vendas, Financeiro, Análises) continuam com as contas
+    delas; não foram trocadas por esta.
+
+ARQUIVOS
+  sistema_interno/metricas_vendas.py                    (novo)
+  sistema_interno/views.py                              (MetricasDeVendasView)
+  sistema_interno/urls.py                               (vendas_metricas_inner)
+  sistema_interno/documento_pedido.py                   (quais_pedem_contrato)
+  sistema_interno/templates/metricas_vendas_inner.html  (novo)
+  sistema_interno/templates/vendas_inner.html           (o botão)
+  sistema_interno/static/interno/metricas_vendas.css    (novo; só variáveis)
+  sistema_interno/tests_metricas_vendas.py              (novo, 16 testes)
+  sistema_interno/tests_auditoria_funcoes.py
+
+Sem migração.
+
+TESTES
+  DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test \
+      sistema_interno.tests_metricas_vendas --parallel 1
+  E a suíte completa (core sistema_interno contas rh).
+
+CONFERIDO NO NAVEGADOR (390 px e 1366 px, dados sintéticos, tema escuro)
+  O botão em Vendas, a tela, os chips de período, o caminho de volta, sem
+  rolagem de lado e sem <select>; o vendedor é mandado embora da tela.

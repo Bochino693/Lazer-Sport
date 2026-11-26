@@ -309,6 +309,40 @@ def gerar_do_pedido(pedido, cpf_cnpj, usuario=None):
     return documento
 
 
+def quais_pedem_contrato(pedidos) -> set:
+    """Os ids dos pedidos (não cancelados) que levam máquina ou brinquedo.
+
+    Para quem conta muitos pedidos de uma vez (as métricas, seção 147): as
+    categorias vêm numa consulta só; os itens, do `prefetch` de quem chama.
+    """
+    from . import montagem
+
+    pedidos = [p for p in pedidos if p.status != "cancelado"]
+    if not pedidos:
+        return set()
+    from django.contrib.contenttypes.models import ContentType
+
+    regras = montagem.Regras.agora()
+    # o tipo de cada item vem do cache dos ContentType e fica no item: a
+    # leitura das linhas (`montagem`) não consulta o banco por item
+    for pedido in pedidos:
+        for item in pedido.itens.all():
+            if item.content_type_id:
+                item.content_type = ContentType.objects.get_for_id(item.content_type_id)
+    try:
+        regras.carregar_categorias([
+            item.item_original
+            for pedido in pedidos
+            for item in pedido.itens.all()
+            if item.content_type_id and item.object_id
+            and ContentType.objects.get_for_id(item.content_type_id).model == "brinquedos"
+            and item.item_original is not None
+        ])
+    except Exception:  # noqa: BLE001 -- sem as categorias em lote, cada pedido lê as dele
+        pass
+    return {pedido.pk for pedido in pedidos if pede_contrato(pedido, regras)}
+
+
 def anotar_nos_pedidos(pedidos) -> None:
     """Põe em cada pedido de Meus pedidos o que a tela mostra do contrato.
 

@@ -1681,6 +1681,25 @@ class VendasView(FinanceiroInternoRequiredMixin, View):
         })
 
 
+class MetricasDeVendasView(FinanceiroInternoRequiredMixin, View):
+    """As métricas de venda unificadas: site, orçamento e serviços (seção 147).
+
+    Só leitura, para o Financeiro e a Gestão (a mesma porta da tela de
+    Vendas). O período vem de um chip; os números, de `metricas_vendas`.
+    """
+
+    def get(self, request):
+        from . import metricas_vendas
+
+        periodo = metricas_vendas.ler_periodo(request.GET.get("periodo"))
+        contexto = metricas_vendas.apurar(periodo)
+        contexto["chips_periodo"] = [
+            {"chave": chave, "rotulo": rotulo, "ativo": chave == periodo}
+            for chave, rotulo, _dias in metricas_vendas.PERIODOS
+        ]
+        return render(request, "metricas_vendas_inner.html", contexto)
+
+
 class PedidosView(FinanceiroInternoRequiredMixin, View):
     POR_PAGINA = 36
 

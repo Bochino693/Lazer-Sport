@@ -1,0 +1,121 @@
+{% extends "base_inner.html" %}
+{% load interno_extras %}
+{% block title %}Métricas de venda | Lazer &amp; Sport{% endblock %}
+{% block top_title %}Métricas de venda{% endblock %}
+{% block body_class %}ls-commercial-body{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" data-ls-tela="metricas-vendas" href="{% estatico 'interno/metricas_vendas.css' %}">
+{% endblock %}
+
+{% block content %}
+{% comment %}
+  AS MÉTRICAS DE VENDA, UNIFICADAS (metricas_vendas.py; LEIA-ME-V10, seção
+  147). Site, orçamento e serviços (a O.S. paga) na mesma conta, sem contar
+  duas vezes: a O.S. do orçamento que já virou venda fica de fora. A tela
+  só lê; o período é um chip.
+{% endcomment %}
+<section class="ls-page-hero">
+  <div class="ls-page-hero-copy">
+    <span class="ls-page-kicker">Loja · financeiro</span>
+    <h1>Métricas de venda</h1>
+    <p>Toda venda na mesma conta: o pedido pago no site, o orçamento pago 100% e o serviço (a O.S. paga). A O.S. de um orçamento que já virou venda não conta de novo.</p>
+  </div>
+  <div class="ls-page-hero-actions">
+    <a href="{% url 'vendas_inner' %}" class="btn btn-outline-success" id="voltarParaVendas">
+      <i class="bi bi-receipt-cutoff me-1" aria-hidden="true"></i> Ver as vendas
+    </a>
+  </div>
+</section>
+
+<nav class="ls-mv-chips" aria-label="Período">
+  {% for chip in chips_periodo %}
+    <a class="ls-mv-chip{% if chip.ativo %} ativo{% endif %}" href="?periodo={{ chip.chave }}" data-mv-periodo="{{ chip.chave }}"{% if chip.ativo %} aria-current="true"{% endif %}>{{ chip.rotulo }}</a>
+  {% endfor %}
+</nav>
+<p class="ls-mv-conta">
+  {% if inicio %}Vendas pagas desde {{ inicio|date:"d/m/Y" }}.{% else %}Todas as vendas pagas.{% endif %}
+</p>
+
+<section class="ls-metrics" aria-label="Resumo">
+  <div class="ls-metric-card green" data-mv="valor">
+    <div class="ls-metric-head"><span class="ls-metric-label">Valor vendido</span><span class="ls-metric-icon"><i class="bi bi-cash-coin"></i></span></div>
+    <strong class="ls-metric-value">R$ {{ valor|moeda }}</strong>
+    <span class="ls-metric-note">Os três canais somados</span>
+  </div>
+  <div class="ls-metric-card blue" data-mv="quantidade">
+    <div class="ls-metric-head"><span class="ls-metric-label">Vendas</span><span class="ls-metric-icon"><i class="bi bi-receipt-cutoff"></i></span></div>
+    <strong class="ls-metric-value">{{ quantidade }}</strong>
+    <span class="ls-metric-note">Uma por pedido, orçamento ou O.S.</span>
+  </div>
+  <div class="ls-metric-card cyan" data-mv="ticket">
+    <div class="ls-metric-head"><span class="ls-metric-label">Ticket médio</span><span class="ls-metric-icon"><i class="bi bi-graph-up-arrow"></i></span></div>
+    <strong class="ls-metric-value">R$ {{ ticket|moeda }}</strong>
+    <span class="ls-metric-note">Valor vendido ÷ vendas</span>
+  </div>
+  <div class="ls-metric-card violet" data-mv="assinatura">
+    <div class="ls-metric-head"><span class="ls-metric-label">Assinadas</span><span class="ls-metric-icon"><i class="bi bi-pen"></i></span></div>
+    <strong class="ls-metric-value">{% if taxa_assinatura is None %}—{% else %}{{ taxa_assinatura }}%{% endif %}</strong>
+    <span class="ls-metric-note">{{ assinadas }} de {{ pedem_assinatura }} · tempo para assinar: {{ tempo_para_assinar }}</span>
+  </div>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div>
+      <h2>Por canal de origem</h2>
+      <p>Quantidade, valor, ticket médio e assinatura de cada canal.</p>
+    </div>
+  </div>
+  <div class="ls-data-body">
+    <div class="ls-mv-canais">
+      {% for canal in canais %}
+      <article class="ls-mv-canal {{ canal.cor }}" data-mv-canal="{{ canal.chave }}">
+        <header class="ls-mv-canal-topo">
+          <span class="ls-mv-canal-icone" aria-hidden="true"><i class="bi {{ canal.icone }}"></i></span>
+          <h3>{{ canal.rotulo }}</h3>
+          <span class="ls-mv-canal-parte">{{ canal.parte }}% do valor</span>
+        </header>
+        <div class="ls-mv-barra" role="img" aria-label="{{ canal.parte }}% do valor vendido"><span style="width: {{ canal.parte }}%"></span></div>
+        <dl class="ls-mv-numeros">
+          <div><dt>Vendas</dt><dd data-mv-numero="quantidade">{{ canal.quantidade }}</dd></div>
+          <div><dt>Valor</dt><dd data-mv-numero="valor">R$ {{ canal.valor|moeda }}</dd></div>
+          <div><dt>Ticket médio</dt><dd data-mv-numero="ticket">R$ {{ canal.ticket|moeda }}</dd></div>
+          <div><dt>Assinadas</dt><dd data-mv-numero="assinatura">{% if canal.taxa_assinatura is None %}—{% else %}{{ canal.taxa_assinatura }}%{% endif %} <small>{{ canal.assinadas }} de {{ canal.pedem_assinatura }}</small></dd></div>
+          <div><dt>Tempo para assinar</dt><dd data-mv-numero="tempo">{{ canal.tempo_para_assinar_texto }}</dd></div>
+        </dl>
+        <p class="ls-mv-canal-nota">
+          {% if canal.chave == "site" %}Pedido pago que não foi cancelado. Só o pedido com máquina ou brinquedo pede contrato; o tempo conta do pagamento.
+          {% elif canal.chave == "orcamento" %}Orçamento pago 100%. Todo orçamento pede o contrato; o tempo conta da aprovação.
+          {% else %}O.S. paga, fora as de orçamento que já virou venda. Conta a O.S. assinada; o tempo, de quando o documento saiu.{% endif %}
+        </p>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="ls-data-panel">
+  <div class="ls-data-header">
+    <div>
+      <h2>Tempo entre as fases</h2>
+      <p>A mediana (o tempo do meio): uma venda parada não distorce o número.</p>
+    </div>
+  </div>
+  <div class="ls-data-body">
+    <ul class="ls-mv-fases">
+      {% for fase in fases %}
+      <li class="ls-mv-fase" data-mv-fase>
+        <span class="ls-mv-fase-canal">{{ fase.canal }}</span>
+        <span class="ls-mv-fase-nome">{{ fase.nome }}</span>
+        <strong class="ls-mv-fase-tempo">{{ fase.texto }}</strong>
+        <small class="ls-mv-fase-base">{% if fase.base %}{{ fase.base }} venda{{ fase.base|pluralize }}{% else %}sem dado{% endif %}</small>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+</section>
+{% if sem_origem %}
+<p class="ls-mv-conta">{{ sem_origem }} venda{{ sem_origem|pluralize }} antiga{{ sem_origem|pluralize }} sem pedido nem orçamento ficou de fora dos canais.</p>
+{% endif %}
+{% endblock %}

@@ -24,6 +24,12 @@
     <h1>Vendas</h1>
     <p>Um funil só: cada venda nasce de um pedido pago no site ou de um orçamento pago 100% no painel — uma por pedido ou orçamento, nunca duas. A bolinha do menu conta as que ainda esperam confirmação.</p>
   </div>
+  <div class="ls-page-hero-actions">
+    {# as métricas unificadas: site, orçamento e serviços (seção 147) #}
+    <a href="{% url 'vendas_metricas_inner' %}" class="btn btn-outline-success" id="verMetricasDeVendas">
+      <i class="bi bi-graph-up-arrow me-1" aria-hidden="true"></i> Métricas de venda
+    </a>
+  </div>
 </section>
 
 <section class="ls-metrics">

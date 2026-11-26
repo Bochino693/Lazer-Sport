@@ -36,6 +36,7 @@ from .views import (
     MateriaisInnerView,
     MovimentacoesInnerView,
     PedidosView,
+    MetricasDeVendasView,
     VendasView,
 )
 from .views_app import manifesto, service_worker
@@ -504,6 +505,8 @@ urlpatterns = [
 
     # ---------------- demais telas ----------------
     path('vendas/inner/', VendasView.as_view(), name='vendas_inner'),
+    # As métricas unificadas: site, orçamento e serviços (seção 147).
+    path('vendas/metricas/inner/', MetricasDeVendasView.as_view(), name='vendas_metricas_inner'),
     path('pedidos/inner/', PedidosView.as_view(), name='pedidos_inner'),
     # O andamento do pedido do site (pago -> ... -> finalizado); a venda
     # acompanha. Ver `views_funil.py`.

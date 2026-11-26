@@ -46,6 +46,7 @@ MATRIZ = {
     # financeiro
     "financeiro_inner": FINANCEIRO,
     "vendas_inner": FINANCEIRO,
+    "vendas_metricas_inner": FINANCEIRO,
     "pedidos_inner": FINANCEIRO,
     # a entrada de nota fiscal (seção 115): o Financeiro (e a Gestão) lança,
     # a Engenharia de produção vê as notas lançadas
