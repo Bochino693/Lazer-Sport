@@ -85,7 +85,7 @@ class DadosContratoInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
 
     @staticmethod
     def acrescimo_digitado(request):
-        """O acréscimo do moedeiro (seção 143): "350", "350,00", "1.250,50". Vazio = sem a opção."""
+        """O acréscimo do sistema de ficha (seções 143 e 148): "350", "350,00", "1.250,50". Vazio = sem a opção."""
         bruto = (request.POST.get("acrescimo_moedeiro") or "").strip().replace("R$", "").replace(" ", "")
         if not bruto:
             return None
@@ -95,12 +95,12 @@ class DadosContratoInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
             valor = Decimal(bruto).quantize(Decimal("0.01"))
         except (InvalidOperation, ValueError):
             raise ErroDeFormulario(
-                "Digite o acréscimo do moedeiro em reais, como 350,00 — ou deixe vazio para não oferecer a opção.",
+                "Digite o acréscimo do sistema de ficha em reais, como 999,00 — ou deixe vazio para não oferecer a opção.",
                 campo="acrescimo_moedeiro",
             )
         if valor < 0 or valor > Decimal("99999.99"):
             raise ErroDeFormulario(
-                "O acréscimo do moedeiro precisa ser um valor entre R$ 0,00 e R$ 99.999,99.",
+                "O acréscimo do sistema de ficha precisa ser um valor entre R$ 0,00 e R$ 99.999,99.",
                 campo="acrescimo_moedeiro",
             )
         return valor or None

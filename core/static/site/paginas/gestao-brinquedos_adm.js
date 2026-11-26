@@ -576,6 +576,11 @@
         }
         marcarSemJuros(toyDialog, brinquedo ? brinquedo.parcelas_sem_juros : '');
         marcarVoltagem(brinquedo ? brinquedo.voltz : '', Boolean(brinquedo));
+        /* o sistema de ficha desta máquina (seção 148): "" = pela regra */
+        const fichaAtual = brinquedo ? (brinquedo.moedeiro || '') : '';
+        form.querySelectorAll('input[name="moedeiro"]').forEach((radio) => {
+            radio.checked = radio.value === fichaAtual;
+        });
 
         zerarFotos(brinquedo);
         mostrarObjeto3d(brinquedo);

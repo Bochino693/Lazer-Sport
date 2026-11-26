@@ -350,10 +350,10 @@ class Brinquedos(Prime):
     # decide (máquina aceita; brinquedão, kit e peça não --
     # sistema_interno/moedeiro.py); "sim" e "nao" são a palavra da Gestão
     # para ESTA máquina.
-    MOEDEIRO_OPCOES = (("", "Pela regra (máquina aceita, brinquedão não)"), ("sim", "Aceita moedeiro"), ("nao", "Não aceita moedeiro"))
+    MOEDEIRO_OPCOES = (("", "Pela regra (máquina oferece, brinquedão não)"), ("sim", "Oferece o sistema de ficha"), ("nao", "Não oferece o sistema de ficha"))
     moedeiro = models.CharField(
-        "Moedeiro", max_length=3, blank=True, default="", choices=MOEDEIRO_OPCOES,
-        help_text="Vazio: a regra decide. O preço com moedeiro é o do cadastro mais o acréscimo único.",
+        "Sistema de ficha", max_length=3, blank=True, default="", choices=MOEDEIRO_OPCOES,
+        help_text="Vazio: a regra decide. O preço com sistema de ficha é o do cadastro mais o acréscimo único.",
     )
     eh_kit = models.BooleanField(
         "É um kit eletrônico",

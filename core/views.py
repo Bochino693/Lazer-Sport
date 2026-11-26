@@ -3680,6 +3680,8 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                     if brinquedo.avaliacao is not None else ""
                 ),
                 "voltz": brinquedo.voltz or "",
+                # o sistema de ficha desta máquina (seção 148): "" = pela regra
+                "moedeiro": brinquedo.moedeiro or "",
                 "altura_m": (
                     formatar_decimal_br(brinquedo.altura_m, casas=2)
                     if brinquedo.altura_m is not None else ""
@@ -3754,6 +3756,8 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
             "busca": busca,
             "page_obj": brinquedos_page,
             "brinquedos_dados": brinquedos_dados,
+            # o acréscimo do sistema de ficha, para a ajuda do campo (seção 148)
+            "acrescimo_ficha": self._acrescimo_ficha(),
             "total_brinquedos": total,
             "total_loja": numeros["loja"],
             "total_com_imagem": total_com_imagem,
@@ -4537,6 +4541,19 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
                 foto.ordem = ordem_correta
                 foto.save(update_fields=["ordem", "atualizado"])
 
+    @staticmethod
+    def _acrescimo_ficha():
+        """O acréscimo do sistema de ficha em reais ("999,00"), ou "" sem ele."""
+        try:
+            from sistema_interno import moedeiro
+
+            valor = moedeiro.acrescimo()
+        except Exception:  # noqa: BLE001 -- a ajuda do campo não derruba o cadastro
+            return ""
+        if valor <= 0:
+            return ""
+        return f"{valor:,.2f}".replace(",", "#").replace(".", ",").replace("#", ".")
+
     def _salvar(self, request):
         brinquedo_id = request.POST.get("id")
         brinquedo = (
@@ -4613,6 +4630,12 @@ class BrinquedoAdmin(AdminOnlyMixin, View):
         brinquedo.parcelas_sem_juros = sem_juros
         brinquedo.avaliacao = avaliacao if avaliacao is not None else Decimal("0")
         brinquedo.voltz = voltz
+        # O SISTEMA DE FICHA POR MÁQUINA (seção 148): "sim", "nao" ou vazio
+        # (a regra decide). Qualquer outra coisa é recusada.
+        ficha = (request.POST.get("moedeiro") or "").strip().lower()
+        if ficha not in ("", "sim", "nao"):
+            raise ErroDeFormulario("Sistema de ficha: escolha “Pela regra”, “Oferece” ou “Não oferece”.")
+        brinquedo.moedeiro = ficha
         brinquedo.altura_m = altura
         brinquedo.largura_m = largura
         brinquedo.profundidade_m = profundidade

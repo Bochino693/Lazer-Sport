@@ -526,6 +526,15 @@
               <label class="bq-opcao"><input type="radio" name="voltz" value="" data-rotulo="Voltagem" data-bq-sem-voltagem><span>Não se aplica</span></label>
             </div>
 
+            {# O SISTEMA DE FICHA POR MÁQUINA (LEIA-ME-V10, seção 148): chips de rádio, nunca select #}
+            <span class="bq-rotulo" id="toyFichaRotulo">Sistema de ficha</span>
+            <div id="toyFicha" class="bq-escolhas" role="radiogroup" aria-labelledby="toyFichaRotulo" aria-describedby="toyFichaAjuda" data-bq-ficha>
+              <label class="bq-opcao"><input type="radio" name="moedeiro" value="" checked data-rotulo="Sistema de ficha"><span>Pela regra</span></label>
+              <label class="bq-opcao"><input type="radio" name="moedeiro" value="sim" data-rotulo="Sistema de ficha"><span>Oferece</span></label>
+              <label class="bq-opcao"><input type="radio" name="moedeiro" value="nao" data-rotulo="Sistema de ficha"><span>Não oferece</span></label>
+            </div>
+            <p class="bq-ajuda" id="toyFichaAjuda" data-bq-ficha-ajuda>Para operações, eventos e afins: a máquina funciona por ficha. “Pela regra”: máquina oferece; brinquedão, espaço, trampolim, brinquedo grande e kit não.{% if acrescimo_ficha %} Com sistema de ficha o preço é o do cadastro + R$ {{ acrescimo_ficha }}.{% else %} O acréscimo ainda não foi definido em Dados do contrato: a opção não aparece para ninguém.{% endif %}</p>
+
             <div class="bq-medidas-campos">
               <div>
                 <label class="bq-rotulo" for="toyHeight">Altura</label>

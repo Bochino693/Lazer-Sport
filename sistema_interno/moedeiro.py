@@ -1,4 +1,11 @@
-"""COM OU SEM MOEDEIRO: a regra e a conta do preço (LEIA-ME-V10, seção 143).
+"""COM OU SEM SISTEMA DE FICHA: a regra e a conta do preço (LEIA-ME-V10, seções 143 e 148).
+
+O NOME. O dono (seção 148): "deve se chamar sistema de ficha, não mais
+moedeiro, para operações, eventos e afins". Em tudo o que a pessoa lê é
+"Sistema de ficha". Os nomes internos ficaram (este módulo, os campos
+`acrescimo_moedeiro`, `Brinquedos.moedeiro`, `com_moedeiro`): já estavam
+publicados, e renomear coluna só trocaria um risco de deploy por nada que
+a pessoa veja. O valor que ele deu: R$ 999,00 (a Gestão pode mudar).
 
 O dono: "entenda também que os moedeiros nas máquinas, que não são
 brinquedões, arenas esportivas nem esses brinquedões grandes, têm dois
@@ -30,6 +37,19 @@ from __future__ import annotations
 from decimal import Decimal
 
 ZERO = Decimal("0.00")
+
+#: O nome que a pessoa lê, em todas as telas e documentos.
+NOME = "Sistema de ficha"
+ROTULO_SEM = "Sem sistema de ficha"
+ROTULO_COM = "Com sistema de ficha"
+#: A linha de explicação, onde couber.
+EXPLICACAO = "Para operações, eventos e afins: a máquina funciona por ficha."
+#: O que o nome do item ganha quando a máquina sai com o sistema de ficha.
+#: Vai NO NOME do item (como o adesivo), para todo documento -- proposta,
+#: contrato, O.S., lista de montagem, etiqueta -- dizer sem depender de
+#: cada tela lembrar de um campo.
+MARCA = "com sistema de ficha"
+SUFIXO = " — " + MARCA
 
 
 def acrescimo() -> Decimal:
@@ -96,6 +116,29 @@ def opcoes(brinquedo, regras=None) -> list[dict]:
     if not oferece(brinquedo, regras):
         return []
     return [
-        {"chave": "sem", "rotulo": "Sem moedeiro", "com_moedeiro": False, "preco": preco(brinquedo, False, regras)},
-        {"chave": "com", "rotulo": "Com moedeiro", "com_moedeiro": True, "preco": preco(brinquedo, True, regras)},
+        {"chave": "sem", "rotulo": ROTULO_SEM, "com_moedeiro": False, "preco": preco(brinquedo, False, regras)},
+        {"chave": "com", "rotulo": ROTULO_COM, "com_moedeiro": True, "preco": preco(brinquedo, True, regras)},
     ]
+
+
+def tem_a_marca(texto) -> bool:
+    """O nome do item já diz "com sistema de ficha"?"""
+    return MARCA in (texto or "").casefold()
+
+
+def nome_com_a_escolha(nome, com_ficha, limite=None) -> str:
+    """O nome do item com (ou sem) a marca do sistema de ficha no fim.
+
+    Com a escolha, o nome termina em " — com sistema de ficha" (sem
+    repetir); sem ela, a marca sai. `limite` é o tamanho do campo: quem
+    encurta é o nome, nunca a marca.
+    """
+    nome = (nome or "").strip()
+    if tem_a_marca(nome):
+        posicao = nome.casefold().rfind(MARCA)
+        nome = (nome[:posicao] + nome[posicao + len(MARCA):]).strip().rstrip("—-–").strip()
+    if not com_ficha:
+        return nome[:limite] if limite else nome
+    if limite:
+        nome = nome[: max(limite - len(SUFIXO), 0)].rstrip()
+    return nome + SUFIXO

@@ -11407,3 +11407,71 @@ TESTES
 CONFERIDO NO NAVEGADOR (390 px e 1366 px, dados sintéticos, tema escuro)
   O botão em Vendas, a tela, os chips de período, o caminho de volta, sem
   rolagem de lado e sem <select>; o vendedor é mandado embora da tela.
+
+
+==========================================================================
+148. "SISTEMA DE FICHA" (O ANTIGO MOEDEIRO): O NOME, OS R$ 999,00 E O LIGA/DESLIGA POR MÁQUINA
+==========================================================================
+
+O PEDIDO DO DONO
+"o acréscimo do moedeiro é 999 reais e deve se chamar sistema de ficha, não
+mais moedeiro, para operações, eventos e afins". Com isso ele liberou o
+resto da seção 143 (as fatias 1 a 5 de lá); esta seção é a primeira delas.
+As outras: 149 (orçamento do painel e documentos), 150 (o site) e 151 (a
+ficha "Air Game Premium com Sistema de Ficheiro").
+
+O QUE MUDOU
+  1. O NOME. Em tudo o que a pessoa lê, a opção é "Sistema de ficha" --
+     "Com sistema de ficha" / "Sem sistema de ficha" --, com a linha "Para
+     operações, eventos e afins: a máquina funciona por ficha" onde cabe.
+     O bloco "Moedeiro" de Comercial > Dados do contrato virou "Sistema de
+     ficha". Os textos moram em sistema_interno/moedeiro.py (NOME,
+     ROTULO_SEM, ROTULO_COM, EXPLICACAO, MARCA): quem escreve o nome numa
+     tela usa de lá.
+  2. OS NOMES INTERNOS FICARAM: o módulo `moedeiro.py`, os campos
+     `DadosContrato.acrescimo_moedeiro`, `Brinquedos.moedeiro` e (seção
+     149) `com_moedeiro`. Já estavam publicados no banco; renomear coluna é
+     mudança de esquema com risco no deploy e nada que a pessoa veja. Quem
+     ler o código: "moedeiro" = "sistema de ficha".
+  3. O VALOR: R$ 999,00. A migração de DADOS sistema_interno/0086 grava
+     999,00 no acréscimo SÓ quando ele está vazio ou zero; um valor que a
+     Gestão já digitou não é tocado; rodar de novo não muda nada; o log do
+     deploy diz o que fez. O campo continua configurável em Dados do
+     contrato (vazio = a opção some de todo lugar).
+  4. O LIGA/DESLIGA POR MÁQUINA. No cadastro do brinquedo (Site >
+     Brinquedos > Editar > Especificações), três chips de rádio (sem
+     select): "Pela regra" (o padrão), "Oferece", "Não oferece". "Pela
+     regra": máquina oferece; brinquedão, espaço/arena, trampolim,
+     brinquedo grande e kit não (a mesma regra da lista de montagem). A
+     ajuda do campo diz o acréscimo de hoje. Valor inventado no POST é
+     recusado.
+  5. A MARCA NO NOME DO ITEM. `moedeiro.nome_com_a_escolha(nome, com)` põe
+     (ou tira) " — com sistema de ficha" no fim do nome do item, sem
+     repetir e sem cortar a marca. É assim -- no NOME, como o adesivo --
+     que as próximas fatias fazem todo documento dizer a escolha.
+
+ATENÇÃO: nesta fatia a opção ainda não aparece para o cliente nem no
+orçamento. Entra nas seções 149 e 150.
+
+ARQUIVOS
+  sistema_interno/moedeiro.py
+  sistema_interno/models.py, core/models.py                 (só os textos)
+  sistema_interno/migrations/0085_textos_do_sistema_de_ficha.py   (esquema)
+  sistema_interno/migrations/0086_acrescimo_do_sistema_de_ficha.py (dados)
+  core/migrations/0220_textos_do_sistema_de_ficha.py              (esquema)
+  sistema_interno/templates/dados_contrato_inner.html
+  sistema_interno/views_dados_contrato.py
+  core/views.py (BrinquedoAdmin), core/templates/gestao/brinquedos_adm.html
+  core/static/site/paginas/gestao-brinquedos_adm.js
+  sistema_interno/tests_moedeiro.py
+
+TESTES
+  DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test \
+      sistema_interno.tests_moedeiro --parallel 1
+  O nome nas telas (e "moedeiro" fora delas), a marca no nome do item, a
+  migração do valor (vazio, zero, já digitado, sem a linha, duas vezes), os
+  três chips do cadastro, a palavra da Gestão gravada e o valor inventado
+  recusado.
+
+CONFERIDO NO NAVEGADOR (390 px e 1366 px): o bloco em Dados do contrato e
+os chips no cadastro do brinquedo.
