@@ -39,7 +39,7 @@ import re
 from urllib.parse import urlencode
 
 from django.core.paginator import Paginator
-from django.db.models import Count, Q
+from django.db.models import Case, Count, F, Q, When
 from django.db.models.functions import Coalesce
 from django.shortcuts import redirect, render
 from django.urls import reverse
@@ -47,7 +47,7 @@ from django.views.generic import View
 
 from . import documento_assinatura as svc
 from .documento_servico import papel_curto
-from .models import DocumentoAssinatura
+from .models import Cliente, DocumentoAssinatura
 from .permissoes import (
     AMBULANTE, FINANCEIRO, GESTAO, PRODUCAO, VENDAS, capacidades,
 )
@@ -91,6 +91,54 @@ def documentos_visiveis(user):
         .filter(visiveis)
         .filter(situacao__in=(ASSINADO, AGUARDANDO))
     )
+
+
+def do_cliente(cliente_id) -> Q:
+    """Os documentos DESTE cliente, pelo vínculo de verdade (seção 144).
+
+    O contrato do orçamento ligado a ele, ou a ordem de serviço ligada a
+    ele -- nunca pelo nome digitado (dois "Buffet Alegria" não se misturam).
+    """
+    return Q(orcamento__cliente_id=cliente_id) | (_DA_ORDEM & Q(ordem_servico__cliente_id=cliente_id))
+
+
+def contagem_por_cliente(user, ids) -> dict:
+    """{id do cliente: {"assinadas": n, "aguardando": n}} do que ESTA pessoa pode ver.
+
+    Uma consulta para a página inteira da lista de clientes (o banco fica a
+    ~170 ms): o cliente de cada documento é o do orçamento, ou o da O.S.
+    quando o documento é dela. Só entra quem tem pelo menos um documento.
+    """
+    ids = [pk for pk in ids if pk]
+    if not ids or not capacidades(user)["assinaturas"]:
+        return {}
+    linhas = (
+        documentos_visiveis(user)
+        .annotate(cliente_do_documento=Case(
+            When(orcamento__isnull=False, then=F("orcamento__cliente_id")),
+            default=F("ordem_servico__cliente_id"),
+        ))
+        .filter(cliente_do_documento__in=ids)
+        .values("cliente_do_documento")
+        .annotate(
+            assinadas=Count("pk", filter=Q(situacao=ASSINADO)),
+            aguardando=Count("pk", filter=Q(situacao=AGUARDANDO)),
+        )
+    )
+    return {
+        linha["cliente_do_documento"]: {"assinadas": linha["assinadas"], "aguardando": linha["aguardando"]}
+        for linha in linhas
+    }
+
+
+def resumo_do_cliente(numeros) -> str:
+    """"2 assinadas · 1 aguardando" (só o que existe)."""
+    partes = []
+    if numeros.get("assinadas"):
+        partes.append(f"{numeros['assinadas']} assinada{'s' if numeros['assinadas'] != 1 else ''}")
+    if numeros.get("aguardando"):
+        partes.append(f"{numeros['aguardando']} aguardando")
+    return " · ".join(partes)
 
 
 def _numero_buscado(busca: str):
@@ -140,6 +188,8 @@ def _cartao(documento, acesso) -> dict:
         "documento": documento,
         "objeto": objeto,
         "cliente": cliente or (conteudo.get("cliente") or {}).get("nome") or "Cliente sem nome",
+        # o cadastro a que o documento está ligado (para ir ao cliente e para filtrar por ele)
+        "cliente_id": orcamento.cliente_id if orcamento is not None else ordem.cliente_id,
         "papel": papel_curto(conteudo),
         "situacao": "assinado" if documento.assinado else ("suspenso" if suspenso else "aguardando"),
         "url_via": via,
@@ -173,6 +223,15 @@ class AssinaturasInnerView(InternoRequiredMixin, View):
         if not ve_os_dois or objeto not in {valor for valor, _, _ in OBJETOS}:
             objeto = "todos"
         busca = (request.GET.get("q") or "").strip()[:80]
+
+        # AS ASSINATURAS DE UM CLIENTE (seção 144): a tela Clientes chega
+        # aqui com ?cliente=<id>. O filtro é pelo vínculo de verdade e só
+        # corta o que a pessoa JÁ podia ver -- o id de um cliente alheio
+        # devolve a lista vazia, sem dizer nem o nome dele.
+        cliente_id = (request.GET.get("cliente") or "").strip()
+        cliente_id = int(cliente_id) if cliente_id.isdigit() and len(cliente_id) < 10 else None
+        if cliente_id:
+            visiveis = visiveis.filter(do_cliente(cliente_id))
 
         do_objeto = {"orcamentos": _DO_ORCAMENTO, "os": _DA_ORDEM}.get(objeto, Q())
         da_situacao = {
@@ -215,13 +274,26 @@ class AssinaturasInnerView(InternoRequiredMixin, View):
         pagina = paginador.get_page(request.GET.get("page"))
 
         def endereco(**troca):
-            atual = {"situacao": situacao, "objeto": objeto, "q": busca}
+            atual = {"situacao": situacao, "objeto": objeto, "q": busca, "cliente": str(cliente_id or "")}
             atual.update(troca)
-            padrao = {"situacao": "todas", "objeto": "todos", "q": ""}
+            padrao = {"situacao": "todas", "objeto": "todos", "q": "", "cliente": ""}
             partes = {chave: valor for chave, valor in atual.items() if valor != padrao[chave]}
             return "?" + urlencode(partes) if partes else reverse("assinaturas_inner", urlconf=URLCONF)
 
+        # O nome no chip "Cliente: ..." só aparece para quem vê o cadastro
+        # (o Comercial) ou tem pelo menos um documento dele na tela.
+        cliente_nome = ""
+        if cliente_id and (acesso["clientes"] or numeros["todos"] or numeros["todas"]):
+            cliente_nome = (
+                Cliente.objects.filter(pk=cliente_id).values_list("nome_cliente", flat=True).first() or ""
+            )
+
         return render(request, self.template_name, {
+            "cliente_id": cliente_id,
+            "cliente_nome": cliente_nome,
+            "url_sem_cliente": endereco(cliente=""),
+            "pode_ver_clientes": acesso["clientes"],
+            "url_clientes": reverse("clientes_inner", urlconf=URLCONF),
             "cartoes": [_cartao(documento, acesso) for documento in pagina.object_list],
             "pagina": pagina,
             "total": pagina.paginator.count,

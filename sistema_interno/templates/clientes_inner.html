@@ -319,6 +319,13 @@
                   <span class="ls-perfil-numero"><strong>{{ ficha.abertos }}</strong><small>Em aberto</small></span>
                   <span class="ls-perfil-numero"><strong>{{ ficha.aprovados }}</strong><small>Fechada{{ ficha.aprovados|pluralize }}</small></span>
                 </span>
+                {# As assinaturas deste cliente (seção 144): o selo leva à tela Assinaturas já filtrada por ele. #}
+                {% if ficha.assinaturas %}
+                  <a class="ls-cli-assinaturas" href="{{ ficha.assinaturas.url }}" data-cliente-assinaturas="{{ cliente.id }}"
+                     title="Abrir as assinaturas de {{ cliente.nome_cliente }}: {{ ficha.assinaturas.resumo }}">
+                    <i class="bi bi-pen-fill" aria-hidden="true"></i> <span>{{ ficha.assinaturas.resumo }}</span>
+                  </a>
+                {% endif %}
               </td>
 
               <td data-rotulo="Aprovado" data-v="total" class="text-end"{% if not ficha.total_aprovado %} data-zerado{% endif %}>
@@ -357,6 +364,15 @@
                     ver OrcamentosInnerView.cliente_inicial). Só para quem
                     pode criar proposta. No cartão é a primeira da barra.
                   {% endcomment %}
+                  {# ASSINATURAS, DAQUI MESMO (seção 144): só para quem tem a tela e só se o cliente tem documento. #}
+                  {% if ficha.assinaturas %}
+                  <a class="btn btn-sm btn-outline-primary" href="{{ ficha.assinaturas.url }}"
+                     data-acao-cartao="Assinaturas" data-acao-ordem="4"
+                     aria-label="Assinaturas de {{ cliente.nome_cliente }}: {{ ficha.assinaturas.resumo }}"
+                     title="Contratos e ordens de serviço que este cliente assina: {{ ficha.assinaturas.resumo }}">
+                    <i class="bi bi-pen"></i><span class="ls-action-label">Assinaturas ({{ ficha.assinaturas.total }})</span>
+                  </a>
+                  {% endif %}
                   {% if permissoes_interno.orcamentos_criar %}
                   <a class="btn btn-sm btn-outline-primary"
                      href="{% url 'orcamentos_inner' %}?novo=1&amp;cliente={{ cliente.id }}"

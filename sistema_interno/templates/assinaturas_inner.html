@@ -27,6 +27,7 @@
 <section class="ls-as-filtros" aria-label="Filtros das assinaturas">
   <form method="get" class="ls-as-busca" role="search" action="{% url 'assinaturas_inner' %}">
     {% if situacao != "todas" %}<input type="hidden" name="situacao" value="{{ situacao }}">{% endif %}
+    {% if cliente_id %}<input type="hidden" name="cliente" value="{{ cliente_id }}">{% endif %}
     {% if objeto != "todos" %}<input type="hidden" name="objeto" value="{{ objeto }}">{% endif %}
     <i class="bi bi-search" aria-hidden="true"></i>
     <input type="search" name="q" value="{{ busca }}" autocomplete="off" maxlength="80" enterkeyhint="search"
@@ -34,6 +35,18 @@
     {% if busca %}<a class="ls-as-busca-limpar" href="{{ url_limpar }}" aria-label="Limpar a busca"><i class="bi bi-x-lg" aria-hidden="true"></i></a>{% endif %}
     <button type="submit" class="ls-as-busca-ir"><i class="bi bi-arrow-right" aria-hidden="true"></i><span>Buscar</span></button>
   </form>
+
+  {% if cliente_id %}
+  {# Chegou pela tela Clientes (seção 144): o chip diz de quem são e o ✕ volta a todas. #}
+  <div class="ls-as-chips" aria-label="Cliente">
+    <a class="ls-as-chip ativo ls-as-chip-cliente" href="{{ url_sem_cliente }}" data-as-cliente="{{ cliente_id }}" title="Tirar o filtro do cliente">
+      <i class="bi bi-person-fill" aria-hidden="true"></i> <span>{% if cliente_nome %}Cliente: {{ cliente_nome }}{% else %}Um cliente{% endif %}</span> <i class="bi bi-x-lg" aria-hidden="true"></i>
+    </a>
+    {% if pode_ver_clientes and cliente_nome %}
+    <a class="ls-as-chip" href="{{ url_clientes }}?abrir={{ cliente_id }}" data-as-cadastro><i class="bi bi-person-vcard" aria-hidden="true"></i> Abrir o cadastro</a>
+    {% endif %}
+  </div>
+  {% endif %}
 
   <nav class="ls-as-chips" aria-label="Situação">
     {% for chip in chips_situacao %}
@@ -78,6 +91,10 @@
 
     <div class="ls-as-card-corpo">
       <h2 class="ls-as-cliente">{{ c.cliente }}</h2>
+      {# O caminho de volta ao cliente (seção 144): as outras assinaturas dele e, para o Comercial, o cadastro. #}
+      {% if c.cliente_id and not cliente_id %}
+        <a class="ls-as-do-cliente" href="{% url 'assinaturas_inner' %}?cliente={{ c.cliente_id }}" data-as-do-cliente="{{ c.cliente_id }}"><i class="bi bi-person-lines-fill" aria-hidden="true"></i> Todas as assinaturas deste cliente</a>
+      {% endif %}
       <span class="ls-as-papel"><i class="bi bi-file-earmark-ruled" aria-hidden="true"></i> {{ c.papel }}</span>
       {% if c.situacao == "assinado" %}
         <dl class="ls-as-dados">

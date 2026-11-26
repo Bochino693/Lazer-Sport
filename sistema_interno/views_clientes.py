@@ -36,6 +36,7 @@ from django.views.generic import View
 from core.models import Estabelecimentos
 
 from . import cartao_cliente
+from . import views_assinaturas
 from . import exclusao_cliente
 from . import clientes as svc
 from .completude_clientes import (
@@ -127,6 +128,21 @@ class ClientesInnerView(RespostaJSONMixin, GestorInternoRequiredMixin, View):
         pagina.object_list = list(pagina.object_list)
         origem = origem_empresa()
         fichas = [self.ficha(cliente, origem) for cliente in pagina.object_list]
+        # AS ASSINATURAS DE CADA CLIENTE (seção 144): a contagem da página
+        # inteira numa consulta só, com a regra de quem vê o quê da tela
+        # Assinaturas (`views_assinaturas`). Quem não tem a tela não ganha nada.
+        assinaturas = views_assinaturas.contagem_por_cliente(
+            request.user, [cliente.pk for cliente in pagina.object_list],
+        )
+        url_assinaturas = reverse("assinaturas_inner", urlconf="sistema_interno.urls")
+        for ficha in fichas:
+            numeros = assinaturas.get(ficha["obj"].pk)
+            ficha["assinaturas"] = {
+                **numeros,
+                "total": numeros["assinadas"] + numeros["aguardando"],
+                "resumo": views_assinaturas.resumo_do_cliente(numeros),
+                "url": f"{url_assinaturas}?cliente={ficha['obj'].pk}",
+            } if numeros else None
 
         todos = svc.com_publicacao_mapa()
         buffets = list(

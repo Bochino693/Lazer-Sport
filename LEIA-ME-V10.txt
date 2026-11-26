@@ -11093,3 +11093,55 @@ Dependência nova: rjsmin (requirements.txt).
    salvo. NÃO conferido: o Multi Jogos na tela (só nos testes) e, sobretudo,
    O BANCO NO AR -- a migração roda no deploy; os nomes das fichas no ar
    podem diferir dos que o dono descreveu.
+
+144) PELA TELA CLIENTES, AS ASSINATURAS DE CADA CLIENTE
+   O PEDIDO: "no sistema interno, através da aba de clientes devemos poder
+   acessar as assinaturas deles, entendeu?"
+
+   ONDE FICA O ATALHO (Comercial > Clientes), em cada cliente que tem
+   documento de assinatura:
+     * um selo verde embaixo dos números de propostas ("2 assinadas · 1
+       aguardando");
+     * a ação "Assinaturas (3)" no "⋮" da linha (e na barra do cartão, no
+       modo Cards).
+   Cliente sem documento não ganha nada; quem não tem a tela Assinaturas
+   também não.
+   O QUE ABRE: a tela Assinaturas já filtrada por ele
+   (/assinaturas/?cliente=<id>), com os mesmos cards e botões de sempre
+   (Imprimir ou PDF, Ver, Abrir o QR e o link). Em cima, o chip "Cliente:
+   Fulano ✕" (o ✕ volta a todas) e, para quem vê Clientes, "Abrir o
+   cadastro". Os chips de situação e de objeto e a busca guardam o cliente.
+   Escolhi o filtro (e não uma seção dentro da janela do cliente) para não
+   haver uma segunda cópia dos cards nem da regra de quem vê o quê.
+   PELO VÍNCULO DE VERDADE: o contrato do orçamento ligado ao cadastro
+   (orcamento.cliente) e a ordem de serviço ligada a ele
+   (ordem_servico.cliente). Nunca pelo nome: um homônimo não herda nada.
+   Orçamento ou O.S. SEM cliente vinculado não aparece em cliente nenhum
+   (continua na tela Assinaturas geral).
+   O CAMINHO INVERSO: cada card da tela Assinaturas tem "Todas as
+   assinaturas deste cliente".
+   QUEM VÊ O QUÊ: a mesma regra da tela Assinaturas
+   (views_assinaturas.documentos_visiveis) -- a contagem e o filtro só
+   cortam o que a pessoa já podia ver. Vendas conta e vê só os contratos; o
+   Ambulante, só a própria carteira; a Produção e o Financeiro não têm a
+   tela Clientes, mas o endereço ?cliente= funciona para eles com o que
+   veem (O.S.; o Financeiro, também os contratos). O id de um cliente que
+   a pessoa não pode ver devolve a lista vazia; o nome dele só aparece no
+   chip para quem vê o cadastro ou tem algum documento dele.
+   POUCAS IDAS AO BANCO: a contagem da página inteira de clientes é UMA
+   consulta (views_assinaturas.contagem_por_cliente); a lista não ganha
+   consulta por cliente.
+   ARQUIVOS: sistema_interno/views_assinaturas.py (do_cliente,
+   contagem_por_cliente, resumo_do_cliente, o filtro), views_clientes.py,
+   templates/clientes_inner.html, templates/assinaturas_inner.html,
+   static/interno/assinaturas.css e interno_modern.css (seção nova no fim).
+   TESTES: tests_assinaturas.py (+8): a contagem pelo vínculo (o homônimo
+   não herda); o atalho só em quem tem documento; cada função conta só o
+   que vê; a contagem numa consulta e a lista sem crescer; o filtro com o
+   chip, os chips guardando o cliente; id inválido ou alheio não vaza; o
+   caminho do card ao cliente.
+   CONFERIDO NO CHROMIUM (dados SINTÉTICOS, 390 e 1366 px): os selos na
+   lista, a ação na folha do "⋮", o clique abrindo a tela filtrada, o chip
+   de situação guardando o cliente, "Abrir o cadastro", o ✕ e o atalho do
+   card; como Vendas, Ambulante, Produção e Financeiro (só em 1366). NÃO
+   conferido: o modo Cards da lista de clientes e os temas Sol e Eclipse.

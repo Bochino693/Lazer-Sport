@@ -30,7 +30,8 @@ from django.utils import timezone
 from . import documento_assinatura as svc
 from . import documento_servico as servico
 from .menu import menu_do_usuario
-from .models import DocumentoAssinatura, Orcamento, OrdemServico
+from . import views_assinaturas
+from .models import Cliente, DocumentoAssinatura, Orcamento, OrdemServico
 from .permissoes import capacidades
 from .tests_documento_assinatura import CPF_DO_CLIENTE, png_de_assinatura
 from .tests_documento_os import BaseOS
@@ -450,3 +451,134 @@ class MenuERegrasDaCasaTests(BaseAssinaturas):
         for proibido in ("<select", "alert(", "confirm(", "<script"):
             self.assertNotIn(proibido, modelo)
         self.assertIn('data-ls-tela="assinaturas"', modelo)
+
+
+# ======================================================================
+# PELA TELA CLIENTES (seção 144)
+# ======================================================================
+class AssinaturasPeloClienteTests(BaseAssinaturas):
+    """O dono: "através da aba de clientes devemos poder acessar as assinaturas deles"."""
+
+    def setUp(self):
+        super().setUp()
+        # o cadastro ligado ao orçamento assinado do vendedor e à O.S. que aguarda
+        self.buffet = Cliente.objects.create(nome_cliente="Buffet Alegria Sintético", telefone="(11) 97777-6655")
+        Orcamento.objects.filter(pk=self.orc_assinado.pk).update(cliente=self.buffet)
+        OrdemServico.objects.filter(pk=self.ordem.pk).update(cliente=self.buffet)
+        # o do ambulante, com o contrato que aguarda
+        self.escola = Cliente.objects.create(nome_cliente="Escola Modelo Fictícia", telefone="(11) 96666-0000")
+        Orcamento.objects.filter(pk=self.orc_ambulante.pk).update(cliente=self.escola)
+        # um HOMÔNIMO sem vínculo nenhum: não pode herdar as assinaturas pelo nome
+        self.homonimo = Cliente.objects.create(nome_cliente="Buffet Alegria Sintético", telefone="(11) 95555-0000")
+        self.sem_nada = Cliente.objects.create(nome_cliente="Cliente Sem Documento Sintético")
+
+    def clientes(self, usuario):
+        self.client.force_login(usuario)
+        return self.client.get("/clientes/", **INTERNO)
+
+    def fichas(self, resposta):
+        return {ficha["obj"].pk: ficha["assinaturas"] for ficha in resposta.context["fichas"]}
+
+    # ---------------- a contagem, na lista de clientes ----------------
+    def test_a_contagem_de_cada_cliente_pelo_vinculo_de_verdade(self):
+        numeros = self.fichas(self.clientes(self.gestao))
+        buffet = numeros[self.buffet.pk]
+        self.assertEqual((buffet["assinadas"], buffet["aguardando"], buffet["total"]), (1, 1, 2))
+        self.assertEqual(buffet["resumo"], "1 assinada · 1 aguardando")
+        self.assertEqual(buffet["url"], f"/assinaturas/?cliente={self.buffet.pk}")
+        self.assertEqual(numeros[self.escola.pk]["resumo"], "1 aguardando")
+        self.assertIsNone(numeros[self.homonimo.pk])   # o mesmo nome, outro cadastro
+        self.assertIsNone(numeros[self.sem_nada.pk])
+
+    def test_o_atalho_aparece_na_linha_so_de_quem_tem_documento(self):
+        html = self.clientes(self.gestao).content.decode()
+        self.assertIn(f'data-cliente-assinaturas="{self.buffet.pk}"', html)
+        self.assertIn(f'href="/assinaturas/?cliente={self.buffet.pk}"', html)
+        self.assertIn("1 assinada · 1 aguardando", html)
+        self.assertIn("Assinaturas (2)", html)
+        self.assertNotIn(f'data-cliente-assinaturas="{self.homonimo.pk}"', html)
+        self.assertNotIn(f'data-cliente-assinaturas="{self.sem_nada.pk}"', html)
+
+    def test_cada_um_conta_so_o_que_pode_ver(self):
+        # Vendas não vê as das O.S.: do buffet, só o contrato assinado
+        vendas = self.fichas(self.clientes(self.vendedor))
+        self.assertEqual(vendas[self.buffet.pk]["resumo"], "1 assinada")
+        self.assertEqual(vendas[self.escola.pk]["resumo"], "1 aguardando")
+        # o Ambulante, só a própria carteira
+        ambulante = self.fichas(self.clientes(self.ambulante))
+        self.assertIsNone(ambulante.get(self.buffet.pk))
+        self.assertEqual(ambulante[self.escola.pk]["resumo"], "1 aguardando")
+        # quem conta é a regra da tela Assinaturas
+        self.assertEqual(
+            views_assinaturas.contagem_por_cliente(self.tecnico, [self.buffet.pk, self.escola.pk]),
+            {self.buffet.pk: {"assinadas": 0, "aguardando": 1}},   # a Produção: só a O.S.
+        )
+        self.assertEqual(views_assinaturas.contagem_por_cliente(self.criacao, [self.buffet.pk]), {})
+
+    def test_a_contagem_e_uma_consulta_so_para_a_pagina(self):
+        self.clientes(self.gestao)
+
+        def consultas():
+            with CaptureQueriesContext(connection) as contexto:
+                self.assertEqual(self.client.get("/clientes/", **INTERNO).status_code, 200)
+            return len(contexto)
+
+        antes = consultas()
+        for numero in range(6):
+            cliente = Cliente.objects.create(nome_cliente=f"Cliente Extra Sintético {numero}")
+            orcamento = self.criar_orcamento(cliente.nome_cliente, self.vendedor, cliente=cliente)
+            svc.gerar(orcamento, self.vendedor)
+        self.assertLessEqual(consultas(), antes, "cada cliente a mais não pode custar uma ida ao banco")
+        todos = list(Cliente.objects.values_list("pk", flat=True))
+        with CaptureQueriesContext(connection) as contexto:
+            views_assinaturas.contagem_por_cliente(self.gestao, todos)
+        contagens = [c["sql"] for c in contexto if "documentoassinatura" in c["sql"].lower()]
+        self.assertEqual(len(contagens), 1)   # a contagem em si é UMA consulta, qualquer que seja a página
+
+    # ---------------- a tela Assinaturas filtrada ----------------
+    def test_o_filtro_mostra_so_as_do_cliente_com_o_chip_para_limpar(self):
+        resposta = self.abrir(self.gestao, f"?cliente={self.buffet.pk}")
+        self.assertEqual(self.ids(resposta), {self.doc_assinado.pk, self.doc_os_aguardando.pk})
+        html = resposta.content.decode()
+        self.assertIn("Cliente: Buffet Alegria Sintético", html)
+        self.assertIn(f'data-as-cliente="{self.buffet.pk}"', html)
+        self.assertIn(f'href="/clientes/?abrir={self.buffet.pk}"', html)          # a Gestão abre o cadastro
+        self.assertRegex(html, r'class="ls-as-chip ativo ls-as-chip-cliente" href="/assinaturas/"')  # o ✕ volta a todas
+        # os chips e a busca guardam o cliente
+        self.assertIn(f"?situacao=assinadas&amp;cliente={self.buffet.pk}", html)
+        self.assertIn(f'name="cliente" value="{self.buffet.pk}"', html)
+        numeros = {c["valor"]: c["quantos"] for c in resposta.context["chips_situacao"]}
+        self.assertEqual(numeros, {"todas": 2, "assinadas": 1, "aguardando": 1})
+
+    def test_o_filtro_e_pelo_vinculo_e_nao_pelo_nome(self):
+        self.assertEqual(self.ids(self.abrir(self.gestao, f"?cliente={self.homonimo.pk}")), set())
+        self.assertEqual(self.ids(self.abrir(self.gestao, f"?cliente={self.sem_nada.pk}")), set())
+        self.assertEqual(self.ids(self.abrir(self.gestao, "?cliente=abc")), self.ids(self.abrir(self.gestao)))
+        self.assertEqual(self.ids(self.abrir(self.gestao, "?cliente=999999")), set())
+
+    def test_o_filtro_nao_vaza_o_que_a_pessoa_nao_ve(self):
+        # o Ambulante pede o cliente do vendedor: nada, nem o nome
+        resposta = self.abrir(self.ambulante, f"?cliente={self.buffet.pk}")
+        self.assertEqual(self.ids(resposta), set())
+        self.assertNotContains(resposta, "Maria Exemplo da Silva")
+        # a Produção vê só a O.S. dele; o Financeiro, o contrato e a O.S.
+        self.assertEqual(self.ids(self.abrir(self.tecnico, f"?cliente={self.buffet.pk}")), {self.doc_os_aguardando.pk})
+        self.assertEqual(
+            self.ids(self.abrir(self.financeiro, f"?cliente={self.buffet.pk}")),
+            {self.doc_assinado.pk, self.doc_os_aguardando.pk},
+        )
+        # quem não vê o cadastro e não tem documento dele não lê nem o nome
+        resposta = self.abrir(self.tecnico, f"?cliente={self.escola.pk}")
+        self.assertEqual(self.ids(resposta), set())
+        self.assertNotContains(resposta, "Escola Modelo Fictícia")
+        self.assertContains(resposta, "Um cliente")
+        # e quem não vê Clientes não ganha o atalho para o cadastro
+        self.assertNotContains(self.abrir(self.tecnico, f"?cliente={self.buffet.pk}"), "data-as-cadastro")
+        # a Criação continua fora
+        self.assertEqual(self.abrir(self.criacao, f"?cliente={self.buffet.pk}").status_code, 302)
+
+    def test_do_card_volta_se_ao_cliente(self):
+        html = self.abrir(self.gestao).content.decode()
+        self.assertIn(f'href="/assinaturas/?cliente={self.buffet.pk}" data-as-do-cliente="{self.buffet.pk}"', html)
+        # já filtrada, o card não repete o atalho
+        self.assertNotIn("data-as-do-cliente", self.abrir(self.gestao, f"?cliente={self.buffet.pk}").content.decode())
