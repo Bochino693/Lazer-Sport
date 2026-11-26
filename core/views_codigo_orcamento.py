@@ -251,6 +251,50 @@ class AssinarTermoView(LoginRequiredMixin, View):
         return redirect("documento_assinatura_publico", token=token)
 
 
+class AssinarOrdemDeServicoView(LoginRequiredMixin, View):
+    """"Assinar a O.S." do orçamento da conta (LEIA-ME-V10, seção 146).
+
+    A ordem de serviço para assinatura (seção 124) só chegava pelo link que
+    a equipe manda. Em Meus pedidos, o cliente do orçamento pede o link
+    dele -- o mesmo `emitir_link`, as mesmas conferências na página de
+    assinar. O documento tem de existir (quem gera é a equipe: a O.S. é
+    dela); aqui nada nasce. Só POST, só o orçamento da conta da sessão.
+    """
+
+    login_url = "login"
+    http_method_names = ["post"]
+
+    def post(self, request):
+        from sistema_interno import central_do_cliente
+
+        orcamento = svc.orcamento_da_conta(request.POST.get("codigo"), request.user)
+        if orcamento is None:
+            avisar(
+                request,
+                "Este orçamento não está na sua conta. Vincule o código dele primeiro.",
+                nivel=messages.ERROR,
+                titulo="Orçamento não encontrado",
+            )
+            return _de_volta()
+        ancora = f"orc-{orcamento.codigo}"
+        documento = central_do_cliente.documento_da_ordem_para_assinar(orcamento)
+        if documento is None or svc_doc.motivo_da_suspensao(documento):
+            avisar(
+                request,
+                "Esta ordem de serviço não está esperando a sua assinatura agora. "
+                "Se a equipe pediu para assinar, fale com ela.",
+                nivel=messages.WARNING,
+                titulo="Assinatura indisponível",
+            )
+            return _de_volta(ancora)
+        token, _expira = svc_doc.emitir_link(documento, canal="cliente")
+        log.info(
+            "O.S. %s: link de assinatura pedido pelo cliente em Meus pedidos (link %s)",
+            documento.ordem_servico_id, documento.links_gerados,
+        )
+        return redirect("documento_assinatura_publico", token=token)
+
+
 class AssinarContratoDoPedidoView(LoginRequiredMixin, View):
     """"Assinar o contrato" de um PEDIDO DO SITE pago (LEIA-ME-V10, seção 145).
 

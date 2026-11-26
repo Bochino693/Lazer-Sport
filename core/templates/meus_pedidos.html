@@ -65,6 +65,28 @@
     <div class="pd-pagina">
     <div class="pd-lista">
 
+    {# O QUE FALTA FAZER, NUM LUGAR SÓ (LEIA-ME-V10, seção 146): cada linha leva ao cartão dela #}
+    {% if o_que_falta %}
+    <nav class="ck-card pd-falta" aria-labelledby="pd-falta-titulo">
+        <h2 class="pd-falta-titulo" id="pd-falta-titulo">
+            <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+            O que falta você fazer
+            <span class="ck-contador">{{ o_que_falta|length }}</span>
+        </h2>
+        <ul class="pd-falta-lista">
+            {% for passo in o_que_falta %}
+            <li>
+                <a class="pd-falta-passo" href="#{{ passo.ancora }}">
+                    <span class="pd-falta-icone" aria-hidden="true"><i class="fa-solid {{ passo.icone }}"></i></span>
+                    <span class="pd-falta-texto">{{ passo.texto }}</span>
+                    <i class="fa-solid fa-chevron-right pd-falta-seta" aria-hidden="true"></i>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+
     {# O CÓDIGO DO ORÇAMENTO DO TELEFONE (LEIA-ME-V10, seção 104) #}
     {% include "partials/orcamento_vincular.html" %}
 

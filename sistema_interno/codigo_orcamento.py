@@ -300,7 +300,8 @@ def orcamentos_da_conta(usuario):
         # a produção (a fila e as etapas, seção 112) vem junto
         .select_related("ordem_servico", "producao")
         .prefetch_related(
-            "itens",
+            # a foto de cada item vem do brinquedo dele (seção 146)
+            "itens__brinquedo",
             "producao__unidades",
             Prefetch(
                 "documentos_assinatura",

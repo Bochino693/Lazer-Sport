@@ -75,6 +75,11 @@
         <ul class="oc-itens" aria-label="Itens do orçamento">
             {% for item in cartao.itens %}
             <li class="oc-item">
+                {# a foto inteira, presa à moldura (seções 141 e 146) #}
+                <span class="oc-item-foto" aria-hidden="true">
+                    {% if item.foto_url %}<img src="{{ item.foto_url }}" alt="" loading="lazy" decoding="async" width="52" height="52">
+                    {% else %}<i class="fa-solid fa-cube"></i>{% endif %}
+                </span>
                 <span class="oc-item-nome">{{ item.descricao }}</span>
                 <span class="oc-item-qtd">× {{ item.quantidade }}</span>
             </li>
@@ -94,6 +99,46 @@
         </p>
         {% endif %}
     </div>
+
+    {# A ORDEM DE SERVIÇO DESTE ORÇAMENTO (LEIA-ME-V10, seção 146) #}
+    {% if cartao.ordem %}
+    {% with os=cartao.ordem %}
+    <section class="oc-ordem{% if os.cancelada %} is-cancelada{% elif os.assinada %} is-assinada{% endif %}" aria-label="Ordem de serviço">
+        <span class="oc-ordem-icone" aria-hidden="true"><i class="fa-solid fa-screwdriver-wrench"></i></span>
+        <div class="oc-ordem-texto">
+            <strong>Ordem de serviço <span class="oc-ordem-numero">{{ os.numero }}</span></strong>
+            <small>
+                {{ os.situacao }}
+                {% if os.agendada_para and not os.cancelada %}· agendada para {{ os.agendada_para|date:"d/m/Y \à\s H:i" }}{% endif %}
+                {% if os.assinada %}· assinada em {{ os.assinada_em|date:"d/m/Y" }}{% elif os.falta_assinar %}· falta a sua assinatura{% endif %}
+            </small>
+            {% if os.equipamento %}<small class="oc-ordem-equip">{{ os.equipamento }}</small>{% endif %}
+        </div>
+        <div class="oc-ordem-acoes">
+            {% if os.falta_assinar %}
+            <form method="post" action="{% url 'assinar_ordem_de_servico' %}" class="oc-form">
+                {% csrf_token %}
+                <input type="hidden" name="codigo" value="{{ o.codigo }}">
+                <button type="submit" class="ck-botao ck-botao--primario">
+                    <i class="fa-solid fa-signature" aria-hidden="true"></i>
+                    <span>Assinar a O.S.</span>
+                </button>
+            </form>
+            {% endif %}
+            <a class="ck-botao ck-botao--secundario" href="{{ os.url }}" target="_blank" rel="noopener">
+                <i class="fa-solid fa-file-lines" aria-hidden="true"></i>
+                Ver a O.S.
+            </a>
+            {% if os.assinada %}
+            <a class="ck-botao ck-botao--secundario" href="{{ os.url_assinada }}" target="_blank" rel="noopener">
+                <i class="fa-solid fa-clipboard-check" aria-hidden="true"></i>
+                Ver a O.S. assinada
+            </a>
+            {% endif %}
+        </div>
+    </section>
+    {% endwith %}
+    {% endif %}
 
     {# O QUE O CLIENTE FAZ SOZINHO #}
     <div class="pd-acoes oc-acoes">

@@ -8578,6 +8578,12 @@ class MeusPedidosView(LoginRequiredMixin, View):
             )
             for fase in cartao.fases:
                 fase.icone = ICONES_DAS_FASES.get(fase.chave, "fa-circle-info")
+        # MEUS PEDIDOS, CENTRALIZADO (LEIA-ME-V10, seção 146): a O.S. de cada
+        # orçamento, a foto dos itens e, no alto, o que falta o cliente fazer.
+        from sistema_interno import central_do_cliente
+
+        central_do_cliente.anotar_orcamentos(orcamentos)
+        o_que_falta = central_do_cliente.o_que_falta(pedidos, orcamentos)
         # o código que voltou de um erro (para corrigir uma letra), ou o do
         # link da proposta ("?codigo=LS-..."), já no campo
         codigo_digitado = (
@@ -8589,6 +8595,7 @@ class MeusPedidosView(LoginRequiredMixin, View):
             'pedidos': pedidos,
             'resumo_pedidos': resumo,
             'orcamentos': orcamentos,
+            'o_que_falta': o_que_falta,
             'orcamentos_em_andamento': sum(
                 1 for cartao in orcamentos
                 if cartao.situacao not in ('recusado', 'expirado', 'substituido', 'concluido')

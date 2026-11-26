@@ -11226,3 +11226,84 @@ Dependência nova: rjsmin (requirements.txt).
    o chip "Pedidos do site", o card e a via. NÃO conferido: o fluxo de
    assinar em 1366 px; um pedido com combo ou promoção na tela (a regra é
    a da lista de montagem, testada lá); o pagamento de verdade.
+
+
+==========================================================================
+146. MEUS PEDIDOS, CENTRALIZADO: A O.S., A FOTO DOS ITENS E O QUE FALTA FAZER
+==========================================================================
+
+O PEDIDO DO DONO
+"melhore também as informações do lado do cliente (...) em meus pedidos,
+para centralizar os dados dos orçamentos, O.S. e pedidos do site". Fatia (b)
+do pedido das assinaturas (a fatia (a) é a seção 145).
+
+O QUE HAVIA (conferido antes de mexer)
+  * Meus pedidos já mostrava os pedidos do site (fases, produção, itens com
+    foto e, desde a seção 145, o contrato) e os orçamentos vinculados pelo
+    código (fases, contrato, Pix).
+  * A ORDEM DE SERVIÇO NÃO APARECIA para o cliente em Meus pedidos. Ela só
+    entrava na conta das fases do orçamento ("Entregue", "Agendado para");
+    o documento da O.S. só chegava pelo link que a equipe manda.
+  * Os itens do orçamento apareciam só com o nome e a quantidade, sem foto.
+  * Cada coisa que o cliente tinha para fazer estava no cartão dela; não
+    havia um resumo.
+
+O QUE MUDOU
+  1. A O.S. NO CARTÃO DO ORÇAMENTO. O orçamento que a conta acompanha
+     mostra a O.S. dele: o número, a situação, a agenda, o equipamento,
+     "Ver a O.S." (a página pública dela) e, assinada, "Ver a O.S.
+     assinada" (o comprovante). Só depois de ENVIADA ao cliente (antes
+     disso a página dela nem abre) e nunca a versão trocada por outra.
+  2. "ASSINAR A O.S." Quando a equipe gerou o documento da O.S. (seção 124)
+     e ele espera a assinatura, o cliente pede o link dele ali mesmo
+     (POST /meus-pedidos/orcamento/ordem-de-servico/assinar/): a mesma
+     `emitir_link`, a mesma página de assinar. Aqui nada nasce: quem gera o
+     documento da O.S. é a equipe. O.S. cancelada, já assinada, sem
+     documento, de outra conta, anônimo e GET ficam de fora.
+  3. A FOTO DE CADA ITEM DO ORÇAMENTO: a capa do brinquedo do item, inteira
+     e presa à moldura (`object-fit: contain`, a regra da seção 141); item
+     sem brinquedo (frete, instalação) mostra um ícone. O adesivo continua
+     na descrição do item, que agora pode ocupar duas linhas.
+  4. "O QUE FALTA VOCÊ FAZER", no alto da página: responder a proposta,
+     assinar o contrato do orçamento, assinar a O.S., concluir o pagamento
+     do pedido do site e assinar o contrato do pedido do site. Cada linha
+     leva ao cartão dela (âncora). Sem nada a fazer, o quadro não aparece.
+  5. Só os dados da conta de quem está logado, e numa conta fixa de
+     consultas: os brinquedos dos itens e os documentos das O.S. vêm de uma
+     vez (um teste conta as consultas com 1 e com 5 orçamentos).
+
+O QUE NÃO ENTROU (e por quê)
+  * A O.S. AVULSA (sem orçamento da conta) não aparece: a O.S. não tem
+    ligação com a conta do site, e ligar pelo nome ou pelo telefone
+    mostraria o serviço de um cliente a outro. Ela continua pelo link. Para
+    aparecer, é preciso um vínculo de verdade (um código como o do
+    orçamento, ou a conta no cadastro do cliente) -- decisão do dono.
+  * O MOEDEIRO ainda não é uma opção gravada no item (seção 143, primeira
+    fatia), então não há o que mostrar; entra com as outras fatias dele.
+  * O adesivo do pedido do site segue no nome do item (o item do pedido não
+    tem campo de adesivo).
+
+ARQUIVOS
+  sistema_interno/central_do_cliente.py          (novo)
+  sistema_interno/codigo_orcamento.py            (os itens trazem o brinquedo)
+  core/views.py                                  (MeusPedidosView)
+  core/views_codigo_orcamento.py                 (AssinarOrdemDeServicoView)
+  core/urls.py                                   (assinar_ordem_de_servico)
+  core/templates/meus_pedidos.html
+  core/templates/partials/orcamento_cartao.html
+  core/static/site/paginas/meus_pedidos.css      (seção nova no fim)
+  core/tests_meus_pedidos_central.py             (novo, 17 testes)
+
+Sem migração.
+
+TESTES
+  DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test \
+      core.tests_meus_pedidos_central --parallel 1
+  E a suíte completa (core sistema_interno contas rh).
+
+CONFERIDO NO NAVEGADOR (390 px e 1366 px, dados sintéticos)
+  O quadro "O que falta você fazer" e o toque que leva ao cartão; as fotos
+  quadrada e larga inteiras na moldura e o ícone do item sem foto; a O.S.
+  esperando assinatura e a assinada; "Ver a O.S.", "Ver a O.S. assinada" e
+  "Assinar a O.S." (que abre a página de assinar, sem relógio); sem rolagem
+  de lado.
