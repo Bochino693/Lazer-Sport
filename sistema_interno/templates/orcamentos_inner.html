@@ -1595,11 +1595,82 @@ LSTela.pronto(function () {
     var descricao = linha.querySelector(".ls-item-descricao");
     var valor = linha.querySelector(".ls-item-valor");
 
+    /* Trocar de item começa SEM sistema de ficha: a escolha era da máquina
+       de antes. A marca sai da descrição e o acréscimo, do valor. */
+    if (linha.dataset.ficha === "1") escolherFicha(linha, false);
+
     if (opcao) {
       if (!descricao.value.trim()) descricao.value = opcao.rotulo;
       if (!paraNumero(valor.value) && opcao.preco) valor.value = opcao.preco;
     }
 
+    pintarFicha(linha);
+    recalcular();
+  }
+
+  /* ------------------------------------------------------------------
+     COM OU SEM SISTEMA DE FICHA (LEIA-ME-V10, seção 149)
+     A máquina que oferece a opção vem da busca com `ficha` (o acréscimo
+     e o preço COM, calculados no servidor). Os dois chips aparecem só
+     nela. Escolher "com" põe a marca na descrição e soma o acréscimo ao
+     valor (que continua editável, como todo preço de proposta); o
+     servidor confere de novo se a máquina oferece a opção.
+     ------------------------------------------------------------------ */
+  var MARCA_FICHA = " — com sistema de ficha";
+
+  function fichaDaLinha(linha) {
+    var opcao = linha.buscaItem ? linha.buscaItem.opcaoAtual() : null;
+    return opcao && opcao.ficha ? opcao.ficha : null;
+  }
+
+  function pintarFicha(linha) {
+    var caixa = linha.querySelector(".ls-item-ficha");
+    if (!caixa) return;
+    var ficha = fichaDaLinha(linha);
+    caixa.hidden = !ficha;
+    if (!ficha) { linha.dataset.ficha = ""; return; }
+    var com = linha.dataset.ficha === "1";
+    caixa.querySelectorAll(".ls-ficha-chip").forEach(function (chip) {
+      var ativo = (chip.dataset.ficha === "1") === com;
+      chip.classList.toggle("ativo", ativo);
+      chip.setAttribute("aria-pressed", ativo ? "true" : "false");
+      chip.disabled = !podeEditarComercial;
+    });
+    caixa.querySelector(".ls-ficha-mais").textContent = "+ R$ " + ficha.acrescimo;
+  }
+
+  function escolherFicha(linha, com) {
+    var ficha = fichaDaLinha(linha);
+    var estava = linha.dataset.ficha === "1";
+    if (com && !ficha) com = false;
+    if (estava === com) { pintarFicha(linha); return; }
+
+    var descricao = linha.querySelector(".ls-item-descricao");
+    var valor = linha.querySelector(".ls-item-valor");
+    var opcao = linha.buscaItem ? linha.buscaItem.opcaoAtual() : null;
+    var texto = descricao.value.split(MARCA_FICHA).join("").trim();
+    descricao.value = com ? (texto.slice(0, 180 - MARCA_FICHA.length) + MARCA_FICHA) : texto;
+
+    /* O valor: o da tabela vira o preço COM que o servidor mandou; o que
+       a equipe já ajustou à mão ganha (ou perde) só o acréscimo. */
+    var acrescimo = ficha ? paraNumero(ficha.acrescimo) : 0;
+    var atual = paraNumero(valor.value);
+    if (acrescimo && atual) {
+      var novo = null;
+      if (com) {
+        novo = (opcao && paraNumero(opcao.preco) === atual && ficha.preco_com)
+          ? paraNumero(ficha.preco_com) : atual + acrescimo;
+      } else if (atual > acrescimo) {
+        novo = atual - acrescimo;
+      }
+      if (novo !== null) {
+        valor.value = novo.toFixed(2).replace(".", ",");
+        Painel.aplicarMascaras(linha);
+      }
+    }
+
+    linha.dataset.ficha = com ? "1" : "";
+    pintarFicha(linha);
     recalcular();
   }
 
@@ -1672,7 +1743,12 @@ LSTela.pronto(function () {
     tr.className = "ls-item-linha";
     tr.innerHTML =
       '<td data-rotulo="Item"></td>' +
-      '<td data-rotulo="Descrição"><input class="form-control form-control-sm ls-item-descricao" maxlength="180" placeholder="Descrição que vai na proposta"></td>' +
+      '<td data-rotulo="Descrição"><input class="form-control form-control-sm ls-item-descricao" maxlength="180" placeholder="Descrição que vai na proposta">' +
+        /* COM OU SEM SISTEMA DE FICHA (seção 149): dois chips, só na máquina que oferece */
+        '<div class="ls-item-ficha" role="group" aria-label="Sistema de ficha" hidden>' +
+          '<button type="button" class="ls-ficha-chip" data-ficha="0" aria-pressed="true"><i class="bi bi-slash-circle" aria-hidden="true"></i> <span>Sem sistema de ficha</span></button>' +
+          '<button type="button" class="ls-ficha-chip" data-ficha="1" aria-pressed="false"><i class="bi bi-coin" aria-hidden="true"></i> <span>Com sistema de ficha</span> <b class="ls-ficha-mais"></b></button>' +
+        '</div></td>' +
       '<td data-rotulo="Qtd."><input type="number" class="form-control form-control-sm text-end ls-item-quantidade" inputmode="numeric" min="1" max="100000" step="1" value="1"></td>' +
       '<td data-rotulo="Valor unit."><input class="form-control form-control-sm text-end ls-item-valor" inputmode="decimal" data-mascara="moeda-valor" autocomplete="off" placeholder="0,00"></td>' +
       '<td data-rotulo="Subtotal" class="text-end"><span class="ls-money ls-item-subtotal">R$ 0,00</span></td>' +
@@ -1707,7 +1783,10 @@ LSTela.pronto(function () {
       tr.querySelector(".ls-item-valor").value = item.valor_unitario || "";
       /* O valor salvo é número ("2800,00"): sai já no formato da tela. */
       Painel.aplicarMascaras(tr);
+      /* a escolha salva do sistema de ficha (o valor e a descrição já a trazem) */
+      tr.dataset.ficha = item.com_ficha ? "1" : "";
     }
+    pintarFicha(tr);
 
     recalcular();
     return tr;
@@ -1716,6 +1795,11 @@ LSTela.pronto(function () {
   corpo.addEventListener("input", recalcular);
 
   corpo.addEventListener("click", function (evento) {
+    var chipFicha = evento.target.closest(".ls-ficha-chip");
+    if (chipFicha) {
+      escolherFicha(chipFicha.closest("tr"), chipFicha.dataset.ficha === "1");
+      return;
+    }
     var botao = evento.target.closest(".ls-item-remover");
     if (!botao) return;
 
@@ -2600,7 +2684,8 @@ LSTela.pronto(function () {
           produto: origem === "p:" ? referencia : "",
           peca: origem === "r:" ? referencia : "",
           quantidade: quantidade,
-          valor_unitario: valor || "0"
+          valor_unitario: valor || "0",
+          com_ficha: origem === "b:" && linha.dataset.ficha === "1"
         });
       });
 
@@ -3563,7 +3648,8 @@ LSTela.pronto(function () {
         opcao: linha.buscaItem ? linha.buscaItem.opcaoAtual() : null,
         descricao: linha.querySelector(".ls-item-descricao").value,
         quantidade: linha.querySelector(".ls-item-quantidade").value,
-        valor_unitario: linha.querySelector(".ls-item-valor").value
+        valor_unitario: linha.querySelector(".ls-item-valor").value,
+        com_ficha: linha.dataset.ficha === "1"
       });
     });
 
@@ -3624,6 +3710,8 @@ LSTela.pronto(function () {
       linha.querySelector(".ls-item-descricao").value = item.descricao || "";
       linha.querySelector(".ls-item-quantidade").value = item.quantidade || 1;
       linha.querySelector(".ls-item-valor").value = item.valor_unitario || "";
+      linha.dataset.ficha = item.com_ficha ? "1" : "";
+      pintarFicha(linha);
     });
 
     recalcular();

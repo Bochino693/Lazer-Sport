@@ -345,6 +345,10 @@ def linhas_do_pedido(pedido, regras=None) -> list[Linha]:
     for item in itens:
         quantidade = max(int(item.quantidade or 1), 1)
         nome, _, adesivo = (item.nome_item or "").partition(" — adesivo ")
+        # "com sistema de ficha" (seção 150) vai na variante, como o adesivo:
+        # é o que a fábrica lê para montar. Com adesivo, já veio junto dele.
+        if not adesivo and nome.endswith(" — com sistema de ficha"):
+            nome, adesivo = nome[: -len(" — com sistema de ficha")], "com sistema de ficha"
         modelo = item.content_type.model if item.content_type_id else ""
         objeto = item.item_original if item.content_type_id and item.object_id else None
         origem = {"item_pedido": item}

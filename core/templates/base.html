@@ -1300,7 +1300,9 @@ const LSCartLoading = (() => {
       Boolean(event.submitter && event.submitter.value === 'carrinho'),
       {
         quantidade: campos.get('quantidade') || undefined,
-        adesivo: campos.get('adesivo') || ''
+        adesivo: campos.get('adesivo') || '',
+        /* com ou sem sistema de ficha (seção 150): o servidor confere se a máquina oferece */
+        ficha: campos.get('ficha') || ''
       }
     );
   }, true);
@@ -1366,6 +1368,7 @@ function adicionarAoCarrinho(tipo, id, irParaCarrinho = false, opcoes = {}) {
     : 1;
   const body = new URLSearchParams({ quantidade: String(quantidade) });
   if (opcoes.adesivo) body.set('adesivo', String(opcoes.adesivo));
+  if (opcoes.ficha) body.set('ficha', String(opcoes.ficha));
 
   // O token da página (window.LSCsrf); recusado pelo CSRF, pega um novo e
   // manda de novo, uma vez (core/views_seguranca.py).

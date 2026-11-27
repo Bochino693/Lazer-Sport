@@ -3206,8 +3206,8 @@ class DadosContrato(Prime):
     # aparece em lugar nenhum (`moedeiro.py`). Mora aqui porque é a Gestão
     # que define, na mesma tela dos dados comerciais do contrato.
     acrescimo_moedeiro = models.DecimalField(
-        "Acréscimo do moedeiro", max_digits=10, decimal_places=2, null=True, blank=True,
-        help_text="Somado ao preço da máquina com moedeiro. Vazio: a opção não aparece.",
+        "Acréscimo do sistema de ficha", max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Somado ao preço da máquina com sistema de ficha. Vazio: a opção não aparece.",
     )
     atualizado_por = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -3237,6 +3237,21 @@ class DadosContrato(Prime):
         if dados is None:
             dados = cls.objects.create()
         return dados
+
+    def save(self, *args, **kwargs):
+        resultado = super().save(*args, **kwargs)
+        # o acréscimo do sistema de ficha fica um minuto no cache (moedeiro.py)
+        from . import moedeiro
+
+        moedeiro.esquecer()
+        return resultado
+
+    def delete(self, *args, **kwargs):
+        resultado = super().delete(*args, **kwargs)
+        from . import moedeiro
+
+        moedeiro.esquecer()
+        return resultado
 
     @property
     def faltando(self):
@@ -3533,6 +3548,12 @@ class ItemOrcamento(Prime):
     )
     quantidade = models.PositiveIntegerField(default=1)
     valor_unitario = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    # A MÁQUINA SAI COM O SISTEMA DE FICHA (LEIA-ME-V10, seção 149)? Só vale
+    # com `brinquedo` que oferece a opção (`moedeiro.py`); o servidor
+    # desmarca o que a tela não podia ter oferecido. O nome do item diz a
+    # mesma coisa (" — com sistema de ficha"), e é por ele que os
+    # documentos e a fábrica leem; este campo é a resposta para o código.
+    com_moedeiro = models.BooleanField("Com sistema de ficha", default=False)
 
     @property
     def subtotal(self):

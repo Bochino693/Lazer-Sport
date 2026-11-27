@@ -83,7 +83,7 @@ class RegraDoMoedeiroTests(TestCase):
         self.assertEqual(moedeiro.preco(self.fliperama, True), Decimal("7340.00"))
         self.assertEqual(
             [(o["rotulo"], o["com_moedeiro"], o["preco"]) for o in moedeiro.opcoes(self.fliperama)],
-            [("Sem moedeiro", False, Decimal("6990.00")), ("Com moedeiro", True, Decimal("7340.00"))],
+            [("Sem sistema de ficha", False, Decimal("6990.00")), ("Com sistema de ficha", True, Decimal("7340.00"))],
         )
         # quem não aceita nunca ganha o acréscimo, nem pedindo
         self.assertEqual(moedeiro.preco(self.brinquedao, True), Decimal("85000.00"))
@@ -93,15 +93,16 @@ class RegraDoMoedeiroTests(TestCase):
     def test_o_cadastro_novo_nasce_pela_regra(self):
         self.assertEqual(Brinquedos._meta.get_field("moedeiro").default, "")
         self.assertEqual(self.fliperama.moedeiro, "")
-        self.assertIsNone(DadosContrato.atual().acrescimo_moedeiro)
+        # o valor que o dono deu (a migração 0086, seção 148)
+        self.assertEqual(DadosContrato.atual().acrescimo_moedeiro, Decimal("999.00"))
 
 
 class TelaDoAcrescimoTests(TestCase):
     def setUp(self):
         cache.clear()
-        self.gestora = User.objects.create_user("gestora-moedeiro", password="senha-de-teste")
+        self.gestora = User.objects.create_user("gestora-ficha", password="senha-de-teste")
         atribuir_funcoes(self.gestora, ("gestao",))
-        self.vendedor = User.objects.create_user("vendedor-moedeiro", password="senha-de-teste")
+        self.vendedor = User.objects.create_user("vendedor-ficha", password="senha-de-teste")
         atribuir_funcoes(self.vendedor, ("vendas",))
 
     def salvar(self, usuario=None, **troca):
@@ -139,15 +140,22 @@ class TelaDoAcrescimoTests(TestCase):
                 self.assertEqual(DadosContrato.atual().acrescimo_moedeiro, Decimal("350.00"))
 
     def test_so_a_gestao_muda(self):
-        resposta = self.salvar(self.vendedor, acrescimo_moedeiro="999,00")
+        resposta = self.salvar(self.vendedor, acrescimo_moedeiro="123,00")
         self.assertNotEqual(resposta.status_code, 200)
-        self.assertIsNone(DadosContrato.atual().acrescimo_moedeiro)
+        self.assertEqual(DadosContrato.atual().acrescimo_moedeiro, Decimal("999.00"))
 
     def test_a_tela_mostra_o_campo_e_o_que_ele_faz(self):
         self.client.force_login(self.gestora)
+        definir_acrescimo(None)
         html = self.client.get("/orcamentos/dados-do-contrato/", **INTERNO).content.decode()
         self.assertIn('name="acrescimo_moedeiro"', html)
-        self.assertIn("Vazio: a opção “com moedeiro” não aparece em lugar nenhum.", html)
+        self.assertIn("Vazio: a opção “com sistema de ficha” não aparece em lugar nenhum.", html)
+        # o nome que a pessoa lê é "Sistema de ficha" (seção 148), nunca "moedeiro"
+        self.assertIn("Sistema de ficha", html)
+        self.assertIn("operações, eventos e afins", html)
+        visivel = html.replace('name="acrescimo_moedeiro"', "").replace("dcAjudaMoedeiro", "")
+        onde = visivel.lower().find("moedeiro")
+        self.assertEqual(onde, -1, visivel[max(onde - 120, 0):onde + 60])
         self.salvar(acrescimo_moedeiro="350,00")
         html = self.client.get("/orcamentos/dados-do-contrato/", **INTERNO).content.decode()
         self.assertIn('value="350,00"', html)
@@ -165,3 +173,87 @@ class TelaDoAcrescimoTests(TestCase):
             self.assertTrue(all(isinstance(o, migrations.AddField) for o in operacoes), caminho)
         dados = importlib.import_module("core.migrations.0218_fichas_que_sao_adesivos").Migration.operations
         self.assertTrue(all(isinstance(o, migrations.RunPython) for o in dados))
+
+
+# ======================================================================
+# O NOME, O VALOR E O LIGA/DESLIGA POR MÁQUINA (LEIA-ME-V10, seção 148)
+# ======================================================================
+class NomeEValorTests(TestCase):
+    def test_a_marca_no_nome_do_item(self):
+        com = moedeiro.nome_com_a_escolha
+        self.assertEqual(com("Air Game Premium", True), "Air Game Premium — com sistema de ficha")
+        self.assertEqual(com("Air Game Premium — com sistema de ficha", True), "Air Game Premium — com sistema de ficha")
+        self.assertEqual(com("Air Game Premium — com sistema de ficha", False), "Air Game Premium")
+        self.assertEqual(com("Air Game Premium — adesivo Candy", True), "Air Game Premium — adesivo Candy — com sistema de ficha")
+        # quem encurta é o nome, nunca a marca
+        longo = com("M" * 200, True, limite=180)
+        self.assertEqual(len(longo), 180)
+        self.assertTrue(longo.endswith(moedeiro.SUFIXO))
+        self.assertTrue(moedeiro.tem_a_marca("Fliperama — COM SISTEMA DE FICHA"))
+        self.assertFalse(moedeiro.tem_a_marca("Fliperama"))
+
+    def test_a_migracao_do_valor_so_preenche_o_vazio_e_e_idempotente(self):
+        import importlib
+
+        from django.apps import apps
+        from django.db import migrations
+
+        modulo = importlib.import_module("sistema_interno.migrations.0086_acrescimo_do_sistema_de_ficha")
+        self.assertTrue(all(isinstance(o, migrations.RunPython) for o in modulo.Migration.operations))
+        textos = importlib.import_module("sistema_interno.migrations.0085_textos_do_sistema_de_ficha")
+        self.assertTrue(all(isinstance(o, migrations.AlterField) for o in textos.Migration.operations))
+        for antes, depois in ((None, "999.00"), ("0", "999.00"), ("999.00", "999.00"), ("1250.50", "1250.50")):
+            with self.subTest(antes=antes):
+                definir_acrescimo(antes)
+                modulo.preencher(apps, None)
+                modulo.preencher(apps, None)
+                moedeiro.esquecer()
+                self.assertEqual(DadosContrato.atual().acrescimo_moedeiro, Decimal(depois))
+        # sem a linha de Dados do contrato, nada quebra e nada é criado
+        DadosContrato.objects.all().delete()
+        modulo.preencher(apps, None)
+        self.assertFalse(DadosContrato.objects.exists())
+
+
+class CadastroDaMaquinaTests(TestCase):
+    """O liga/desliga por máquina na tela do cadastro do brinquedo."""
+
+    def setUp(self):
+        cache.clear()
+        self.admin = User.objects.create_superuser("admin-ficha", "admin@exemplo.test", "senha-de-teste")
+        self.client.force_login(self.admin)
+        self.maquina = maquina("Fliperama Sintético", imagem_brinquedo="imagens_brinquedos/fliperama-sintetico.jpg")
+
+    def salvar(self, **troca):
+        dados = {
+            "action": "save", "id": self.maquina.pk, "nome_brinquedo": "Fliperama Sintético", "descricao": "x",
+            "valor_brinquedo": "6.990,00", "avaliacao": "5", "voltz": "220V",
+        }
+        dados.update(troca)
+        return self.client.post("/site/brinquedos/", dados, **AJAX)
+
+    def test_a_tela_tem_os_tres_chips_sem_select(self):
+        html = self.client.get("/site/brinquedos/", **INTERNO).content.decode()
+        for valor in ("", "sim", "nao"):
+            self.assertIn(f'name="moedeiro" value="{valor}"', html)
+        self.assertIn("Sistema de ficha", html)
+        self.assertIn("do cadastro + R$ 999,00", html)
+        trecho = html[html.index('id="toyFicha"'):html.index('id="toyFichaAjuda"')]
+        self.assertNotIn("<select", trecho)
+
+    def test_grava_a_palavra_da_gestao_e_volta_para_a_regra(self):
+        for escolha in ("nao", "sim", ""):
+            with self.subTest(escolha=escolha):
+                resposta = self.salvar(moedeiro=escolha)
+                self.assertEqual(resposta.status_code, 200, resposta.content[:300])
+                self.maquina.refresh_from_db()
+                self.assertEqual(self.maquina.moedeiro, escolha)
+        self.maquina.moedeiro = "nao"
+        self.maquina.save()
+        self.assertFalse(moedeiro.oferece(self.maquina))
+
+    def test_valor_inventado_e_recusado(self):
+        resposta = self.salvar(moedeiro="talvez")
+        self.assertNotEqual(resposta.status_code, 200)
+        self.maquina.refresh_from_db()
+        self.assertEqual(self.maquina.moedeiro, "")

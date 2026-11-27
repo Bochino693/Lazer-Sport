@@ -7286,3 +7286,26 @@ body.modal-open .ls-folha-veu{display:none!important}
 .ls-cli-assinaturas span{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .ls-cli-assinaturas:hover,.ls-cli-assinaturas:focus-visible{background:rgba(var(--green-rgb),.2);color:var(--green-texto)}
 .ls-cli-assinaturas:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+
+/* ======================================================================
+   COM OU SEM SISTEMA DE FICHA NA LINHA DO ITEM DO ORÇAMENTO (LEIA-ME-V10,
+   seção 149). Dois chips embaixo da descrição, só na máquina que oferece
+   a opção. Só variáveis do tema. (Seção nova, fora da "LISTA OU CARDS,
+   SEGUNDA PARTE".)
+   ====================================================================== */
+.ls-item-ficha{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ls-item-ficha[hidden]{display:none}
+.ls-ficha-chip{
+  min-height:34px;padding:5px 12px;display:inline-flex;align-items:center;gap:6px;
+  border:1px solid var(--line);border-radius:999px;white-space:nowrap;cursor:pointer;
+  color:var(--text-2);background:rgba(var(--verniz-rgb),.035);font-size:.76rem;font-weight:800;line-height:1.1;
+  transition:border-color .15s ease,background .15s ease,color .15s ease;
+}
+.ls-ficha-chip b{font-weight:900;color:var(--muted)}
+.ls-ficha-chip:hover,.ls-ficha-chip:focus-visible{border-color:var(--line-forte);color:var(--text);background:rgba(var(--acento-rgb),.1)}
+.ls-ficha-chip:focus-visible{outline:2px solid var(--acento);outline-offset:2px}
+.ls-ficha-chip.ativo{border-color:var(--acento);color:var(--acento-texto);background:rgba(var(--acento-rgb),.18)}
+.ls-ficha-chip.ativo b{color:var(--acento-texto)}
+.ls-ficha-chip:disabled{opacity:.6;cursor:default}
+@media (max-width:700px){.ls-ficha-chip{min-height:44px}}
+@media (prefers-reduced-motion:reduce){.ls-ficha-chip{transition:none}}

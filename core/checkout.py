@@ -189,6 +189,7 @@ def carrinho_do_cliente(perfil):
                     content_type_id=item.content_type_id,
                     object_id=item.object_id,
                     adesivo=item.adesivo,
+                    com_ficha=item.com_ficha,
                 ).first()
                 if igual:
                     igual.quantidade += item.quantidade

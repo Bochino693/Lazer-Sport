@@ -583,6 +583,7 @@
         var detalhe = plural(quantidade, "unidade", "unidades");
         if (preco) detalhe += " · " + reais(preco * quantidade);
         if (item.adesivo) detalhe += " · adesivo " + item.adesivo;
+        if (item.com_ficha) detalhe += " · com sistema de ficha";
 
         var filhos = [
             el("div", { class: "ls-cr-visto", html: svg("visto", "0 0 52 52") }),
@@ -736,6 +737,8 @@
 
         var dados = new URLSearchParams({ quantidade: String(quantidade) });
         if (opcoes.adesivo) dados.set("adesivo", String(opcoes.adesivo));
+        /* com ou sem sistema de ficha (LEIA-ME-V10, seção 150): o servidor confere */
+        if (opcoes.ficha) dados.set("ficha", String(opcoes.ficha));
 
         return postar(
             "/carrinho/adicionar/" + encodeURIComponent(tipo) + "/" + encodeURIComponent(id) + "/",
