@@ -1267,6 +1267,10 @@ class BrinquedoInfoView(View):
                 "disponivel_loja": disponivel_loja,
                 "preco_formatado": preco_formatado,
                 "preco_valor": valor if disponivel_loja else None,
+                # a máquina ACEITA o sistema de ficha (a regra e a palavra da
+                # Gestão; seção 150)? Vai no cache da página, com o resto do
+                # catálogo; o valor do acréscimo é lido fora dele.
+                "ficha_aceita": BrinquedoInfoView._aceita_ficha(brinquedo) if disponivel_loja else False,
                 "preco_sem_juros": brinquedo.sem_juros_no_cartao,
                 "preco_schema": preco_schema,
                 "imagens_brinquedo": imagens_brinquedo,
@@ -1285,6 +1289,15 @@ class BrinquedoInfoView(View):
             "imagem_catalogo_url": imagem_catalogo.url if imagem_catalogo else "",
             "curtidas": servico_favoritos.contagem_curtidas([brinquedo]).get(brinquedo.pk, 0),
         }
+
+    @staticmethod
+    def _aceita_ficha(brinquedo):
+        try:
+            from sistema_interno import moedeiro
+
+            return bool(moedeiro.aceita(brinquedo))
+        except Exception:  # noqa: BLE001 -- na dúvida, a página não oferece
+            return False
 
     def get(self, request, id):
         from urllib.parse import quote
@@ -1328,6 +1341,25 @@ class BrinquedoInfoView(View):
                 })
             extra["adesivos_troca"] = troca
             mensagem.insert(3, f"Adesivo: {escolhido['nome']}")
+
+        # COM OU SEM SISTEMA DE FICHA (LEIA-ME-V10, seção 150): os dois preços,
+        # calculados aqui (fora do cache da página: o acréscimo e a palavra
+        # da Gestão mudam sem o catálogo saber). A página só troca o que mostra.
+        preco_sem = dados["contexto"].get("preco_valor")
+        if preco_sem is not None and dados["contexto"].get("ficha_aceita"):
+            try:
+                from sistema_interno import moedeiro
+
+                acrescimo_ficha = moedeiro.acrescimo()      # um minuto no cache
+            except Exception:  # noqa: BLE001 -- sem a opção, a página vende como sempre
+                acrescimo_ficha = 0
+            if acrescimo_ficha and acrescimo_ficha > 0:
+                extra["ficha"] = {
+                    "acrescimo": acrescimo_ficha,
+                    "preco_com": preco_sem + acrescimo_ficha,
+                    "explicacao": moedeiro.EXPLICACAO,
+                    "escolhida": request.GET.get("ficha") == "com",
+                }
 
         # O contador de cliques é por visita: um UPDATE, fora do cache.
         _registrar_clique(BrinquedoClick, {"brinquedo_clicado_id": brinquedo.pk})
@@ -6233,11 +6265,22 @@ def _adicionar_ao_carrinho(request, tipo, object_id):
         if pedido:
             adesivo = objeto.variantes_adesivo.filter(ativo=True, nome=pedido).values_list("nome", flat=True).first() or ""
 
+    # COM OU SEM SISTEMA DE FICHA (LEIA-ME-V10, seção 150): só a máquina que
+    # oferece a opção. Pedido para quem não oferece (um POST feito à mão), a
+    # linha entra SEM -- o servidor nunca soma um acréscimo que a página não
+    # podia ter oferecido.
+    com_ficha = False
+    if tipo == 'brinquedo' and (request.POST.get('ficha') or "").strip().lower() in ("1", "com", "sim", "true", "on"):
+        from sistema_interno import moedeiro
+
+        com_ficha = moedeiro.oferece(objeto)
+
     item, created = ItemCarrinho.objects.get_or_create(
         carrinho=carrinho,
         content_type=content_type,
         object_id=objeto.id,
         adesivo=adesivo,
+        com_ficha=com_ficha,
         defaults={'quantidade': quantidade}
     )
 
@@ -6277,6 +6320,11 @@ def _adicionar_ao_carrinho(request, tipo, object_id):
         previa = {'tipo': tipo, 'id': objeto.pk, 'nome': str(objeto)}
     if adesivo:
         previa['adesivo'] = adesivo
+    if com_ficha:
+        # o "pronto" da folha diz a escolha e o preço COM (o que foi gravado)
+        previa['com_ficha'] = True
+        previa['preco_unitario'] = f'{item.preco_unitario:.2f}'
+        previa['preco_unitario_formatado'] = dinheiro(item.preco_unitario, prefixo='R$')
 
     return JsonResponse({
         'sucesso': True,

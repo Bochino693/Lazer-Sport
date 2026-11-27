@@ -2239,11 +2239,44 @@ class ItemCarrinho(Prime):
     quantidade = models.PositiveIntegerField(default=1)
     # o adesivo escolhido na página do produto (VarianteAdesivo.nome): a equipe sabe qual foi pedido
     adesivo = models.CharField(max_length=60, blank=True, default="", verbose_name="Adesivo")
+    # A MÁQUINA SAI COM O SISTEMA DE FICHA (LEIA-ME-V10, seção 150)? Escolhido
+    # na página do produto. Só vale para a máquina que oferece a opção: o
+    # preço é sempre conferido no servidor (`ficha_vale`), e o mesmo produto
+    # com e sem sistema de ficha são duas linhas do carrinho.
+    com_ficha = models.BooleanField("Com sistema de ficha", default=False)
+
+    @property
+    def ficha_vale(self):
+        """A escolha "com sistema de ficha" vale AGORA para este item?
+
+        Só para brinquedo, e só enquanto a máquina oferece a opção (o
+        acréscimo definido, a regra ou a palavra da Gestão). Marcado num
+        item que não oferece -- um POST feito à mão, ou a Gestão desligou
+        depois --, não soma nada e não aparece no nome.
+        """
+        if not self.com_ficha:
+            return False
+        guardado = getattr(self, "_ficha_vale", None)
+        if guardado is None:
+            try:
+                from sistema_interno import moedeiro
+
+                item = self.item
+                guardado = bool(hasattr(item, "valor_brinquedo") and moedeiro.oferece(item))
+            except Exception:  # noqa: BLE001 -- na dúvida, o preço do cadastro
+                guardado = False
+            self._ficha_vale = guardado
+        return guardado
 
     @property
     def preco_unitario(self):
 
         if hasattr(self.item, 'valor_brinquedo'):
+            if self.ficha_vale and self.item.valor_brinquedo is not None:
+                from sistema_interno import moedeiro
+
+                # o preço COM: o do cadastro + o acréscimo único (seção 148)
+                return self.item.valor_brinquedo + moedeiro.acrescimo()
             return self.item.valor_brinquedo
 
         if hasattr(self.item, 'valor_combo'):
@@ -2270,14 +2303,17 @@ class ItemCarrinho(Prime):
         )
 
     def __str__(self):
-        adesivo = f" — adesivo {self.adesivo}" if self.adesivo else ""
-        return f"{self.item}{adesivo} (x{self.quantidade})"
+        return f"{self.nome_com_adesivo} (x{self.quantidade})"
 
     @property
     def nome_com_adesivo(self):
-        """O nome do item como vai para o pedido: com o adesivo escolhido, quando há."""
+        """O nome do item como vai para o pedido: com o adesivo e o sistema de ficha, quando há."""
         nome = str(self.item) if self.item else "Produto removido"
-        return f"{nome} — adesivo {self.adesivo}" if self.adesivo else nome
+        if self.adesivo:
+            nome = f"{nome} — adesivo {self.adesivo}"
+        if self.ficha_vale:
+            nome = f"{nome} — com sistema de ficha"
+        return nome
 
 
 from django.db import IntegrityError, transaction
@@ -2829,13 +2865,19 @@ class Pedido(Prime):
                 # item fantasma sem preço.
                 continue
 
-            # o adesivo escolhido volta com o item (o pedido o guarda no nome: "— adesivo X")
-            adesivo = item.nome_item.rsplit(" — adesivo ", 1)[1] if " — adesivo " in (item.nome_item or "") else ""
+            # o adesivo e o sistema de ficha escolhidos voltam com o item (o
+            # pedido os guarda no nome: "— adesivo X — com sistema de ficha")
+            nome = item.nome_item or ""
+            com_ficha = nome.endswith(" — com sistema de ficha")
+            if com_ficha:
+                nome = nome[: -len(" — com sistema de ficha")]
+            adesivo = nome.rsplit(" — adesivo ", 1)[1] if " — adesivo " in nome else ""
             linha, criado = ItemCarrinho.objects.get_or_create(
                 carrinho=carrinho,
                 content_type_id=item.content_type_id,
                 object_id=item.object_id,
                 adesivo=adesivo,
+                com_ficha=com_ficha,
                 defaults={"quantidade": item.quantidade},
             )
             if not criado:

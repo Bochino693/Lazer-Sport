@@ -11550,3 +11550,97 @@ CONFERIDO NO NAVEGADOR (390 px e 1366 px): os chips na linha do item (com,
 sem, com de novo), o valor e a descrição mudando, salvar; a proposta
 pública e o contrato dizendo "com sistema de ficha"; a unidade da lista de
 montagem com a variante.
+
+
+==========================================================================
+150. SISTEMA DE FICHA NO SITE: PÁGINA DO PRODUTO, CARRINHO, PEDIDO E CONTRATO
+==========================================================================
+
+O PEDIDO (seção 148, item 4 da lista da 143)
+Os chips "Sem sistema de ficha / Com sistema de ficha" na página do
+produto, mudando o preço; o carrinho, o checkout, o pedido, Meus pedidos e
+o contrato do pedido do site com a escolha; o preço sempre no servidor.
+
+COMO FICOU
+  1. A PÁGINA DO PRODUTO. Na máquina que oferece a opção, embaixo do preço:
+     o quadro "Sistema de ficha" ("Para operações, eventos e afins: a
+     máquina funciona por ficha") com dois chips -- "Sem sistema de ficha"
+     e "Com sistema de ficha + R$ 999,00". Os DOIS blocos de preço (Pix,
+     cartão, parcelas) vêm prontos do servidor; o chip só troca qual
+     aparece e o que vai ao carrinho. O endereço ganha ?ficha=com (dá para
+     compartilhar a página já na escolha). Brinquedão, espaço, kit, máquina
+     desligada pela Gestão e produto sob consulta não mostram o quadro; sem
+     o acréscimo definido, ninguém mostra.
+  2. O CARRINHO. `ItemCarrinho.com_ficha` (core/0221, só esquema). O mesmo
+     produto com e sem sistema de ficha são DUAS linhas. A linha mostra o
+     selo "Com sistema de ficha" e o preço COM. A folha "Adicionado ao
+     carrinho" também diz a escolha e o preço COM.
+  3. O PREÇO É DO SERVIDOR, SEMPRE. `ItemCarrinho.preco_unitario` soma o
+     acréscimo só quando `ficha_vale`: a linha marcada E a máquina
+     oferecendo a opção AGORA. A escolha pedida para quem não oferece (um
+     POST feito à mão num brinquedão, numa promoção, num combo, numa peça)
+     entra SEM. Linha marcada de uma máquina que a Gestão desligou depois
+     volta ao preço do cadastro e perde a marca. Como todo total, assinatura
+     do carrinho e valor do pagamento saem de `preco_unitario`, o checkout,
+     o Pix, o cartão e o boleto cobram o mesmo número.
+  4. O PEDIDO. O item do pedido guarda o preço COM e o nome com a marca
+     ("Air Game Kids — adesivo Candy — com sistema de ficha"). Não há campo
+     novo no item do pedido: o nome é o retrato, como o adesivo. Meus
+     pedidos, o e-mail, a tela de Pedidos do painel e as etiquetas mostram
+     o nome. Pedido cancelado que devolve os itens ao carrinho devolve a
+     escolha (e o adesivo).
+  5. A LISTA DE MONTAGEM do pedido do site põe "com sistema de ficha" na
+     VARIANTE da unidade (junto do adesivo, quando há), para a fábrica.
+  6. O CONTRATO DO PEDIDO DO SITE (seção 145) mostra o item com a marca e o
+     total com o acréscimo.
+
+A SEGUNDA VISITA CONTINUA SEM IR AO BANCO. A página do produto sai do
+cache do catálogo; "esta máquina aceita o sistema de ficha?" (a regra e a
+palavra da Gestão) é guardado junto com ela, e o valor do acréscimo vem do
+cache de um minuto (seção 149). Mudar a regra de brinquedão nas regras da
+produção só aparece na página quando o cache do catálogo renova; o carrinho
+confere na hora, de qualquer jeito.
+
+PROMOÇÕES E COMBOS: FICARAM SEM A OPÇÃO (o seguro)
+  Somar o acréscimo por máquina DISTORCERIA o que o código faz hoje:
+    * a promoção e o combo entram no carrinho como UM item, com um preço
+      fechado (`preco_promocao`, `valor_combo`), e não como as máquinas
+      deles; a página de promoção e a de combo não têm escolha por máquina
+      (nem a de adesivo);
+    * o combo tem várias máquinas: "com sistema de ficha" em qual? Em todas
+      seria R$ 999,00 x o número de máquinas num clique, sem o cliente ver
+      a conta; numa só, a fábrica não saberia em qual;
+    * a promoção pode levar brinquedão ou máquina desligada entre os
+      extras.
+  Por isso: promoção e combo saem pelo preço deles, sem sistema de ficha; a
+  escolha forçada no POST é ignorada (há teste). Quem quer a máquina da
+  promoção com sistema de ficha pede pelo orçamento (seção 149), onde a
+  equipe marca máquina por máquina. Fica como DÚVIDA PARA O DONO se quer a
+  escolha por máquina dentro da promoção e do combo.
+
+ARQUIVOS
+  core/models.py                (ItemCarrinho.com_ficha, ficha_vale,
+                                 preco_unitario, nome_com_adesivo;
+                                 Pedido.devolver_ao_carrinho)
+  core/migrations/0221_item_do_carrinho_com_sistema_de_ficha.py  (esquema)
+  core/views.py                 (página do produto; adicionar ao carrinho)
+  core/checkout.py              (juntar carrinhos repetidos)
+  core/templates/brinquedo_info.html, carrinho.html, base.html
+  core/static/site/ls-carrinho-rapido.js
+  core/static/site/paginas/brinquedo_info.css   (seção nova no fim)
+  sistema_interno/montagem.py   (a variante da unidade do pedido)
+  core/tests_ficha_no_site.py   (novo, 15 testes)
+
+UM ERRO QUE SÓ O NAVEGADOR MOSTROU: o botão "Adicionar ao carrinho" envia
+por JavaScript (base.html e ls-carrinho-rapido.js), que monta o corpo do
+POST campo a campo -- e o campo `ficha` não ia junto: os testes do servidor
+passavam e o carrinho recebia a máquina SEM. Corrigido nos dois arquivos, e
+há um teste que confere que eles mandam o campo.
+
+TESTES
+  DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test \
+      core.tests_ficha_no_site --parallel 1
+
+CONFERIDO NO NAVEGADOR (390 px e 1366 px): os chips e os dois preços na
+página do produto, adicionar ao carrinho com a escolha, a linha do carrinho
+com o selo e o preço COM.

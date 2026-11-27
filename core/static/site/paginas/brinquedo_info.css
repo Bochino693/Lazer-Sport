@@ -1919,3 +1919,69 @@
     .kit-maquina { grid-template-columns: 56px minmax(0, 1fr) auto; gap: 11px; }
     .kit-maquina-foto { width: 56px; height: 56px; }
 }
+
+
+/* ==========================================================================
+   COM OU SEM SISTEMA DE FICHA (LEIA-ME-V10, seção 150)
+   Dois chips embaixo do preço, na máquina que oferece a opção.
+   ========================================================================== */
+.produto-ficha {
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid rgba(139, 194, 251, .28);
+    border-radius: 18px;
+    background: rgba(6, 23, 44, .55);
+}
+.produto-ficha-titulo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+    margin: 0 0 10px;
+    color: #eaf4ff;
+    font-size: 1.02rem;
+    font-weight: 800;
+}
+.produto-ficha-titulo i { color: #ffd666; }
+.produto-ficha-titulo small { flex: 1 1 100%; color: #9fb7d4; font-size: .8rem; font-weight: 600; line-height: 1.35; }
+.produto-ficha-opcoes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+.produto-ficha-chip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 2px 8px;
+    min-width: 0;
+    min-height: 52px;
+    padding: 8px 12px;
+    border: 2px solid rgba(148, 163, 184, .35);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, .6);
+    color: #e2e8f0;
+    font: inherit;
+    font-size: .92rem;
+    font-weight: 750;
+    line-height: 1.2;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s ease, background .2s ease;
+}
+.produto-ficha-chip b { color: #ffd666; font-weight: 850; white-space: nowrap; }
+.produto-ficha-chip:hover,
+.produto-ficha-chip:focus-visible { border-color: rgba(124, 196, 255, .8); }
+.produto-ficha-chip:focus-visible { outline: 2px solid #7cc4ff; outline-offset: 2px; }
+.produto-ficha-chip.ativo {
+    border-color: #7cc4ff;
+    background: rgba(47, 139, 255, .22);
+    color: #fff;
+}
+@media (max-width: 420px) {
+    .produto-ficha-opcoes { grid-template-columns: minmax(0, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .produto-ficha-chip { transition: none; }
+}

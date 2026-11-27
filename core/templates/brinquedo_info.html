@@ -252,7 +252,28 @@
 
                 {% if disponivel_loja %}
                     <div class="produto-compra">
+                        {% if ficha %}
+                        {# COM OU SEM SISTEMA DE FICHA (LEIA-ME-V10, seção 150): os dois preços vêm do servidor; os chips trocam qual aparece #}
+                        <div data-ficha-preco="sem"{% if ficha.escolhida %} hidden{% endif %}>{% preco_pix_cartao preco_valor rotulo="Preço do produto" sem_juros=preco_sem_juros %}</div>
+                        <div data-ficha-preco="com"{% if not ficha.escolhida %} hidden{% endif %}>{% preco_pix_cartao ficha.preco_com rotulo="Preço com sistema de ficha" sem_juros=preco_sem_juros %}</div>
+                        <div class="produto-ficha" data-ficha role="group" aria-labelledby="produto-ficha-titulo">
+                            <p class="produto-ficha-titulo" id="produto-ficha-titulo">
+                                <i class="fa-solid fa-coins" aria-hidden="true"></i>
+                                <span>Sistema de ficha</span>
+                                <small>{{ ficha.explicacao }}</small>
+                            </p>
+                            <div class="produto-ficha-opcoes">
+                                <button type="button" class="produto-ficha-chip{% if not ficha.escolhida %} ativo{% endif %}" data-ficha-opcao="sem" aria-pressed="{% if ficha.escolhida %}false{% else %}true{% endif %}">
+                                    <span>Sem sistema de ficha</span>
+                                </button>
+                                <button type="button" class="produto-ficha-chip{% if ficha.escolhida %} ativo{% endif %}" data-ficha-opcao="com" aria-pressed="{% if ficha.escolhida %}true{% else %}false{% endif %}">
+                                    <span>Com sistema de ficha</span> <b>+ R$ {{ ficha.acrescimo|moeda }}</b>
+                                </button>
+                            </div>
+                        </div>
+                        {% else %}
                         {% preco_pix_cartao preco_valor rotulo="Preço do produto" sem_juros=preco_sem_juros %}
+                        {% endif %}
                         <span class="produto-preco-nota">
                             Valor unitário. Retirada na fábrica; o frete é por conta do cliente.
                         </span>
@@ -434,6 +455,8 @@
                         data-url-carrinho="{% url 'carrinho' %}"
                     >
                         {% csrf_token %}
+                        {# com ou sem sistema de ficha (seção 150): o servidor confere se a máquina oferece #}
+                        {% if ficha %}<input type="hidden" name="ficha" value="{% if ficha.escolhida %}com{% else %}sem{% endif %}" data-ficha-escolhida>{% endif %}
                         {# o adesivo escolhido no 3D segue para o carrinho como observação (visor3d.js) #}
                         {% if adesivos_pagina %}<input type="hidden" name="adesivo" value="{{ adesivo.nome }}" data-adesivo-escolhido>{% elif adesivos3d %}<input type="hidden" name="adesivo" value="" data-adesivo-escolhido>{% endif %}
                         <div class="produto-quantidade-linha">
@@ -724,6 +747,32 @@
     // cheia, o 3D (o visor ouve `ls:adesivo`), a observação do carrinho, o
     // WhatsApp e o endereço (o que se compartilha). O controle sobre o 3D avisa
     // a página pelo mesmo evento.
+    // COM OU SEM SISTEMA DE FICHA (LEIA-ME-V10, seção 150): os dois preços já
+    // vieram do servidor; o chip só troca qual aparece e o que vai ao carrinho.
+    const seletorFicha = document.querySelector('[data-ficha]');
+    if (seletorFicha) {
+        seletorFicha.addEventListener('click', (evento) => {
+            const chip = evento.target.closest('[data-ficha-opcao]');
+            if (!chip) return;
+            const escolha = chip.dataset.fichaOpcao;
+            seletorFicha.querySelectorAll('[data-ficha-opcao]').forEach((outro) => {
+                const ativo = outro === chip;
+                outro.classList.toggle('ativo', ativo);
+                outro.setAttribute('aria-pressed', ativo ? 'true' : 'false');
+            });
+            document.querySelectorAll('[data-ficha-preco]').forEach((bloco) => {
+                bloco.hidden = bloco.dataset.fichaPreco !== escolha;
+            });
+            document.querySelectorAll('[data-ficha-escolhida]').forEach((campo) => { campo.value = escolha; });
+            try {
+                const endereco = new URL(window.location.href);
+                if (escolha === 'com') endereco.searchParams.set('ficha', 'com');
+                else endereco.searchParams.delete('ficha');
+                window.history.replaceState(null, '', endereco);
+            } catch (erro) { /* sem History, a escolha vale só nesta visita */ }
+        });
+    }
+
     const seletorAdesivos = document.querySelector('[data-adesivos-pagina]');
     {% if adesivos_pagina %}
     const dadosAdesivos = (() => {

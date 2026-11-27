@@ -145,6 +145,13 @@
                                     Adesivo {{ item.adesivo }}
                                 </span>
                             {% endif %}
+                            {# com sistema de ficha (seção 150): o preço da linha já é o COM, conferido no servidor #}
+                            {% if item.ficha_vale %}
+                                <span class="ck-item-adesivo ck-item-ficha">
+                                    <i class="fa-solid fa-coins" aria-hidden="true"></i>
+                                    Com sistema de ficha
+                                </span>
+                            {% endif %}
                         </div>
 
                         <button type="button" class="btn-remover"
