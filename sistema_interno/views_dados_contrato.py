@@ -106,12 +106,73 @@ class DadosContratoInnerView(RespostaJSONMixin, InternoRequiredMixin, View):
         return valor or None
 
     def get(self, request):
+        from . import assinatura_representante
+
         dados = DadosContrato.atual()
         return render(request, self.template_name, {
             "dados": dados,
             "faltando": dados.faltando,
             "previa": self.previa(dados),
+            # A ASSINATURA DO REPRESENTANTE (seção 152): a linha (quem enviou
+            # e quando) e a imagem tratada, só para quem abre esta tela.
+            "rubrica": assinatura_representante.atual(),
+            "rubrica_img": assinatura_representante.imagem_atual(),
+            "rubrica_nota": assinatura_representante.NOTA,
         })
+
+    # ------------------------------------------------------------------
+    # A ASSINATURA DO REPRESENTANTE (LEIA-ME-V10, seção 152). Só a Gestão e
+    # o superusuário chegam aqui (o `dispatch` cobra a função). A foto é
+    # dado não confiável: quem confere e trata é `assinatura_representante`.
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _foto_enviada(request):
+        from . import assinatura_representante
+
+        arquivo = request.FILES.get("assinatura_arquivo")
+        if arquivo is None:
+            raise ErroDeFormulario(
+                "Escolha a foto da assinatura (JPEG, PNG ou WebP).",
+                titulo="Falta a foto", campo="assinatura_arquivo",
+            )
+        if arquivo.size and arquivo.size > assinatura_representante.TETO_DO_ENVIO:
+            raise ErroDeFormulario(
+                "A foto é grande demais (o limite é 8 MB). Tire outra ou reduza o tamanho.",
+                titulo="Não deu para usar esta imagem", campo="assinatura_arquivo",
+            )
+        return arquivo.read(assinatura_representante.TETO_DO_ENVIO + 1)
+
+    def acao_assinatura_previa(self, request):
+        """Trata a foto e devolve o resultado para conferir. NADA é gravado."""
+        from . import assinatura_representante
+
+        png, largura, altura = assinatura_representante.tratar(self._foto_enviada(request))
+        return self.sucesso(
+            request, "Confira o traço. Se ficou bom, toque em “Salvar esta assinatura”.",
+            imagem=assinatura_representante.data_url(png), largura=largura, altura=altura,
+        )
+
+    def acao_assinatura_salvar(self, request):
+        from . import assinatura_representante
+
+        linha = assinatura_representante.salvar(self._foto_enviada(request), request.user)
+        return self.sucesso(
+            request,
+            "Assinatura salva. Ela já aparece no lado da Lazer & Sport em todo documento que o cliente assinou "
+            "— inclusive os antigos.",
+            imagem=assinatura_representante.data_url(linha.png), tem=True,
+        )
+
+    def acao_assinatura_remover(self, request):
+        from . import assinatura_representante
+
+        havia = assinatura_representante.remover()
+        return self.sucesso(
+            request,
+            "Assinatura removida. Os documentos voltam a sair sem a assinatura da empresa."
+            if havia else "Não havia assinatura cadastrada.",
+            imagem="", tem=False,
+        )
 
     def acao_salvar(self, request):
         dados = DadosContrato.atual()

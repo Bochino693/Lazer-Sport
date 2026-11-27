@@ -73,3 +73,35 @@
 /* A ajuda de cada campo do representante (seção 141): o formato em que o
    dado sai no contrato modelo, logo abaixo do campo. */
 .ls-dc-ajuda{display:block;margin-top:5px;color:var(--muted);font-size:.76rem;font-style:normal;line-height:1.4}
+
+/* ======================================================================
+   A ASSINATURA DO REPRESENTANTE (LEIA-ME-V10, seção 152). O traço aparece
+   na cor do tema (é uma máscara: o PNG só dá o formato), sobre a linha da
+   prévia; no documento ele sai na cor da caneta, sobre o papel. Só
+   variáveis do tema.
+   ====================================================================== */
+.ls-dc-assina-linha{position:relative;height:72px}
+.ls-dc-traco{
+  position:absolute;inset:0 6px -6px;display:block;background:var(--text);
+  -webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;
+  -webkit-mask-position:center bottom;mask-position:center bottom;
+  -webkit-mask-size:contain;mask-size:contain;
+}
+.ls-dc-traco[hidden]{display:none}
+.ls-dc-rubrica{margin-top:20px;padding-top:18px;border-top:1px solid var(--line);min-width:0}
+.ls-dc-rubrica h3{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:1.02rem;font-weight:800;color:var(--text)}
+.ls-dc-rubrica-situacao{
+  display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;padding:10px 12px;border-radius:14px;
+  border:1px solid rgba(var(--green-rgb),.35);background:rgba(var(--green-rgb),.1);color:var(--text-2);font-size:.86rem;line-height:1.4;
+}
+.ls-dc-rubrica-situacao > i{color:var(--green-texto);line-height:1.4}
+.ls-dc-rubrica[data-tem="0"] .ls-dc-rubrica-situacao:not(.previa){border-color:rgba(var(--yellow-rgb),.4);background:rgba(var(--yellow-rgb),.12)}
+.ls-dc-rubrica[data-tem="0"] .ls-dc-rubrica-situacao:not(.previa) > i{color:var(--yellow-texto)}
+.ls-dc-rubrica-situacao.previa{border-color:rgba(var(--acento-rgb),.45);background:rgba(var(--acento-rgb),.12)}
+.ls-dc-rubrica-situacao.previa > i{color:var(--acento-texto)}
+.ls-dc-rubrica-arquivo{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.ls-dc-rubrica form{position:relative}
+.ls-dc-rubrica-acoes{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.ls-dc-rubrica-acoes .btn{min-height:44px;border-radius:14px}
+.ls-dc-rubrica-acoes .btn.is-invalid{border-color:var(--red-claro);box-shadow:0 0 0 3px rgba(var(--red-rgb),.25)}
+@media (max-width:620px){.ls-dc-rubrica-acoes .btn{flex:1 1 100%;min-height:48px}}

@@ -3273,6 +3273,34 @@ class DadosContrato(Prime):
         verbose_name_plural = "Dados do contrato"
 
 
+class AssinaturaRepresentante(Prime):
+    """A assinatura do representante da empresa, já tratada (LEIA-ME-V10, seção 152).
+
+    Uma linha só. `png` é o traço em PNG transparente que o SERVIDOR gerou a
+    partir da foto enviada (`assinatura_representante.tratar`) -- nunca os
+    bytes que chegaram. Mora no banco, como o traço do cliente: sem arquivo
+    público, sem endereço próprio. Só sai dentro de um documento assinado,
+    desenhada na hora (o documento não é regravado). Fica fora de
+    `DadosContrato` para que ler os dados do contrato -- o que muitas telas
+    fazem -- não traga a imagem junto.
+    """
+
+    png = models.BinaryField(editable=False)
+    largura = models.PositiveIntegerField(default=0)
+    altura = models.PositiveIntegerField(default=0)
+    sha256 = models.CharField(max_length=64, blank=True, editable=False)
+    enviada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+
+    class Meta:
+        verbose_name = "Assinatura do representante"
+        verbose_name_plural = "Assinatura do representante"
+
+    def __str__(self):
+        return "Assinatura do representante"
+
+
 class AvaliacaoBlocoOrcamento(Prime):
     """Decisão do superadministrador sobre cada responsabilidade da proposta."""
 

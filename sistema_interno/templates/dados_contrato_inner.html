@@ -121,10 +121,44 @@
     <h2><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Como sai no contrato</h2>
     <p class="ls-dc-preambulo" id="dcPrevia">{{ previa }}</p>
     <div class="ls-dc-assina">
-      <span class="ls-dc-assina-linha" aria-hidden="true"></span>
+      {# o traço cadastrado, na cor do tema (no documento sai na cor da caneta, sobre o papel) #}
+      <span class="ls-dc-assina-linha" aria-hidden="true"><span class="ls-dc-traco" id="dcRubricaTraco"{% if rubrica_img %} style="-webkit-mask-image:url({{ rubrica_img }});mask-image:url({{ rubrica_img }})"{% else %} hidden{% endif %}></span></span>
       <strong>VENDEDOR (Proprietário)</strong>
       <span data-dc-previa="representante_nome">{{ dados.representante_nome|default:"…" }}</span>
+      <span data-dc-previa="nome_fantasia">{{ dados.nome_fantasia }}</span>
     </div>
+
+    {% comment %}
+      A ASSINATURA DO REPRESENTANTE (LEIA-ME-V10, seção 152). A Gestão envia
+      a FOTO da assinatura; o servidor tira o papel e devolve só o traço
+      para conferir; salva, ela entra no lado da empresa de todo documento
+      que o cliente assinou (os antigos também). A imagem mora no banco e
+      só sai dentro dos documentos. Sem select; a confirmação de remover é
+      a folha do LSAviso (dados-contrato.js).
+    {% endcomment %}
+    <section class="ls-dc-rubrica" id="dcRubrica" data-tem="{% if rubrica_img %}1{% else %}0{% endif %}" aria-labelledby="dcRubricaTitulo">
+      <h3 id="dcRubricaTitulo"><i class="bi bi-pen" aria-hidden="true"></i> Assinatura do representante</h3>
+      <p class="ls-dc-rubrica-situacao" id="dcRubricaSituacao" role="status">
+        {% if rubrica_img %}
+          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+          <span>Cadastrada{% if rubrica.criacao %} em {{ rubrica.criacao|date:"d/m/Y" }}{% endif %}. Entra no lado da Lazer &amp; Sport em todo documento que o cliente assinou — os antigos também.</span>
+        {% else %}
+          <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+          <span>Ainda não há assinatura cadastrada: os documentos assinados saem sem a assinatura da empresa.</span>
+        {% endif %}
+      </p>
+      <p class="ls-dc-ajuda">Assine com caneta escura num papel branco e fotografe de perto (JPEG, PNG ou WebP, até 8 MB). O sistema tira o papel e a sombra e fica só o traço; você confere aqui antes de salvar. No documento ela sai com a linha “{{ rubrica_nota }}”.</p>
+      <form id="formRubrica" method="post" enctype="multipart/form-data" action="{% url 'dados_contrato_inner' %}" novalidate>
+        {% csrf_token %}
+        <input type="file" id="dcRubricaArquivo" name="assinatura_arquivo" accept="image/jpeg,image/png,image/webp" class="ls-dc-rubrica-arquivo" aria-label="Foto da assinatura do representante">
+        <div class="ls-dc-rubrica-acoes">
+          <button type="button" class="btn btn-outline-success" id="dcRubricaEscolher"><i class="bi bi-camera me-1" aria-hidden="true"></i> <span>{% if rubrica_img %}Trocar a foto{% else %}Enviar a foto{% endif %}</span></button>
+          <button type="button" class="btn btn-success" id="dcRubricaSalvar" hidden><i class="bi bi-check2-circle me-1" aria-hidden="true"></i> Salvar esta assinatura</button>
+          <button type="button" class="btn btn-outline-secondary" id="dcRubricaCancelar" hidden>Cancelar</button>
+          <button type="button" class="btn btn-outline-danger" id="dcRubricaRemover"{% if not rubrica_img %} hidden{% endif %}><i class="bi bi-trash3 me-1" aria-hidden="true"></i> Remover</button>
+        </div>
+      </form>
+    </section>
   </aside>
 </div>
 {% endblock %}

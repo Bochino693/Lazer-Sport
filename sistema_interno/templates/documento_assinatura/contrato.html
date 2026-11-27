@@ -133,11 +133,15 @@
     <p class="ct-fecho">{{ doc.fecho }}</p>
     <p class="ct-local">{{ doc.local_data }}</p>
     <div class="ct-assinaturas">
-      <div class="ct-assina">
-        <span class="ct-assina-linha" aria-hidden="true"></span>
+      {# o lado da empresa: com a assinatura do representante depois que o cliente assina (seção 152) #}
+      <div class="ct-assina ct-assina-empresa">
+        <span class="ct-assina-linha"{% if not assinatura_representante_img %} aria-hidden="true"{% endif %}>
+          {% if assinatura_representante_img %}<img src="{{ assinatura_representante_img }}" alt="Assinatura de {{ representante_nome }}">{% endif %}
+        </span>
         <strong>VENDEDOR <small>(Proprietário)</small></strong>
-        <span>{{ doc.vendedor.representante_nome|default:"Representante legal" }}</span>
-        <span>{{ doc.vendedor.nome_fantasia }}</span>
+        <span>{{ doc.vendedor.representante_nome|default:representante_nome|default:"Representante legal" }}</span>
+        <span>{{ doc.vendedor.nome_fantasia|default:representante_empresa }}</span>
+        {% if assinatura_representante_img %}<span class="ct-assina-eletronica">{{ assinatura_representante_nota }}</span>{% endif %}
       </div>
       <div class="ct-assina ct-assina-comprador">
         <span class="ct-assina-linha"{% if not assinatura_img %} aria-hidden="true"{% endif %}>
@@ -182,6 +186,7 @@
         <div><dt>Assinado em</dt><dd>{{ documento.assinado_em|date:"d/m/Y H:i:s O" }}</dd></div>
         <div><dt>Assinante</dt><dd>{{ documento.assinante_nome }} · {{ assinante_documento }}</dd></div>
         <div><dt>IP</dt><dd>{{ documento.assinatura_ip|default:"não informado" }}</dd></div>
+        {% if assinatura_representante_img %}<div class="largo"><dt>Assinatura da empresa</dt><dd>{{ assinatura_representante_nota }} ({{ representante_nome }}), a partir da assinatura cadastrada pela empresa; não é uma assinatura eletrônica feita neste ato.</dd></div>{% endif %}
         <div><dt>Links gerados</dt><dd>{{ documento.links_gerados }} (cada um válido por {% prazo_do_link %})</dd></div>
         <div class="largo"><dt>Aparelho (navegador)</dt><dd>{{ documento.assinatura_navegador|default:"não informado" }}</dd></div>
         <div class="largo"><dt>SHA-256 do documento</dt><dd class="hash">{{ documento.hash_conteudo }}</dd></div>

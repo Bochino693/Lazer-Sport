@@ -129,6 +129,19 @@
     </div>
   </section>
 
+  {# O LADO DA EMPRESA no termo já assinado: a assinatura do representante (seção 152) #}
+  {% if assinatura_representante_img %}
+  <section class="folha-assinatura folha-assinatura-empresa assinada">
+    <div class="folha-assinatura-traco">
+      <img src="{{ assinatura_representante_img }}" alt="Assinatura de {{ representante_nome }}">
+    </div>
+    <div class="folha-assinatura-nome">
+      <strong>{{ representante_nome|default:"Representante legal" }}</strong>
+      <span>{{ representante_empresa }} · {{ assinatura_representante_nota }}</span>
+    </div>
+  </section>
+  {% endif %}
+
   {% if documento.assinado %}
     {% comment %}
       A TRILHA DA ASSINATURA. É o que dá para conferir depois: o código do
@@ -144,6 +157,7 @@
         <div><dt>Assinado em</dt><dd>{{ documento.assinado_em|date:"d/m/Y H:i:s O" }}</dd></div>
         <div><dt>Assinante</dt><dd>{{ documento.assinante_nome }} · {{ assinante_documento }}</dd></div>
         <div><dt>IP</dt><dd>{{ documento.assinatura_ip|default:"não informado" }}</dd></div>
+        {% if assinatura_representante_img %}<div class="largo"><dt>Assinatura da empresa</dt><dd>{{ assinatura_representante_nota }} ({{ representante_nome }}), a partir da assinatura cadastrada pela empresa; não é uma assinatura eletrônica feita neste ato.</dd></div>{% endif %}
         <div class="largo"><dt>Aparelho (navegador)</dt><dd>{{ documento.assinatura_navegador|default:"não informado" }}</dd></div>
         <div class="largo"><dt>SHA-256 do documento</dt><dd class="hash">{{ documento.hash_conteudo }}</dd></div>
         <div class="largo"><dt>SHA-256 conferido na assinatura</dt><dd class="hash">{{ documento.hash_assinado }}</dd></div>

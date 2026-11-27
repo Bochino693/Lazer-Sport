@@ -11713,3 +11713,117 @@ TESTES
 
 NÃO CONFERIDO: a migração no banco do ar (só roda no deploy). A xícara e o
 botão "Transformar em adesivo de…" continuam fora (seção 143).
+
+
+==========================================================================
+152. A ASSINATURA DO REPRESENTANTE DA EMPRESA NOS DOCUMENTOS ASSINADOS
+==========================================================================
+
+O PEDIDO DO DONO (com a foto de uma assinatura a caneta, em papel branco)
+"tenho essa assinatura (...) do responsável pela Lazer e Sport e é ele quem
+aparece nos doc, você deve sempre que o cliente assinar, embutir esta
+assinatura no lado nosso da Lazer e Sport, com o nome (...) e da fábrica,
+inclusive ponha em todos os docs já gerados."
+
+PRIVACIDADE (o repositório é público)
+A imagem da assinatura NÃO está no repositório: nem em static, nem em
+teste, nem em migração, nem em base64, nem em print. Os testes usam um
+rabisco desenhado em código. Os dados pessoais do representante continuam
+só na tela "Dados do contrato" (seções 107, 109 e 141).
+
+COMO O DONO CADASTRA
+  Painel > Orçamentos > Dados do contrato (só Gestão e superusuário) > no
+  quadro "Como sai no contrato", o bloco "Assinatura do representante":
+    1. "Enviar a foto" -- a foto da assinatura (JPEG, PNG ou WebP, até
+       8 MB), feita com caneta escura em papel branco.
+    2. O servidor tira o papel e devolve só o TRAÇO, que aparece sobre a
+       linha "VENDEDOR (Proprietário)" para conferir. Nada foi gravado.
+    3. "Salvar esta assinatura". (Ou "Cancelar" / "Escolher outra foto".)
+  Depois: "Trocar a foto" e "Remover" (com a folha de confirmação).
+  Na tela o traço aparece na cor do tema (é uma máscara, para não abrir um
+  quadro branco no painel); no documento ele sai na cor da caneta, sobre o
+  papel. Sem assinatura cadastrada, a tela avisa que falta.
+
+O TRATAMENTO DA FOTO (sistema_interno/assinatura_representante.py, Pillow)
+  * O tipo é conferido ABRINDO o arquivo: JPEG, PNG ou WebP de verdade.
+    SVG, PDF, GIF, HTML com nome de .jpg, arquivo cortado, animação: tudo
+    recusado, com o campo marcado. Tetos: 8 MB, 40 megapixels, mínimo de
+    120 x 60.
+  * O papel não é branco na foto (sombra, vinco, cor). O traço é o que
+    fica MAIS ESCURO QUE O PAPEL EM VOLTA: o papel de cada região é
+    estimado apagando o traço (o ponto mais claro da vizinhança, borrado) e
+    a diferença vira a opacidade. O grão do papel sai (filtro de mediana).
+    A cor do traço é uma só, a média da caneta.
+  * A margem é recortada, a imagem é limitada a 900 x 380 e salva em PNG
+    transparente (teto de 400 KB). O que é guardado é SEMPRE o PNG que o
+    servidor gerou, nunca os bytes enviados.
+  * Recusa com explicação: papel em branco ("não achei o traço"), foto
+    escura, foto que não é assinatura em papel claro.
+
+ONDE MORA
+  `AssinaturaRepresentante` (sistema_interno/0088, só esquema): uma linha,
+  com o PNG num BinaryField, o tamanho, o SHA-256 e quem enviou. Fica fora
+  de `DadosContrato` para que ler os dados do contrato não traga a imagem.
+  Não há arquivo público nem endereço da imagem: ela só sai DENTRO de um
+  documento (um `data:` na página), para quem pode abrir aquele documento,
+  e na própria tela Dados do contrato. Cinco minutos no cache do servidor;
+  salvar e remover limpam na hora.
+
+ONDE APARECE
+  Em todo documento de assinatura que o cliente JÁ ASSINOU -- contrato de
+  compra e venda, termo (o modelo antigo), ordem de serviço e contrato do
+  pedido do site --, na via do painel, na cópia/comprovante do cliente
+  (/assinado/<código>/, que é para onde Meus pedidos leva) e na
+  impressão/PDF:
+    * contrato e pedido do site: no bloco VENDEDOR (Proprietário);
+    * ordem de serviço: no bloco CONTRATADA;
+    * termo antigo: um bloco da empresa embaixo do comprador;
+  a imagem sobre a linha e, embaixo, o nome do representante, o da fábrica
+  e a frase "Assinatura do representante aplicada pela Lazer & Sport". As
+  duas colunas continuam do mesmo tamanho (a mesma `.ct-assina-linha` do
+  cliente). Ela entra por `core.views_assinatura.contexto_da_folha`, o único
+  lugar que monta a folha do documento.
+  OS NOMES são os do retrato do documento (quem o assinava pela empresa
+  quando ele foi gerado); o documento antigo sem esses nomes usa os de
+  Dados do contrato de agora.
+
+QUANDO
+  Só depois de o cliente assinar. O documento que ainda espera a assinatura
+  mostra o lado da empresa em branco, como sempre -- a página de assinar
+  não muda.
+
+OS DOCUMENTOS JÁ GERADOS E ASSINADOS
+  Ganham a assinatura do mesmo jeito, porque ela é DESENHADA NA HORA DE
+  MOSTRAR e não gravada no documento. O retrato (`conteudo`), o
+  `hash_conteudo`, o `hash_assinado`, o traço do cliente, a data e o diário
+  NÃO mudam (há teste que compara antes e depois). Por isso a folha diz a
+  verdade: no bloco da empresa, "Assinatura do representante aplicada pela
+  Lazer & Sport"; e no "Registro da assinatura eletrônica", a linha
+  "Assinatura da empresa: ... a partir da assinatura cadastrada pela
+  empresa; não é uma assinatura eletrônica feita neste ato". Nenhuma data
+  de assinatura do representante é inventada.
+  CONSEQUÊNCIAS: trocar a assinatura cadastrada troca a imagem em todos os
+  documentos; remover tira de todos.
+
+ARQUIVOS
+  sistema_interno/assinatura_representante.py        (novo)
+  sistema_interno/models.py                          (AssinaturaRepresentante)
+  sistema_interno/migrations/0088_assinatura_do_representante.py
+  sistema_interno/views_dados_contrato.py            (prévia, salvar, remover)
+  sistema_interno/templates/dados_contrato_inner.html
+  sistema_interno/static/interno/dados-contrato.js, dados-contrato.css
+  core/views_assinatura.py                           (contexto_da_folha)
+  sistema_interno/templates/documento_assinatura/contrato.html,
+      servico.html, folha_termo.html
+  sistema_interno/tests_assinatura_representante.py  (novo, 18 testes)
+
+TESTES
+  DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test \
+      sistema_interno.tests_assinatura_representante --parallel 1
+
+CONFERIDO NO NAVEGADOR (390 px e 1366 px, com a foto de verdade SÓ no
+banco local): a tela sem assinatura, o arquivo inválido (o aviso), a
+prévia, cancelar, salvar; o contrato, a O.S. e o contrato do pedido do site
+assinados (a cópia do cliente e a via do painel); o documento que espera
+(sem a imagem); a impressão emulada do contrato, da O.S. e da cópia do
+cliente. Os prints ficaram fora do repositório.

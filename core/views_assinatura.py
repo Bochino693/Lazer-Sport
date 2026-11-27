@@ -87,6 +87,33 @@ def codigo_do_documento(documento) -> str:
     return " · ".join(partes)
 
 
+def _lado_da_empresa(documento, conteudo):
+    """A assinatura do representante e os nomes do lado da empresa, quando ela entra."""
+    from sistema_interno import assinatura_representante
+
+    imagem = assinatura_representante.para_o_documento(documento)
+    if not imagem:
+        return {
+            "assinatura_representante_img": "", "assinatura_representante_nota": "",
+            "representante_nome": "", "representante_empresa": "",
+        }
+    # os nomes são os do retrato (o documento guarda quem o assinava pela
+    # empresa); o documento antigo, sem eles, usa os de Dados do contrato
+    parte = conteudo.get("vendedor") or conteudo.get("prestador") or {}
+    nome, empresa = parte.get("representante_nome") or "", parte.get("nome_fantasia") or ""
+    if not nome or not empresa:
+        from sistema_interno.models import DadosContrato
+
+        dados = DadosContrato.atual()
+        nome, empresa = nome or dados.representante_nome, empresa or dados.nome_fantasia
+    return {
+        "assinatura_representante_img": imagem,
+        "assinatura_representante_nota": assinatura_representante.NOTA,
+        "representante_nome": nome,
+        "representante_empresa": empresa,
+    }
+
+
 def contexto_da_folha(documento, *, painel=False):
     """O que a folha do documento precisa, no painel e no site.
 
@@ -114,6 +141,11 @@ def contexto_da_folha(documento, *, painel=False):
             else mascarar_documento(documento_cliente)
         ),
         "assinatura_img": svc.assinatura_data_url(documento),
+        # A ASSINATURA DO REPRESENTANTE DA EMPRESA (LEIA-ME-V10, seção 152):
+        # desenhada na hora, só no documento que o cliente já assinou --
+        # inclusive os antigos. Nada é gravado no documento (o retrato e os
+        # hashes não mudam).
+        **_lado_da_empresa(documento, conteudo),
         "assinante_documento": (
             svc.documento_pontuado(documento.assinante_documento) if painel
             else mascarar_documento(documento.assinante_documento)
