@@ -1147,3 +1147,124 @@ def completar_na_arena(dados):
             item["grupo"] = modelo.get("grupo", item.get("grupo"))
             item["reino"] = bool(modelo.get("reino"))
             item["jogos_no_espaco"] = arena.jogos_do_modelo(modelo)
+
+
+# ======================================================================
+# A FICHA QUE É A MESMA MÁQUINA "COM SISTEMA DE FICHA" (a 0222; LEIA-ME-V10, seção 151)
+# ======================================================================
+# O dono: a ficha "Air Game Premium com Sistema de Ficheiro" não é outro produto -- é o Air Game
+# Premium COM SISTEMA DE FICHA (seção 148). Ela vira a OPÇÃO do Air Game Premium e é apagada, com
+# as referências repontadas e a opção marcada. O preço passa a ser o do Air Game Premium + o
+# acréscimo único (a regra do acréscimo fixo vence o preço que a ficha tinha).
+#
+# Achada pelo NOME, exatamente (como a 0218). Rodar de novo não muda nada.
+
+#: (a máquina que fica, [grafias da ficha que vira a opção "com sistema de ficha"]).
+FICHAS_COM_SISTEMA_DE_FICHA = (
+    ("Air Game Premium", (
+        "Air Game Premium com Sistema de Ficheiro",
+        "Air Game Premium com Sistema de Ficha",
+    )),
+)
+
+MARCA_DA_FICHA = " — com sistema de ficha"
+
+
+def _dinheiro(valor):
+    return "sem preço" if valor is None else "R$ " + f"{valor:,.2f}".replace(",", "#").replace(".", ",").replace("#", ".")
+
+
+def unir_as_fichas_com_sistema_de_ficha(apps, schema_editor=None, avisar=print):
+    """A 0222: cada ficha de FICHAS_COM_SISTEMA_DE_FICHA vira a opção da máquina e é apagada.
+
+    O que acontece com cada referência:
+      * item de ORÇAMENTO: passa para a máquina, com `com_moedeiro` marcado e o nome
+        "<máquina> — com sistema de ficha" (quando o nome era o da ficha). O VALOR combinado na
+        proposta não muda: é o que foi negociado;
+      * item de CARRINHO: passa para a máquina com `com_ficha` marcado (o preço passa a ser o da
+        máquina + o acréscimo, conferido no servidor); a linha igual soma;
+      * item de PEDIDO: passa para a máquina; o nome e o preço do pedido ficam como foram vendidos;
+      * favorito, lista de desejos, promoção, combo, cliques, análises: passam para a máquina;
+      * o endereço antigo (/brinquedo/<id da ficha>/) redireciona para a máquina.
+    As fotos e o 3D da ficha saem com ela (os arquivos continuam no armazenamento; o log diz
+    quais eram). A máquina que a Gestão marcou como "não oferece" NÃO é mexida: a ficha fica.
+    Devolve [(máquina, ficha, o que aconteceu, preço antigo da ficha, preço novo)].
+    """
+    Brinquedos = apps.get_model("core", "Brinquedos")
+    VarianteAdesivo = apps.get_model("core", "VarianteAdesivo")
+    ImagemBrinquedo = apps.get_model("core", "ImagemBrinquedo")
+    ContentType = apps.get_model("contenttypes", "ContentType")
+    ItemCarrinho = apps.get_model("core", "ItemCarrinho")
+    try:
+        ItemOrcamento = apps.get_model("sistema_interno", "ItemOrcamento")
+        DadosContrato = apps.get_model("sistema_interno", "DadosContrato")
+    except LookupError:
+        ItemOrcamento = DadosContrato = None
+    acrescimo = None
+    if DadosContrato is not None:
+        acrescimo = DadosContrato.objects.order_by("id").values_list("acrescimo_moedeiro", flat=True).first()
+    feito = []
+    for produto, grafias in FICHAS_COM_SISTEMA_DE_FICHA:
+        base = _achar(produto, Brinquedos)
+        ficha = _achar_uma_grafia(grafias, Brinquedos)
+        if base is None or ficha is None or ficha.pk == base.pk:
+            motivo = "máquina não encontrada" if base is None else "ficha não encontrada (já unida, ou com outro nome)"
+            avisar(f"{grafias[0]} -> {produto}: {motivo}; nada a fazer.")
+            feito.append((produto, grafias[0], motivo, None, None))
+            continue
+        if (getattr(base, "moedeiro", "") or "") == "nao":
+            motivo = "a máquina está marcada como “não oferece o sistema de ficha”; a ficha ficou como está"
+            avisar(f"{ficha.nome_brinquedo} -> {produto}: {motivo}.")
+            feito.append((produto, ficha.nome_brinquedo, motivo, ficha.valor_brinquedo, None))
+            continue
+        antigo = ficha.valor_brinquedo
+        novo = (base.valor_brinquedo + acrescimo) if (base.valor_brinquedo is not None and acrescimo) else None
+        nome_da_ficha, id_da_ficha = ficha.nome_brinquedo, ficha.pk
+        with transaction.atomic():
+            # a máquina passa a oferecer a opção, pela palavra da Gestão (não depende da regra)
+            if hasattr(base, "moedeiro") and not base.moedeiro:
+                Brinquedos.objects.filter(pk=base.pk).update(moedeiro="sim")
+            # o orçamento: a opção marcada e o nome da máquina com a marca; o valor fica
+            if ItemOrcamento is not None:
+                for item in ItemOrcamento.objects.filter(brinquedo_id=ficha.pk):
+                    descricao = item.descricao or ""
+                    if _normalizar(descricao).startswith(_normalizar(nome_da_ficha)):
+                        resto = descricao[len(nome_da_ficha):]
+                        descricao = (base.nome_brinquedo + resto)
+                    if "com sistema de ficha" not in descricao.casefold():
+                        descricao = descricao[: 180 - len(MARCA_DA_FICHA)].rstrip() + MARCA_DA_FICHA
+                    ItemOrcamento.objects.filter(pk=item.pk).update(
+                        brinquedo_id=base.pk, com_moedeiro=True, descricao=descricao[:180])
+            # o carrinho: a máquina, com a opção marcada (a linha igual soma)
+            tipo = ContentType.objects.filter(app_label="core", model="brinquedos").first()
+            if tipo is not None:
+                for linha in list(ItemCarrinho.objects.filter(content_type=tipo, object_id=ficha.pk)):
+                    igual = ItemCarrinho.objects.filter(
+                        carrinho_id=linha.carrinho_id, content_type=tipo, object_id=base.pk,
+                        adesivo=linha.adesivo, com_ficha=True,
+                    ).exclude(pk=linha.pk).first()
+                    if igual is not None:
+                        ItemCarrinho.objects.filter(pk=igual.pk).update(quantidade=igual.quantidade + linha.quantidade)
+                        ItemCarrinho.objects.filter(pk=linha.pk).delete()
+                    else:
+                        ItemCarrinho.objects.filter(pk=linha.pk).update(object_id=base.pk, com_ficha=True)
+            # o endereço antigo redireciona pelo adesivo padrão da máquina (como a 0218)
+            padrao = _padrao_do(base, VarianteAdesivo, Brinquedos)
+            if padrao is not None and not padrao.id_antigo:
+                VarianteAdesivo.objects.filter(pk=padrao.pk).update(id_antigo=ficha.pk)
+            fotos = [str(nome) for nome in ImagemBrinquedo.objects.filter(brinquedo_id=ficha.pk).values_list("imagem", flat=True) if nome]
+            if ficha.imagem_brinquedo:
+                fotos.insert(0, str(ficha.imagem_brinquedo))
+            # todo o resto (pedido, favorito, promoção, combo, cliques, análises) passa para a máquina
+            _repontar(apps, ficha, base, "", avisar)
+            Brinquedos.objects.filter(pk=ficha.pk).delete()
+        avisar(
+            f"{nome_da_ficha} (id {id_da_ficha}) agora é a opção “com sistema de ficha” do {base.nome_brinquedo}; "
+            f"a ficha à parte foi apagada. PREÇO ANTIGO da ficha: {_dinheiro(antigo)}. "
+            f"PREÇO NOVO com sistema de ficha: {_dinheiro(novo)} "
+            f"({base.nome_brinquedo} {_dinheiro(base.valor_brinquedo)} + acréscimo {_dinheiro(acrescimo)})."
+            + (f" Diferença: {_dinheiro(novo - antigo)}." if (novo is not None and antigo is not None) else "")
+            + (f" Fotos que eram da ficha (os arquivos continuam guardados): {', '.join(fotos)}." if fotos else "")
+        )
+        feito.append((produto, nome_da_ficha, "unida", antigo, novo))
+    return feito

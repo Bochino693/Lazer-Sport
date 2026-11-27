@@ -11644,3 +11644,72 @@ TESTES
 CONFERIDO NO NAVEGADOR (390 px e 1366 px): os chips e os dois preços na
 página do produto, adicionar ao carrinho com a escolha, a linha do carrinho
 com o selo e o preço COM.
+
+
+==========================================================================
+151. A FICHA "AIR GAME PREMIUM COM SISTEMA DE FICHEIRO" VIRA A OPÇÃO DO AIR GAME PREMIUM
+==========================================================================
+
+O PEDIDO (seção 148, item 5 da lista da 143)
+A ficha à parte "Air Game Premium com Sistema de Ficheiro" (#46 no ar, R$
+14.990,00) é o Air Game Premium COM SISTEMA DE FICHA: vira a opção dele e é
+apagada, com as referências repontadas e a opção marcada. O preço passa a
+ser Air Game Premium + R$ 999,00 (a regra do acréscimo fixo vence).
+
+O QUE A MIGRAÇÃO core/0222 FAZ (só dados; a regra em core/variantes.py:
+FICHAS_COM_SISTEMA_DE_FICHA, unir_as_fichas_com_sistema_de_ficha)
+  * A máquina "Air Game Premium" fica com o nome e o preço dela, e passa a
+    oferecer a opção pela palavra da Gestão (`moedeiro = "sim"`).
+  * Item de ORÇAMENTO da ficha: passa para a máquina, com `com_moedeiro`
+    marcado e o nome "Air Game Premium — com sistema de ficha" (o texto
+    escrito à mão só ganha a marca no fim). O VALOR da proposta não muda: é
+    o que foi negociado com o cliente.
+  * Item de CARRINHO da ficha: passa para a máquina com `com_ficha`
+    marcado; o preço passa a ser o novo (máquina + acréscimo), conferido no
+    servidor. A linha igual soma; a linha SEM continua separada.
+  * Item de PEDIDO da ficha: passa para a máquina; o nome e o preço do
+    pedido ficam como foram vendidos (o pedido é o retrato da compra).
+  * Favorito, lista de desejos, promoção, combo, cliques e análises: passam
+    para a máquina (o mesmo `_repontar` da 0218).
+  * O endereço antigo (/brinquedo/<id da ficha>/) redireciona (301) para o
+    Air Game Premium.
+  * A ficha é apagada. As fotos e o 3D que eram só dela saem com ela (os
+    arquivos continuam no armazenamento; o log do deploy lista os nomes).
+    Se alguma foto dela faz falta na página do Air Game Premium, é só
+    incluí-la no cadastro.
+
+O PREÇO DA #46
+  Hoje: R$ 14.990,00. Depois: preço do Air Game Premium + R$ 999,00. A
+  diferença depende do preço do Air Game Premium no ar, que o repositório
+  não tem: só dá os mesmos 14.990,00 se ele custar 13.991,00. O LOG DO
+  DEPLOY escreve os três números, por exemplo:
+    "Air Game Premium com Sistema de Ficheiro (id 46) agora é a opção “com
+     sistema de ficha” do Air Game Premium; a ficha à parte foi apagada.
+     PREÇO ANTIGO da ficha: R$ 14.990,00. PREÇO NOVO com sistema de ficha:
+     R$ ... (Air Game Premium R$ ... + acréscimo R$ 999,00). Diferença: ..."
+  Confira essa linha no log do Render depois do deploy.
+
+QUANDO NADA ACONTECE (e o log diz por quê)
+  * A ficha é achada pelo NOME, exatamente ("Air Game Premium com Sistema
+    de Ficheiro" ou "... de Ficha"). Com outro nome no ar: "ficha não
+    encontrada". Aí é acertar a grafia em FICHAS_COM_SISTEMA_DE_FICHA e
+    rodar a função de novo (python manage.py shell, com django.apps.apps),
+    ou renomear a ficha no painel antes do deploy.
+  * Sem a máquina "Air Game Premium": "máquina não encontrada"; a ficha fica.
+  * Máquina marcada como "Não oferece" pela Gestão: a ficha fica.
+  * Rodar de novo: nada muda.
+
+ORDEM DAS MIGRAÇÕES: a 0222 depende da sistema_interno/0087 (o campo do
+item do orçamento) e roda depois da 0086 (o acréscimo de R$ 999,00).
+
+ARQUIVOS
+  core/variantes.py
+  core/migrations/0222_ficha_com_sistema_de_ficha.py
+  core/tests_ficha_air_game_premium.py   (novo, 7 testes)
+
+TESTES
+  DJANGO_SETTINGS_MODULE=lazer.settings_test python manage.py test \
+      core.tests_ficha_air_game_premium --parallel 1
+
+NÃO CONFERIDO: a migração no banco do ar (só roda no deploy). A xícara e o
+botão "Transformar em adesivo de…" continuam fora (seção 143).
